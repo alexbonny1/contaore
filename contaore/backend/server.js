@@ -1,3 +1,5 @@
+process.env.TZ = 'Europe/Rome'
+
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import dotenv from 'dotenv'
@@ -30,39 +32,30 @@ await fastify.register(scanRoutes)
 await fastify.register(adminRoutes)
 
 fastify.get('/', async () => {
-  return {
-    status: 'ok'
-  }
+  return { status: 'ok' }
 })
 
 fastify.get('/api/debug-tz', async (request, reply) => {
   const now = new Date()
   return {
-    utc: now.toISOString(),
+    utc:    now.toISOString(),
     locale: now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-    tz: process.env.TZ,
+    tz:     process.env.TZ,
     offset: now.getTimezoneOffset()
   }
 })
 
 const start = async () => {
-
   try {
-
     await fastify.listen({
       port: process.env.PORT || 3000,
       host: '0.0.0.0'
     })
-
     console.log(`SERVER ONLINE PORT ${process.env.PORT || 3000}`)
-
   } catch (err) {
-
     fastify.log.error(err)
     process.exit(1)
-
   }
-
 }
 
 start()
