@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+
+  --bg: #d4d4d4bd;
+  --sidebar: #ffffff;
+  --card: rgba(255,255,255,0.72);
+
+  --text: #18181b;
+  --muted: #71717a;
+
+  --border: rgba(0,0,0,0.06);
+
+}
+
+.dark {
+
+  --bg: #09090b;
+  --sidebar: #111113;
+  --card: rgba(53, 53, 55, 0.564);
+
+  --text: #fafafa;
+  --muted: #a1a1aa;
+
+  --border: rgba(255,255,255,0.06);
+
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, sans-serif;
+}
+
+body {
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+@custom-variant dark (&:where(.dark, .dark *));
