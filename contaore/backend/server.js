@@ -34,7 +34,7 @@ await fastify.register(adminRoutes)
 fastify.get('/', async () => {
   return { status: 'ok' }
 })
-//bug
+//pubblic
 
 fastify.get('/api/debug-tz', async (request, reply) => {
   const now = new Date()
