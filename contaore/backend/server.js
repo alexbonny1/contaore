@@ -35,7 +35,15 @@ fastify.get('/', async () => {
   }
 })
 
-
+fastify.get('/api/debug-tz', async (request, reply) => {
+  const now = new Date()
+  return {
+    utc: now.toISOString(),
+    locale: now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+    tz: process.env.TZ,
+    offset: now.getTimezoneOffset()
+  }
+})
 
 const start = async () => {
 
