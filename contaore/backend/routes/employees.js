@@ -264,6 +264,16 @@ export default async function employeeRoutes(fastify) {
 
         const today     = new Date().toISOString().split('T')[0]
         const thisMonth = today.slice(0, 7)
+        const todayName = getDayName(today)
+
+        /*
+          TURNI DI TUTTI I DIPENDENTI
+        */
+
+        const { data: allShifts } = await supabase
+          .from('turni')
+          .select('*')
+          .eq('company_id', companyId)
 
         const result = employees.map(emp => {
 
@@ -271,9 +281,42 @@ export default async function employeeRoutes(fastify) {
           const todayReads = empReads.filter(r => getLocalDateStr(r.created_at) === today)
           const monthReads = empReads.filter(r => getLocalDateStr(r.created_at).slice(0, 7) === thisMonth)
 
+          const presente = isEmployeeInside(empReads)
+
+          /*
+            CALCOLA ASSENTE:
+            turni attivi + ha un turno oggi +
+            non e presente + la fascia e gia passata
+          */
+
+          let assente = false
+
+          if (emp.turni_attivi && !presente) {
+
+            const empShifts = (allShifts || []).filter(
+              s => s.dipendente_id === emp.id &&
+                   s.giorno_settimana === todayName
+            )
+
+            if (empShifts.length > 0) {
+
+              const now = new Date()
+              const nowMins = now.getHours() * 60 + now.getMinutes()
+
+              // e assente se almeno un turno e gia finito
+              assente = empShifts.some(s => {
+                const fine = timeToMinutes(s.uscita_1)
+                return fine !== null && nowMins > fine
+              })
+
+            }
+
+          }
+
           return {
             ...emp,
-            attivo: isEmployeeInside(empReads),
+            attivo:  presente,
+            assente,
             stats: {
               total_reads: empReads.length,
               today_reads: todayReads.length,
