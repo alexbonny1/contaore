@@ -1,12 +1,6 @@
 import { supabase } from '../services/supabase.js'
 import { authenticate } from '../middleware/auth.js'
 
-/*
-────────────────────────────────────
-HELPERS
-────────────────────────────────────
-*/
-
 const GIORNI_SETTIMANA = [
   'Domenica','Lunedì','Martedì','Mercoledì',
   'Giovedì','Venerdì','Sabato'
@@ -17,7 +11,7 @@ function getDayName(dateStr) {
 }
 
 function timeToMinutes(t) {
-  if (!t) return 0
+  if (!t) return null
   const parts = t.split(':')
   return parseInt(parts[0]) * 60 + parseInt(parts[1])
 }
@@ -114,9 +108,9 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
     let stato             = 'presente'
 
     if (turniAttivi && shifts.length > 0) {
-      const dayName    = getDayName(giorno)
-      const dayShifts  = shifts.filter(s => s.giorno_settimana === dayName)
-      ore_previste     = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
+      const dayName   = getDayName(giorno)
+      const dayShifts = shifts.filter(s => s.giorno_settimana === dayName)
+      ore_previste    = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
       ore_straordinario = ore_previste > 0
         ? Number(Math.max(0, oreLavorate - ore_previste).toFixed(2))
         : 0
@@ -138,13 +132,14 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
 
   if (turniAttivi && shifts.length > 0) {
 
-    const start = dataInizio
-      ? new Date(dataInizio)
-      : new Date()
+    const now     = new Date()
+    const today   = now.toISOString().split('T')[0]
+    const nowMins = now.getHours() * 60 + now.getMinutes()
 
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    yesterday.setHours(23, 59, 59, 999)
+    const start = dataInizio ? new Date(dataInizio) : new Date()
+
+    const endDate = new Date()
+    endDate.setHours(23, 59, 59, 999)
 
     const presentSet = new Set(Object.keys(grouped))
     const shiftDays  = new Set(shifts.map(s => s.giorno_settimana))
@@ -152,15 +147,34 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
     const cursor = new Date(start)
     cursor.setHours(0, 0, 0, 0)
 
-    while (cursor <= yesterday) {
+    while (cursor <= endDate) {
 
-      const dateStr = cursor.toISOString().split('T')[0]
-      const dayName = getDayName(dateStr)
+      // usa la data locale non UTC per evitare offset timezone
+      const dateStr = [
+        cursor.getFullYear(),
+        String(cursor.getMonth() + 1).padStart(2, '0'),
+        String(cursor.getDate()).padStart(2, '0')
+      ].join('-')
+      const dayName = GIORNI_SETTIMANA[cursor.getDay()]
+      const isToday = dateStr === today
+
 
       if (shiftDays.has(dayName) && !presentSet.has(dateStr)) {
 
         const dayShifts    = shifts.filter(s => s.giorno_settimana === dayName)
         const ore_previste = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
+
+        if (isToday) {
+          // oggi: segna assente solo se almeno un turno e gia finito
+          const turnoFinito = dayShifts.some(s => {
+            const fine = timeToMinutes(s.uscita_1)
+            return fine !== null && nowMins > fine
+          })
+          if (!turnoFinito) {
+            cursor.setDate(cursor.getDate() + 1)
+            continue
+          }
+        }
 
         absentDays.push({
           giorno:            dateStr,
@@ -223,12 +237,6 @@ function groupByMonth(days = []) {
 
 }
 
-/*
-────────────────────────────────────
-ROUTES
-────────────────────────────────────
-*/
-
 export default async function employeeRoutes(fastify) {
 
   fastify.get(
@@ -262,13 +270,11 @@ export default async function employeeRoutes(fastify) {
           return reply.send({ success: false })
         }
 
-        const today     = new Date().toISOString().split('T')[0]
+        const now       = new Date()
+        const today     = now.toISOString().split('T')[0]
         const thisMonth = today.slice(0, 7)
-        const todayName = getDayName(today)
-
-        /*
-          TURNI DI TUTTI I DIPENDENTI
-        */
+        const nowMins   = now.getHours() * 60 + now.getMinutes()
+        const todayName = GIORNI_SETTIMANA[now.getDay()]
 
         const { data: allShifts } = await supabase
           .from('turni')
@@ -283,12 +289,6 @@ export default async function employeeRoutes(fastify) {
 
           const presente = isEmployeeInside(empReads)
 
-          /*
-            CALCOLA ASSENTE:
-            turni attivi + ha un turno oggi +
-            non e presente + la fascia e gia passata
-          */
-
           let assente = false
 
           if (emp.turni_attivi && !presente) {
@@ -297,19 +297,14 @@ export default async function employeeRoutes(fastify) {
               s => s.dipendente_id === emp.id &&
                    s.giorno_settimana === todayName
             )
-            console.log('TODAY:', today)
-console.log('TODAY NAME:', todayName)
-console.log('NOW MINS:', new Date().getHours() * 60 + new Date().getMinutes())
 
             if (empShifts.length > 0) {
 
-              const now = new Date()
-              const nowMins = now.getHours() * 60 + now.getMinutes()
-
-              // e assente se almeno un turno e gia finito
               assente = empShifts.some(s => {
-                const fine = timeToMinutes(s.uscita_1)
-                return fine !== null && nowMins > fine
+                if (!s.ingresso_1 || !s.uscita_1) return false
+                const inizio = timeToMinutes(s.ingresso_1)
+                const fine   = timeToMinutes(s.uscita_1)
+                return nowMins >= inizio && nowMins <= fine
               })
 
             }
@@ -392,7 +387,14 @@ console.log('NOW MINS:', new Date().getHours() * 60 + new Date().getMinutes())
 
         const turniAttivi = !!employee.turni_attivi
 
-        const days   = groupByDay(reads, shifts || [], turniAttivi, employee.turni_attivati_il || employee.data_inizio)
+
+        const days   = groupByDay(
+          reads,
+          shifts || [],
+          turniAttivi,
+          employee.turni_attivati_il || employee.data_inizio
+        )
+
         const months = groupByMonth(days)
 
         return reply.send({
@@ -555,7 +557,6 @@ console.log('NOW MINS:', new Date().getHours() * 60 + new Date().getMinutes())
 
         const updateData = { turni_attivi }
 
-        // salva la data di attivazione solo quando si attiva
         if (turni_attivi) {
           updateData.turni_attivati_il = new Date().toISOString()
         }
