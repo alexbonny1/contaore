@@ -297,6 +297,9 @@ export default async function employeeRoutes(fastify) {
               s => s.dipendente_id === emp.id &&
                    s.giorno_settimana === todayName
             )
+            console.log('TODAY:', today)
+console.log('TODAY NAME:', todayName)
+console.log('NOW MINS:', new Date().getHours() * 60 + new Date().getMinutes())
 
             if (empShifts.length > 0) {
 
