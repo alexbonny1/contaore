@@ -140,7 +140,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
 
     const start = dataInizio
       ? new Date(dataInizio)
-      : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+      : new Date()
 
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
@@ -346,7 +346,7 @@ export default async function employeeRoutes(fastify) {
 
         const turniAttivi = !!employee.turni_attivi
 
-        const days   = groupByDay(reads, shifts || [], turniAttivi, employee.data_inizio)
+        const days   = groupByDay(reads, shifts || [], turniAttivi, employee.turni_attivati_il || employee.data_inizio)
         const months = groupByMonth(days)
 
         return reply.send({
@@ -507,9 +507,16 @@ export default async function employeeRoutes(fastify) {
         const { turni_attivi } = request.body
         const companyId        = request.user.company_id
 
+        const updateData = { turni_attivi }
+
+        // salva la data di attivazione solo quando si attiva
+        if (turni_attivi) {
+          updateData.turni_attivati_il = new Date().toISOString()
+        }
+
         const { data, error } = await supabase
           .from('dipendenti')
-          .update({ turni_attivi })
+          .update(updateData)
           .eq('id', id)
           .eq('company_id', companyId)
           .select()

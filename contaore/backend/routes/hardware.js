@@ -18,8 +18,9 @@ function nowMinutes() {
   return now.getHours() * 60 + now.getMinutes()
 }
 
-function getFasciaAttiva(fasce) {
-  const now = nowMinutes()
+function getFasciaAttiva(fasce, refDate = null) {
+  const d   = refDate ? new Date(refDate) : new Date()
+  const now = d.getHours() * 60 + d.getMinutes()
   for (const fascia of fasce) {
     const inizio = timeToMinutes(fascia.ora_inizio)
     const fine   = timeToMinutes(fascia.ora_fine)
@@ -111,11 +112,23 @@ export default async function hardwareRoutes(fastify) {
 
       try {
 
-        const { uid, reader_id, company_id } = request.body
+        const {
+          uid,
+          reader_id,
+          company_id,
+          timestamp   // opzionale — mandato dalle letture offline
+        } = request.body
 
         if (!uid || !reader_id || !company_id) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
         }
+
+        /*
+          DATA EFFETTIVA DELLA LETTURA
+          se offline usa il timestamp mandato dal device
+          altrimenti usa now
+        */
+        const readDate = timestamp ? new Date(timestamp) : new Date()
 
         /*
           CONTROLLA CHE IL TAG SIA
@@ -155,6 +168,7 @@ export default async function hardwareRoutes(fastify) {
         }
 
         console.log('DIPENDENTE:', dipendente.nome, dipendente.cognome)
+        console.log('DATA LETTURA:', readDate.toISOString())
 
         /*
           CARICA FASCE ORARIE AZIENDA
@@ -168,6 +182,7 @@ export default async function hardwareRoutes(fastify) {
 
         /*
           ULTIMA TIMBRATURA DI QUESTO TAG
+          prima della data di questa lettura
         */
 
         const { data: lastPresence } = await supabase
@@ -175,19 +190,21 @@ export default async function hardwareRoutes(fastify) {
           .select('tipo, created_at')
           .eq('tag_uid', uid)
           .eq('company_id', company_id)
+          .lt('created_at', readDate.toISOString())
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
 
         /*
           LOGICA TIPO
+          usa la fascia attiva al momento della lettura reale
         */
 
         let tipo = 'ENTRATA'
 
         const fasciaAttiva =
           fasce && fasce.length > 0
-            ? getFasciaAttiva(fasce)
+            ? getFasciaAttiva(fasce, readDate)
             : null
 
         if (fasciaAttiva) {
@@ -228,16 +245,18 @@ export default async function hardwareRoutes(fastify) {
         console.log('TIPO FINALE:', tipo)
 
         /*
-          SALVA PRESENZA
+          SALVA PRESENZA CON TIMESTAMP REALE
         */
 
         const { data: insertedPresence, error: insertError } = await supabase
           .from('presenza')
           .insert({
             company_id,
-            tag_uid:   uid,
+            tag_uid:    uid,
             reader_id,
-            tipo
+            tipo,
+            created_at: readDate.toISOString(),
+            timestamp:  readDate.toISOString()
           })
           .select()
 

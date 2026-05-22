@@ -2,9 +2,34 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard,
-  Radio, Sun, Moon
+  Radio, Sun, Moon, CheckCircle2, XCircle
 } from "lucide-react";
 import { API_URL } from "../api";
+
+function Toast({ message, type, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className={`
+      fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+      flex items-center gap-2
+      px-5 py-3 rounded-2xl shadow-lg
+      text-sm font-medium
+      ${type === "success"
+        ? "bg-green-500 text-white"
+        : "bg-red-500 text-white"
+      }
+    `}>
+      {type === "success"
+        ? <CheckCircle2 size={16} />
+        : <XCircle size={16} />
+      }
+      {message}
+    </div>
+  );
+}
 
 export default function Badges() {
 
@@ -16,6 +41,11 @@ export default function Badges() {
   const [employeeName, setEmployeeName] = useState("");
   const [employeeCognome, setEmployeeCognome] = useState("");
   const [waitingScan, setWaitingScan] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  function showToast(message, type = "success") {
+    setToast({ message, type });
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -38,22 +68,15 @@ export default function Badges() {
   useEffect(() => { loadBadges(); }, []);
 
   async function loadBadges() {
-
     try {
-
       const token = localStorage.getItem("token");
-
       const response = await fetch(
         API_URL + "/api/tags",
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const data = await response.json();
-
       if (data.success) setBadges(data.tags || []);
-
     } catch (err) { console.log(err); }
-
   }
 
   useEffect(() => {
@@ -63,26 +86,19 @@ export default function Badges() {
     const startedAt = new Date().toISOString();
 
     const interval = setInterval(async () => {
-
       try {
-
         const token = localStorage.getItem("token");
-
         const response = await fetch(
           API_URL + "/api/latest-read?after=" + encodeURIComponent(startedAt),
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
         const data = await response.json();
-
         if (data.success && data.uid) {
           setUid(data.uid);
           setWaitingScan(false);
           clearInterval(interval);
         }
-
       } catch (err) { console.log(err); }
-
     }, 1000);
 
     return () => clearInterval(interval);
@@ -96,7 +112,6 @@ export default function Badges() {
     try {
 
       const token = localStorage.getItem("token");
-
       const response = await fetch(
         API_URL + "/api/tags/register",
         {
@@ -116,15 +131,16 @@ export default function Badges() {
       const data = await response.json();
 
       if (!data.success) {
-        alert(
+        showToast(
           data.error === "UID_ALREADY_EXISTS"
             ? "Badge già registrato"
-            : data.error || "Errore registrazione"
+            : data.error || "Errore registrazione",
+          "error"
         );
         return;
       }
 
-      alert("Badge registrato");
+      showToast("Badge registrato");
       setUid("");
       setEmployeeName("");
       setEmployeeCognome("");
@@ -132,10 +148,8 @@ export default function Badges() {
       loadBadges();
 
     } catch (err) {
-
       console.log(err);
-      alert("Errore server");
-
+      showToast("Errore server", "error");
     }
 
   }
@@ -145,31 +159,20 @@ export default function Badges() {
     if (!confirm("Eliminare badge e dipendente associato?")) return;
 
     try {
-
       const token = localStorage.getItem("token");
-
       const response = await fetch(
         API_URL + "/api/tags/" + id,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
       );
-
       const data = await response.json();
-
       if (!data.success) {
-        alert(data.error || "Errore");
+        showToast(data.error || "Errore", "error");
         return;
       }
-
       loadBadges();
-
     } catch (err) {
-
       console.log(err);
-      alert("Errore server");
-
+      showToast("Errore server", "error");
     }
 
   }
@@ -182,6 +185,14 @@ export default function Badges() {
   return (
 
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -237,8 +248,6 @@ export default function Badges() {
           <p className="text-zinc-500 mt-2">Registra un nuovo badge e associalo a un dipendente</p>
         </div>
 
-        {/* FORM */}
-
         <form
           onSubmit={createBadge}
           className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-8"
@@ -265,9 +274,7 @@ export default function Badges() {
 
               <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                 <CreditCard size={16} className="text-zinc-400 shrink-0" />
-                <p className="text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100">
-                  {uid}
-                </p>
+                <p className="text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100">{uid}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -305,8 +312,6 @@ export default function Badges() {
 
         </form>
 
-        {/* LISTA */}
-
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
 
           {badges.map((badge) => (
@@ -317,28 +322,20 @@ export default function Badges() {
             >
 
               <div className="flex items-start justify-between mb-5">
-
                 <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                   <CreditCard size={20} className="text-zinc-700 dark:text-zinc-200" />
                 </div>
-
                 <button
                   onClick={() => deleteBadge(badge.id)}
                   className="text-xs text-red-500 hover:text-red-700"
                 >
                   Elimina
                 </button>
-
               </div>
 
               <p className="text-xs text-zinc-400 mb-1">UID</p>
-              <h3 className="text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100">
-                {badge.uid}
-              </h3>
-
-              <p className="text-sm text-zinc-500 mt-3">
-                {badge.nome}
-              </p>
+              <h3 className="text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100">{badge.uid}</h3>
+              <p className="text-sm text-zinc-500 mt-3">{badge.nome}</p>
 
             </div>
 

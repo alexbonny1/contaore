@@ -17,10 +17,46 @@ import {
   ChevronUp,
   CreditCard,
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 
 import { API_URL } from "../api";
+
+function Toast({ message, type, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className={`
+      fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+      flex items-center gap-2
+      px-5 py-3 rounded-2xl shadow-lg
+      text-sm font-medium
+      ${type === "success"
+        ? "bg-green-500 text-white"
+        : "bg-red-500 text-white"
+      }
+    `}>
+      {type === "success"
+        ? <CheckCircle2 size={16} />
+        : <XCircle size={16} />
+      }
+      {message}
+    </div>
+  );
+}
+
+function formatOre(decimalHours) {
+  if (!decimalHours || decimalHours === 0) return "0m";
+  const h = Math.floor(decimalHours);
+  const m = Math.round((decimalHours - h) * 60);
+  if (h === 0) return m + "m";
+  if (m === 0) return h + "h";
+  return h + "h " + m + "m";
+}
 
 export default function EmployeeDetails() {
 
@@ -41,6 +77,11 @@ export default function EmployeeDetails() {
   const [changingBadge, setChangingBadge] = useState(false);
   const [manualUid, setManualUid] = useState("");
   const [showManualUid, setShowManualUid] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  function showToast(message, type = "success") {
+    setToast({ message, type });
+  }
 
   const [editingShiftId, setEditingShiftId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -131,21 +172,18 @@ export default function EmployeeDetails() {
       const data = await response.json();
 
       if (!data.success) {
-        alert(data.error === "UID_ALREADY_USED"
-          ? "Badge già assegnato ad un altro dipendente"
-          : data.error || "Errore cambio badge"
-        );
+        showToast(data.error === "UID_ALREADY_USED" ? "Badge già assegnato ad un altro dipendente" : data.error || "Errore cambio badge", "error");
         return;
       }
 
       setShowManualUid(false);
       setManualUid("");
-      alert("Badge aggiornato");
+      showToast("Badge aggiornato");
       loadData();
 
     } catch (err) {
       console.log(err);
-      alert("Errore server");
+      showToast("Errore server", "error");
     } finally {
       setChangingBadge(false);
     }
@@ -182,14 +220,14 @@ export default function EmployeeDetails() {
 
       const data = await response.json();
 
-      if (!data.success) { alert("Errore salvataggio turno"); return; }
+      if (!data.success) { showToast("Errore salvataggio turno", "error"); return; }
 
       resetForm();
       loadData();
 
     } catch (err) {
       console.log(err);
-      alert("Errore server");
+      showToast("Errore server", "error");
     } finally {
       setSaving(false);
     }
@@ -207,11 +245,11 @@ export default function EmployeeDetails() {
         { method: "DELETE", headers: { Authorization: "Bearer " + token } }
       );
       const data = await response.json();
-      if (!data.success) { alert("Errore eliminazione"); return; }
+      if (!data.success) { showToast("Errore eliminazione", "error"); return; }
       loadData();
     } catch (err) {
       console.log(err);
-      alert("Errore server");
+      showToast("Errore server", "error");
     }
 
   }
@@ -256,11 +294,11 @@ export default function EmployeeDetails() {
         }
       );
       const data = await response.json();
-      if (!data.success) { alert("Errore eliminazione mese"); return; }
+      if (!data.success) { showToast("Errore eliminazione mese", "error"); return; }
       loadData();
     } catch (err) {
       console.log(err);
-      alert("Errore server");
+      showToast("Errore server", "error");
     }
 
   }
@@ -303,6 +341,14 @@ export default function EmployeeDetails() {
   return (
 
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10]">
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       <div className="max-w-4xl mx-auto p-6">
 
@@ -356,7 +402,7 @@ export default function EmployeeDetails() {
               <p className="text-xs text-zinc-500">Ore totali</p>
             </div>
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              {employee.stats?.total_hours ?? 0}h
+              {formatOre(employee.stats?.total_hours ?? 0)}
             </p>
             <p className="text-xs text-zinc-400 mt-1">clicca per storico</p>
           </div>
@@ -391,7 +437,7 @@ export default function EmployeeDetails() {
                   <p className="text-xs text-amber-500">Straordinari</p>
                 </div>
                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {employee.stats?.ore_straordinario ?? 0}h
+                  {formatOre(parseFloat(employee.stats?.ore_straordinario ?? 0))}
                 </p>
               </div>
 
@@ -654,7 +700,7 @@ export default function EmployeeDetails() {
 
                           <div>
                             <p className="text-xs text-zinc-400">Ore lavorate</p>
-                            <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">{month.ore_totali}h</p>
+                            <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">{formatOre(month.ore_totali)}</p>
                           </div>
 
                           {turniAttivi && (
@@ -662,13 +708,13 @@ export default function EmployeeDetails() {
                               {month.ore_previste > 0 && (
                                 <div>
                                   <p className="text-xs text-zinc-400">Previste</p>
-                                  <p className="text-base font-bold text-zinc-600 dark:text-zinc-300">{month.ore_previste}h</p>
+                                  <p className="text-base font-bold text-zinc-600 dark:text-zinc-300">{formatOre(month.ore_previste)}</p>
                                 </div>
                               )}
                               {month.ore_straordinario > 0 && (
                                 <div>
                                   <p className="text-xs text-zinc-400">Straord.</p>
-                                  <p className="text-base font-bold text-amber-500">{month.ore_straordinario}h</p>
+                                  <p className="text-base font-bold text-amber-500">{formatOre(month.ore_straordinario)}</p>
                                 </div>
                               )}
                               {month.giorni_assenti > 0 && (
@@ -762,7 +808,7 @@ export default function EmployeeDetails() {
 
                               <td className="px-5 py-3 text-sm text-right font-semibold text-zinc-900 dark:text-zinc-100">
                                 {day.ore_totali > 0
-                                  ? day.ore_totali + "h"
+                                  ? formatOre(day.ore_totali)
                                   : <span className="text-zinc-400 font-normal">—</span>
                                 }
                               </td>
@@ -776,7 +822,7 @@ export default function EmployeeDetails() {
                                   )}
                                   {day.stato === 'straordinario' && (
                                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-                                      +{day.ore_straordinario}h
+                                      +{formatOre(day.ore_straordinario)}
                                     </span>
                                   )}
                                   {day.stato === 'presente' && !day.assente && (

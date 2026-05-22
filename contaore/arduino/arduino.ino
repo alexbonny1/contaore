@@ -1,22 +1,7 @@
 /*
  * ContaOre NFC Reader Firmware
  * ESP8266 NodeMCU + RC522
- *
- * FEATURES:
- * - WiFiManager provisioning
- * - Config salvata in LittleFS
- * - Backend URL configurabile (HTTP + HTTPS)
- * - Queue offline persistente con retry sicuro
- * - Auto reconnect WiFi
- * - Heartbeat realtime
- * - Anti duplicate scan
- * - LED stato
- * - Reset fisico via pin D0
- * - Firmware stabile produzione
- *
- * API:
- * POST /api/hardware/tag
- * POST /api/hardware/ping
+ * v10.0.0
  */
 
 #include <Arduino.h>
@@ -28,6 +13,7 @@
 #include <ArduinoJson.h>
 #include <SPI.h>
 #include <MFRC522.h>
+#include <time.h>
 
 /*
 ────────────────────────────────────
@@ -35,12 +21,11 @@ PIN
 ────────────────────────────────────
 */
 
-#define SS_PIN  D4
-#define RST_PIN D3
-
-#define LED_OK  D1
-#define LED_ERR D2
-#define PIN_RESET D0   // tieni premuto 5s al boot per reset config
+#define SS_PIN    D4
+#define RST_PIN   D3
+#define LED_OK    D1
+#define LED_ERR   D2
+#define PIN_RESET D0
 
 /*
 ────────────────────────────────────
@@ -48,17 +33,27 @@ CONFIG
 ────────────────────────────────────
 */
 
-#define FW_VERSION    "9.0.0"
-
-#define CONFIG_FILE   "/config.json"
-#define QUEUE_FILE    "/queue.txt"
-#define QUEUE_TMP     "/queue_tmp.txt"
-
+#define FW_VERSION       "10.0.0"
+#define CONFIG_FILE      "/config.json"
+#define QUEUE_FILE       "/queue.txt"
+#define QUEUE_TMP        "/queue_tmp.txt"
 #define WIFI_TIMEOUT_MS  20000UL
 #define HEARTBEAT_MS     60000UL
-#define DEBOUNCE_MS       5000UL
+#define DEBOUNCE_MS      5000UL
+#define QUEUE_MAX        100
+#define RECONNECT_MS     10000UL   // riprova WiFi ogni 10s
 
-#define QUEUE_MAX  100
+/*
+────────────────────────────────────
+NTP
+────────────────────────────────────
+*/
+
+#define NTP_SERVER   "pool.ntp.org"
+#define TZ_OFFSET    3600          // UTC+1 (ora solare)
+#define TZ_DST       3600          // +1 ora legale
+
+bool g_ntpSynced = false;
 
 /*
 ────────────────────────────────────
@@ -90,11 +85,12 @@ GLOBALS
 */
 
 char g_uid[64];
-char g_payload[512];
+char g_payload[600];
 char g_url[256];
 
 unsigned long g_lastHeartbeat = 0;
 unsigned long g_lastRead      = 0;
+unsigned long g_lastReconnect = 0;
 
 uint32_t g_lastHash = 0;
 
@@ -141,15 +137,59 @@ uint32_t fnv1a(const char* s) {
 
 /*
 ────────────────────────────────────
+NTP - OTTIENI TIMESTAMP ISO
+────────────────────────────────────
+*/
+
+bool syncNTP() {
+  configTime(TZ_OFFSET, TZ_DST, NTP_SERVER);
+  Serial.print("NTP sync");
+  unsigned long start = millis();
+  while (time(nullptr) < 1000000000UL) {
+    if (millis() - start > 5000) {
+      Serial.println(" FAIL");
+      return false;
+    }
+    delay(200);
+    Serial.print(".");
+  }
+  Serial.println(" OK");
+  return true;
+}
+
+/*
+  Ritorna timestamp ISO 8601 UTC dell'ora attuale
+  es: "2026-05-20T10:30:00Z"
+*/
+String getISOTimestamp() {
+  time_t now = time(nullptr);
+  if (now < 1000000000UL) {
+    return "";  // NTP non sincronizzato
+  }
+  struct tm* t = gmtime(&now);
+  char buf[32];
+  snprintf(
+    buf, sizeof(buf),
+    "%04d-%02d-%02dT%02d:%02d:%02dZ",
+    t->tm_year + 1900,
+    t->tm_mon + 1,
+    t->tm_mday,
+    t->tm_hour,
+    t->tm_min,
+    t->tm_sec
+  );
+  return String(buf);
+}
+
+/*
+────────────────────────────────────
 LOAD CONFIG
 ────────────────────────────────────
 */
 
 bool loadConfig() {
 
-  if (!LittleFS.exists(CONFIG_FILE)) {
-    return false;
-  }
+  if (!LittleFS.exists(CONFIG_FILE)) return false;
 
   File f = LittleFS.open(CONFIG_FILE, "r");
   if (!f) return false;
@@ -165,8 +205,8 @@ bool loadConfig() {
   strlcpy(cfg.companyId, doc["companyId"] | "", sizeof(cfg.companyId));
 
   cfg.valid =
-    strlen(cfg.backend)   > 3  &&
-    strlen(cfg.readerId)  > 1  &&
+    strlen(cfg.backend)   > 3 &&
+    strlen(cfg.readerId)  > 1 &&
     strlen(cfg.companyId) > 10;
 
   return cfg.valid;
@@ -234,7 +274,7 @@ void startProvisioning() {
   snprintf(apName, sizeof(apName), "ContaOre-%06X", ESP.getChipId());
 
   WiFiManagerParameter p_backend(
-    "backend", "Backend URL (es: https://xxx.ngrok-free.app)",
+    "backend", "Backend URL (es: https://xxx.railway.app)",
     cfg.backend, 127
   );
   WiFiManagerParameter p_reader(
@@ -263,7 +303,6 @@ void startProvisioning() {
   strlcpy(cfg.readerId,  p_reader.getValue(),   sizeof(cfg.readerId));
   strlcpy(cfg.companyId, p_company.getValue(),  sizeof(cfg.companyId));
 
-  // rimuovi slash finale dal backend URL
   int len = strlen(cfg.backend);
   if (len > 0 && cfg.backend[len - 1] == '/') {
     cfg.backend[len - 1] = '\0';
@@ -278,16 +317,12 @@ void startProvisioning() {
 /*
 ────────────────────────────────────
 HTTP POST
-supporta sia HTTP che HTTPS
 ────────────────────────────────────
 */
 
 int httpPost(const char* path, const char* payload) {
 
-  if (
-    WiFi.status() != WL_CONNECTED ||
-    WiFi.localIP() == INADDR_NONE
-  ) {
+  if (WiFi.status() != WL_CONNECTED || WiFi.localIP() == INADDR_NONE) {
     return -1;
   }
 
@@ -302,32 +337,22 @@ int httpPost(const char* path, const char* payload) {
   bool isHttps = strncmp(cfg.backend, "https", 5) == 0;
 
   if (isHttps) {
-
     WiFiClientSecure client;
     client.setInsecure();
-
     if (!http.begin(client, g_url)) return -1;
-
-    http.setTimeout(6000);
+    http.setTimeout(8000);
     http.setReuse(false);
     http.addHeader("Content-Type", "application/json");
-
     code = http.POST(payload);
     http.end();
-
   } else {
-
     WiFiClient client;
-
     if (!http.begin(client, g_url)) return -1;
-
-    http.setTimeout(6000);
+    http.setTimeout(8000);
     http.setReuse(false);
     http.addHeader("Content-Type", "application/json");
-
     code = http.POST(payload);
     http.end();
-
   }
 
   Serial.print("CODE: ");
@@ -340,23 +365,26 @@ int httpPost(const char* path, const char* payload) {
 /*
 ────────────────────────────────────
 QUEUE ADD
+salva uid + timestamp ISO
 ────────────────────────────────────
 */
 
-void queueAdd(const char* uid) {
+void queueAdd(const char* uid, const char* isoTimestamp) {
 
   if (g_queueSize >= QUEUE_MAX) {
     Serial.println("QUEUE FULL");
     return;
   }
 
-  const char* mode =
-    LittleFS.exists(QUEUE_FILE) ? "a" : "w";
+  const char* mode = LittleFS.exists(QUEUE_FILE) ? "a" : "w";
 
   File f = LittleFS.open(QUEUE_FILE, mode);
   if (!f) return;
 
-  f.println(uid);
+  // formato riga: "UID|2026-05-20T10:30:00Z"
+  f.print(uid);
+  f.print("|");
+  f.println(isoTimestamp);
   f.close();
 
   g_queueSize++;
@@ -369,8 +397,6 @@ void queueAdd(const char* uid) {
 /*
 ────────────────────────────────────
 QUEUE FLUSH
-invia le letture offline e rimuove
-solo quelle inviate con successo
 ────────────────────────────────────
 */
 
@@ -392,37 +418,59 @@ void queueFlush() {
 
   while (src.available()) {
 
-    String uid = src.readStringUntil('\n');
-    uid.trim();
+    String line = src.readStringUntil('\n');
+    line.trim();
 
-    if (uid.length() < 3) continue;
+    if (line.length() < 3) continue;
 
-    snprintf(
-      g_payload,
-      sizeof(g_payload),
-      "{"
-      "\"uid\":\"%s\","
-      "\"reader_id\":\"%s\","
-      "\"company_id\":\"%s\","
-      "\"offline\":true"
-      "}",
-      uid.c_str(),
-      cfg.readerId,
-      cfg.companyId
-    );
+    // parse "UID|TIMESTAMP"
+    int sep = line.indexOf('|');
+    String uid       = sep > 0 ? line.substring(0, sep) : line;
+    String timestamp = sep > 0 ? line.substring(sep + 1) : "";
+
+
+
+    // costruisce payload con timestamp reale
+    if (timestamp.length() > 0) {
+      snprintf(
+        g_payload,
+        sizeof(g_payload),
+        "{"
+        "\"uid\":\"%s\","
+        "\"reader_id\":\"%s\","
+        "\"company_id\":\"%s\","
+        "\"timestamp\":\"%s\","
+        "\"offline\":true"
+        "}",
+        uid.c_str(),
+        cfg.readerId,
+        cfg.companyId,
+        timestamp.c_str()
+      );
+    } else {
+      // vecchio formato senza timestamp
+      snprintf(
+        g_payload,
+        sizeof(g_payload),
+        "{"
+        "\"uid\":\"%s\","
+        "\"reader_id\":\"%s\","
+        "\"company_id\":\"%s\","
+        "\"offline\":true"
+        "}",
+        uid.c_str(),
+        cfg.readerId,
+        cfg.companyId
+      );
+    }
 
     int code = httpPost("/api/hardware/tag", g_payload);
 
     if (code == 200 || code == 201) {
-
       sent++;
-
     } else {
-
-      // non inviato: lo teniamo nel file temporaneo
-      tmp.println(uid);
+      tmp.println(line);  // rimetti la riga originale
       failed++;
-
     }
 
     delay(300);
@@ -508,10 +556,7 @@ void taskRfid() {
 
   uint32_t hash = fnv1a(g_uid);
 
-  if (
-    hash == g_lastHash &&
-    millis() - g_lastRead < DEBOUNCE_MS
-  ) {
+  if (hash == g_lastHash && millis() - g_lastRead < DEBOUNCE_MS) {
     return;
   }
 
@@ -521,19 +566,42 @@ void taskRfid() {
   Serial.print("TAG: ");
   Serial.println(g_uid);
 
-  snprintf(
-    g_payload,
-    sizeof(g_payload),
-    "{"
-    "\"uid\":\"%s\","
-    "\"reader_id\":\"%s\","
-    "\"company_id\":\"%s\","
-    "\"offline\":false"
-    "}",
-    g_uid,
-    cfg.readerId,
-    cfg.companyId
-  );
+  // ottieni timestamp reale
+  String isoTs = getISOTimestamp();
+  Serial.print("TIMESTAMP: ");
+Serial.println(isoTs.length() > 0 ? isoTs : "VUOTO");
+
+  if (isoTs.length() > 0) {
+    snprintf(
+      g_payload,
+      sizeof(g_payload),
+      "{"
+      "\"uid\":\"%s\","
+      "\"reader_id\":\"%s\","
+      "\"company_id\":\"%s\","
+      "\"timestamp\":\"%s\","
+      "\"offline\":false"
+      "}",
+      g_uid,
+      cfg.readerId,
+      cfg.companyId,
+      isoTs.c_str()
+    );
+  } else {
+    snprintf(
+      g_payload,
+      sizeof(g_payload),
+      "{"
+      "\"uid\":\"%s\","
+      "\"reader_id\":\"%s\","
+      "\"company_id\":\"%s\","
+      "\"offline\":false"
+      "}",
+      g_uid,
+      cfg.readerId,
+      cfg.companyId
+    );
+  }
 
   int code = httpPost("/api/hardware/tag", g_payload);
 
@@ -546,7 +614,12 @@ void taskRfid() {
     ledErr();
 
     if (code <= 0) {
-      queueAdd(g_uid);
+      // salva nella queue con timestamp
+      if (isoTs.length() > 0) {
+        queueAdd(g_uid, isoTs.c_str());
+      } else {
+        queueAdd(g_uid, "");
+      }
     }
 
   }
@@ -556,6 +629,7 @@ void taskRfid() {
 /*
 ────────────────────────────────────
 WIFI TASK
+riprova connessione ogni RECONNECT_MS
 ────────────────────────────────────
 */
 
@@ -568,6 +642,10 @@ void taskWifi() {
       g_wifiOffline = false;
       digitalWrite(LED_ERR, LOW);
       Serial.println("WIFI RESTORED");
+
+      // risincronizza NTP per correggere eventuale deriva
+      syncNTP();
+
       delay(500);
       queueFlush();
 
@@ -577,13 +655,30 @@ void taskWifi() {
 
   }
 
+  // WiFi disconnesso
   if (!g_wifiOffline) {
-    g_wifiOffline = true;
+    g_wifiOffline   = true;
+    // NON resettiamo g_ntpSynced: il clock interno
+    // continua a funzionare anche senza WiFi
+    g_lastReconnect = millis();
     digitalWrite(LED_ERR, HIGH);
     Serial.println("WIFI OFFLINE");
   }
 
-  WiFi.begin();
+  // riprova ogni RECONNECT_MS senza disconnect
+  if (millis() - g_lastReconnect > RECONNECT_MS) {
+
+    g_lastReconnect = millis();
+
+    Serial.println("WiFi reconnect...");
+
+    // usa WiFi.reconnect() che e piu stabile di disconnect+begin
+    if (!WiFi.reconnect()) {
+      // se reconnect fallisce prova begin con le credenziali salvate
+      WiFi.begin();
+    }
+
+  }
 
 }
 
@@ -611,12 +706,14 @@ void taskSerial() {
 
   } else if (cmd == "STATUS") {
 
-    Serial.print("Backend: ");   Serial.println(cfg.backend);
-    Serial.print("Reader:  ");   Serial.println(cfg.readerId);
-    Serial.print("Company: ");   Serial.println(cfg.companyId);
-    Serial.print("Queue:   ");   Serial.println(g_queueSize);
-    Serial.print("WiFi:    ");   Serial.println(WiFi.status() == WL_CONNECTED ? "OK" : "OFFLINE");
-    Serial.print("IP:      ");   Serial.println(WiFi.localIP());
+    Serial.print("Backend: "); Serial.println(cfg.backend);
+    Serial.print("Reader:  "); Serial.println(cfg.readerId);
+    Serial.print("Company: "); Serial.println(cfg.companyId);
+    Serial.print("Queue:   "); Serial.println(g_queueSize);
+    Serial.print("WiFi:    "); Serial.println(WiFi.status() == WL_CONNECTED ? "OK" : "OFFLINE");
+    Serial.print("IP:      "); Serial.println(WiFi.localIP());
+    Serial.print("NTP:     "); Serial.println(g_ntpSynced ? "OK" : "NO SYNC");
+    Serial.print("Time:    "); Serial.println(getISOTimestamp());
 
   } else if (cmd == "FLUSH") {
 
@@ -629,7 +726,6 @@ void taskSerial() {
 /*
 ────────────────────────────────────
 RESET FISICO
-tieni D0 premuto 5s al boot
 ────────────────────────────────────
 */
 
@@ -704,24 +800,17 @@ void setup() {
     return;
   }
 
-  Serial.print("Backend: ");
-  Serial.println(cfg.backend);
-  Serial.print("Reader:  ");
-  Serial.println(cfg.readerId);
-  Serial.print("Company: ");
-  Serial.println(cfg.companyId);
-  Serial.print("Queue:   ");
-  Serial.println(g_queueSize);
+  Serial.print("Backend: "); Serial.println(cfg.backend);
+  Serial.print("Reader:  "); Serial.println(cfg.readerId);
+  Serial.print("Company: "); Serial.println(cfg.companyId);
+  Serial.print("Queue:   "); Serial.println(g_queueSize);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin();
 
   unsigned long start = millis();
 
-  while (
-    WiFi.status() != WL_CONNECTED &&
-    millis() - start < WIFI_TIMEOUT_MS
-  ) {
+  while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_TIMEOUT_MS) {
     delay(500);
     Serial.print(".");
   }
@@ -732,6 +821,13 @@ void setup() {
 
     Serial.print("WIFI OK - IP: ");
     Serial.println(WiFi.localIP());
+
+    // sincronizza NTP subito
+    if (syncNTP()) {
+      g_ntpSynced = true;
+      Serial.print("TIME: ");
+      Serial.println(getISOTimestamp());
+    }
 
     ledDouble();
 
