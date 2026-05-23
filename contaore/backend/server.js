@@ -9,6 +9,7 @@ import tagRoutes from './routes/tags.js'
 import hardwareRoutes from './routes/hardware.js'
 import presenzeRoutes from './routes/presenze.js'
 import adminRoutes from './routes/admin.js'
+import exportRoutes from './routes/export.js'
 
 dotenv.config()
 
@@ -20,6 +21,7 @@ await fastify.register(cors, {
   origin: true
 })
 
+await fastify.register(exportRoutes)
 await fastify.register(presenzeRoutes)
 await fastify.register(hardwareRoutes)
 await fastify.register(tagRoutes)
