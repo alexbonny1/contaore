@@ -237,16 +237,27 @@ function ExportModal({ employees, onClose, token }) {
   }
 
   async function exportPDF() {
+    // apri la finestra SUBITO nel click handler (prima di async)
+    // cosi il browser non la blocca come popup
+    const win = window.open("", "_blank");
+    if (!win) {
+      alert("Il browser ha bloccato il popup. Consenti i popup per questo sito.");
+      return;
+    }
+    win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Generazione PDF in corso...</body></html>");
+    win.document.close();
+
     setLoading(true);
     try {
       const data = await buildExportData();
       const periodoLabel = selectedMonth === "tutti" ? "Tutto lo storico" : selectedMonth;
       const html = buildPrintHTML(data, periodoLabel);
-      const win = window.open("", "_blank");
+      win.document.open();
       win.document.write(html);
       win.document.close();
     } catch (err) {
       console.error(err);
+      win.close();
     } finally {
       setLoading(false);
     }
