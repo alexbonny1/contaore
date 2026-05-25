@@ -6,7 +6,6 @@ import {
   CheckSquare, Square, FileText, Table2
 } from "lucide-react";
 import { API_URL } from "../api";
-import * as XLSX from "xlsx";
 
 /*
 ────────────────────────────────────
@@ -272,53 +271,29 @@ function ExportModal({ employees, onClose, token }) {
   async function exportExcel() {
     setLoading(true);
     try {
-      const data = await buildExportData();
-      const wb = XLSX.utils.book_new();
-      const periodoLabel = selectedMonth === "tutti" ? "Tutto" : selectedMonth;
+      const response = await fetch(`${API_URL}/api/export/excel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          employee_ids: selectedIds,
+          month: selectedMonth
+        })
+      });
 
-      // Sheet riepilogo
-      const riepilogoRows = [["Nome", "Cognome", "Ore totali", "Giorni assenti", "Straordinari"]];
-      for (const { emp, months } of data) {
-        let ore = 0, assenze = 0, straord = 0;
-        months.forEach(m => { ore += m.ore_totali || 0; assenze += m.giorni_assenti || 0; straord += m.ore_straordinario || 0; });
-        riepilogoRows.push([emp.nome, emp.cognome || "", formatOre(ore), `${assenze} gg`, formatOre(straord)]);
-      }
-      const wsR = XLSX.utils.aoa_to_sheet(riepilogoRows);
-      wsR["!cols"] = [20,20,15,15,15].map(w => ({ wch: w }));
-      XLSX.utils.book_append_sheet(wb, wsR, "Riepilogo");
+      if (!response.ok) throw new Error("Errore generazione Excel");
 
-      // Sheet per dipendente
-      for (const { emp, months } of data) {
-        const rows = [
-          [`${emp.nome} ${emp.cognome || ""}`, "", "", "", ""],
-          [`Periodo: ${periodoLabel}`, "", "", "", ""],
-          [""],
-          ["Data", "Entrata", "Uscita", "Ore lavorate", "Stato"]
-        ];
-        for (const month of months) {
-          rows.push([month.mese.toUpperCase(), "", "", "", ""]);
-          for (const day of month.giorni) {
-            const dataStr = new Date(day.giorno + "T00:00:00").toLocaleDateString("it-IT");
-            if (day.assente) {
-              rows.push([dataStr, "—", "—", "0h", "Assente"]);
-            } else {
-              const coppie = day.coppie || [];
-              const entrate = coppie.length > 0 ? coppie.map(c => c.entrata || "—").join("  ") : "—";
-              const uscite  = coppie.length > 0 ? coppie.map(c => c.uscita  || "—").join("  ") : "—";
-              const stato   = day.stato === "straordinario" ? `+${formatOre(day.ore_straordinario)}` : "Presente";
-              rows.push([dataStr, entrate, uscite, formatOre(day.ore_totali), stato]);
-            }
-          }
-          rows.push([`Totale ${month.mese}`, "", "", formatOre(month.ore_totali),
-            `Assenze: ${month.giorni_assenti} | Straord: ${formatOre(month.ore_straordinario)}`]);
-          rows.push([""]);
-        }
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        ws["!cols"] = [16,10,10,14,22].map(w => ({ wch: w }));
-        XLSX.utils.book_append_sheet(wb, ws, `${emp.nome} ${emp.cognome || ""}`.substring(0, 31));
-      }
-
-      XLSX.writeFile(wb, `ContaOre_${periodoLabel.replace(/\s/g, "_")}.xlsx`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ContaOre_${selectedMonth === "tutti" ? "storico" : selectedMonth.replace(/\s/g, "_")}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
     } finally {
