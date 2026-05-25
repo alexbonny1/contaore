@@ -1,7 +1,7 @@
 /*
  * ContaOre NFC Reader Firmware
  * ESP32-WROOM + RC522 + ILI9488 TFT 480x320 + Buzzer
- * v2.0.0
+ * v1.0.0
  *
  * PIN MAP:
  * ─────────────────────────────────────
@@ -50,7 +50,7 @@
 #define TFT_BL_PIN  32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "1.0.0"
+#define FW_VERSION          "2.0.0"
 #define PREF_NAMESPACE      "contaore"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -71,14 +71,14 @@
 #define HDR_H    40
 #define FTR_Y    285
 #define CLK_SIZE 20
-#define CLK_X    145
-#define CLK_Y    118
+#define CLK_X    140
+#define CLK_Y    125
 #define CLK_W    332   // area pulizia (330 + 2 margine)
 #define CLK_H    92
 // data: size3, 10char*18=180px → x=(480-180)/2=150
 #define DATE_SIZE 3
 #define DATE_X    150
-#define DATE_Y    250
+#define DATE_Y    235
 
 // ── COLORI ───────────────────────────
 #define C_BG       0x0000
@@ -153,15 +153,6 @@ bool syncNTP() {
   }
   Serial.println(" OK");
 
-  // salva timestamp in NVS per persistenza dopo riavvio
-  time_t now = time(nullptr);
-  if (now > 1000000000UL) {
-    prefs.begin(PREF_NAMESPACE, false);
-    prefs.putULong("lastTime", (unsigned long)now);
-    prefs.putULong("lastMillis", millis() / 1000);
-    prefs.end();
-  }
-
   return true;
 }
 
@@ -188,10 +179,12 @@ String getLocalTime() {
 
 void drawHeader() {
   tft.fillRect(0, 0, 480, HDR_H, C_HEADER);
+  // reader ID a sinistra
   tft.setTextColor(C_WHITE, C_HEADER);
   tft.setTextSize(2);
   tft.setCursor(8, 12);
-  tft.print("ContaOre");
+  tft.print(cfg.readerId);
+  // pallino + ONLINE/OFFLINE a destra
   tft.fillCircle(355, 20, 7, g_wifiOffline ? C_RED : C_GREEN);
   tft.setTextColor(C_WHITE, C_HEADER);
   tft.setCursor(368, 12);
@@ -361,16 +354,6 @@ void updateClock() {
     ds.oraCorrente = newOra;
     drawClock();
     drawDate();
-
-    // salva timestamp ogni minuto se sincronizzato
-    if (g_ntpSynced) {
-      time_t now = time(nullptr);
-      if (now > 1000000000UL) {
-        prefs.begin(PREF_NAMESPACE, false);
-        prefs.putULong("lastTime", (unsigned long)now);
-        prefs.end();
-      }
-    }
 
   } else {
     ds.oraCorrente = newOra;
@@ -724,27 +707,15 @@ void setup() {
   tft.init(); tft.setRotation(1); tft.fillScreen(C_BG);
 
   tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(4);
-  tft.setCursor(100, 100); tft.print("ContaOre");
+  tft.setCursor(150, 100); tft.print("ContaOre");
   tft.setTextColor(C_GRAY, C_BG); tft.setTextSize(2);
-  tft.setCursor(160, 165); tft.print("NFC Reader");
+  tft.setCursor(185, 165); tft.print("NFC Reader");
   tft.setCursor(195, 195); tft.print("v"); tft.print(FW_VERSION);
-  delay(1500);
+  delay(3000);
 
   SPI.begin(); rfid.PCD_Init();
   pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW);
   loadQueue();
-
-  // ripristina orologio da NVS se disponibile
-  prefs.begin(PREF_NAMESPACE, true);
-  unsigned long savedTime = prefs.getULong("lastTime", 0);
-  prefs.end();
-  if (savedTime > 1000000000UL) {
-    // imposta il tempo salvato + stima deriva (millis non conta da quando era spento)
-    timeval tv = { (time_t)savedTime, 0 };
-    settimeofday(&tv, nullptr);
-    g_ntpSynced = true;
-    Serial.printf("Tempo ripristinato da NVS: %lu\n", savedTime);
-  }
 
   Serial.println("\nCONTAORE NFC ESP32 v" FW_VERSION);
 

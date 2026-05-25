@@ -399,7 +399,7 @@ export default function EmployeeDetails() {
           >
             <div className="flex items-center gap-2 mb-2">
               <Clock3 size={15} className="text-zinc-400" />
-              <p className="text-xs text-zinc-500">Ore totali</p>
+              <p className="text-xs text-zinc-500">Ore mese corrente</p>
             </div>
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               {formatOre(employee.stats?.total_hours ?? 0)}
@@ -757,6 +757,7 @@ export default function EmployeeDetails() {
                             <th className="text-left px-5 py-3 text-xs font-medium text-zinc-400">Entrata</th>
                             <th className="text-left px-5 py-3 text-xs font-medium text-zinc-400">Uscita</th>
                             <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Ore</th>
+                            {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Previste</th>}
                             {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Stato</th>}
                           </tr>
                         </thead>
@@ -814,6 +815,12 @@ export default function EmployeeDetails() {
                               </td>
 
                               {turniAttivi && (
+                                <td className="px-5 py-3 text-sm text-right text-zinc-400">
+                                  {day.ore_previste > 0 ? formatOre(day.ore_previste) : "—"}
+                                </td>
+                              )}
+
+                              {turniAttivi && (
                                 <td className="px-5 py-3 text-right">
                                   {day.assente && (
                                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
@@ -828,6 +835,11 @@ export default function EmployeeDetails() {
                                   {day.stato === 'presente' && !day.assente && (
                                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
                                       Presente
+                                    </span>
+                                  )}
+                                  {day.ritardo_minuti > 0 && day.stato === 'ritardo' && (
+                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                                      Ritardo {day.ritardo_minuti}m
                                     </span>
                                   )}
                                 </td>
