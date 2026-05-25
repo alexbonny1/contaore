@@ -1,7 +1,7 @@
 /*
  * ContaOre NFC Reader Firmware
  * ESP32-WROOM + RC522 + ILI9488 TFT 480x320 + Buzzer
- * v1.0.0
+ * v2.0.0
  *
  * PIN MAP:
  * ─────────────────────────────────────
@@ -44,10 +44,13 @@
 #include <time.h>
 
 // ── PIN ──────────────────────────────
-#define RC522_SS    21
-#define RC522_RST   22
-#define BUZZER_PIN  33
-#define TFT_BL_PIN  32
+#define PIN_RC522_SS    21
+#define PIN_RC522_RST   22
+#define PIN_RC522_MISO  19
+#define PIN_RC522_MOSI  23
+#define PIN_RC522_SCK   18
+#define BUZZER_PIN      33
+#define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
 #define FW_VERSION          "2.0.0"
@@ -61,21 +64,17 @@
 #define TZ_DST              3600
 
 // ── TAG ADMIN ────────────────────────
-#define ADMIN_UID           "5F93054D78587A"
+#define ADMIN_UID           "3605CA06"
 #define ADMIN_TIMEOUT_MS    60000UL
 
 // ── LAYOUT ───────────────────────────
-// size 11: char ~66px wide, HH:MM=5char → 330px
-// CLK_X = (480-330)/2 = 75
-// CLK_Y: header=40, footer=285, spazio=245, char_h=88 → y = 40+(245-88)/2 = 118
-#define HDR_H    40
-#define FTR_Y    285
-#define CLK_SIZE 20
-#define CLK_X    140
-#define CLK_Y    125
-#define CLK_W    332   // area pulizia (330 + 2 margine)
-#define CLK_H    92
-// data: size3, 10char*18=180px → x=(480-180)/2=150
+#define HDR_H     40
+#define FTR_Y     285
+#define CLK_SIZE  20
+#define CLK_X     140
+#define CLK_Y     120
+#define CLK_W     340
+#define CLK_H     100
 #define DATE_SIZE 3
 #define DATE_X    150
 #define DATE_Y    235
@@ -92,9 +91,9 @@
 #define C_HEADER   0x1082
 
 // ── OGGETTI ──────────────────────────
-MFRC522     rfid(RC522_SS, RC522_RST);
-TFT_eSPI    tft = TFT_eSPI();
-Preferences prefs;
+MFRC522         rfid(PIN_RC522_SS, PIN_RC522_RST);
+TFT_eSPI        tft = TFT_eSPI();
+Preferences     prefs;
 
 // ── STRUTTURE ────────────────────────
 struct Config {
@@ -136,11 +135,18 @@ unsigned long g_resultTimer     = 0;
 unsigned long g_resultTimeout   = 3000UL;
 bool          g_adminMode       = false;
 unsigned long g_adminTimer      = 0;
+bool          g_waitingNtp      = false;
+unsigned long g_lastNtpRetry    = 0;
+#define NTP_RETRY_MS  10000UL
 
 // ── BUZZER ───────────────────────────
-void beepOk()     { tone(BUZZER_PIN, 1000, 100); delay(150); tone(BUZZER_PIN, 1200, 100); }
-void beepErr()    { tone(BUZZER_PIN, 400, 400); }
-void beepOffline(){ tone(BUZZER_PIN, 700, 150); }
+void beepOk() {
+  tone(BUZZER_PIN, 1000, 100);
+  delay(150);
+  tone(BUZZER_PIN, 1200, 100);
+}
+void beepErr()     { tone(BUZZER_PIN, 400, 400); }
+void beepOffline() { tone(BUZZER_PIN, 700, 150); }
 
 // ── NTP ──────────────────────────────
 bool syncNTP() {
@@ -148,11 +154,11 @@ bool syncNTP() {
   Serial.print("NTP sync");
   unsigned long s = millis();
   while (time(nullptr) < 1000000000UL) {
-    if (millis() - s > 6000) { Serial.println(" FAIL"); return false; }
-    delay(200); Serial.print(".");
+    if (millis() - s > 8000) { Serial.println(" FAIL"); return false; }
+    delay(200);
+    Serial.print(".");
   }
   Serial.println(" OK");
-
   return true;
 }
 
@@ -162,7 +168,8 @@ String getISOTimestamp() {
   struct tm* t = gmtime(&now);
   char buf[32];
   snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02dZ",
-    t->tm_year+1900, t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+    t->tm_year+1900, t->tm_mon+1, t->tm_mday,
+    t->tm_hour, t->tm_min, t->tm_sec);
   return String(buf);
 }
 
@@ -171,20 +178,29 @@ String getLocalTime() {
   if (now < 1000000000UL) return "--:--:--";
   struct tm* t = localtime(&now);
   char buf[10];
-  snprintf(buf, sizeof(buf), "%02d:%02d:%02d", t->tm_hour, t->tm_min, t->tm_sec);
+  snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
+    t->tm_hour, t->tm_min, t->tm_sec);
   return String(buf);
+}
+
+// ── RFID INIT ────────────────────────
+void rfidInit() {
+  SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
+  rfid.PCD_Init();
+  delay(100);
+  byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+  Serial.printf("RC522 version: 0x%02X %s\n", v,
+    (v == 0x91 || v == 0x92) ? "OK" : "WARN");
 }
 
 // ── DISPLAY ──────────────────────────
 
 void drawHeader() {
   tft.fillRect(0, 0, 480, HDR_H, C_HEADER);
-  // reader ID a sinistra
   tft.setTextColor(C_WHITE, C_HEADER);
   tft.setTextSize(2);
   tft.setCursor(8, 12);
-  tft.print(cfg.readerId);
-  // pallino + ONLINE/OFFLINE a destra
+  tft.print(cfg.readerId[0] ? cfg.readerId : "ContaOre");
   tft.fillCircle(355, 20, 7, g_wifiOffline ? C_RED : C_GREEN);
   tft.setTextColor(C_WHITE, C_HEADER);
   tft.setCursor(368, 12);
@@ -200,7 +216,7 @@ void drawFooter() {
   if (g_queueSize > 0) {
     tft.setTextColor(C_YELLOW, C_HEADER);
     tft.setCursor(340, FTR_Y + 12);
-    tft.print("In coda: ");
+    tft.print("Coda: ");
     tft.print(g_queueSize);
   }
 }
@@ -220,7 +236,7 @@ void drawDate() {
   char buf[16];
   snprintf(buf, sizeof(buf), "%02d/%02d/%04d",
     t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
-  tft.fillRect(0, DATE_Y, 480, 28, C_BG);
+  tft.fillRect(0, DATE_Y, 480, 30, C_BG);
   tft.setTextColor(C_CYAN, C_BG);
   tft.setTextSize(DATE_SIZE);
   tft.setCursor(DATE_X, DATE_Y);
@@ -228,6 +244,12 @@ void drawDate() {
 }
 
 void showIdle() {
+  if (!g_ntpSynced) {
+    g_waitingNtp = true;
+    showWaitingNtp();
+    return;
+  }
+  g_waitingNtp = false;
   ds.status     = "ATTESA";
   ds.dipendente = "";
   ds.orario     = "";
@@ -251,28 +273,25 @@ void showResult(String tipo, String nome, String orario) {
 
   tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, bg);
 
-  // stato centrato grande
   tft.setTextColor(fg, bg);
   tft.setTextSize(6);
   int16_t sw = tipo.length() * 36;
-  tft.setCursor(max((int16_t)10, (int16_t)((480 - sw) / 2)), HDR_H + 20);
+  tft.setCursor(max((int16_t)10, (int16_t)((480 - sw) / 2)), HDR_H + 22);
   tft.print(tipo);
 
-  // nome centrato
   if (nome.length() > 0) {
     tft.setTextColor(C_WHITE, bg);
     tft.setTextSize(3);
     int16_t nw = nome.length() * 18;
-    tft.setCursor(max((int16_t)10, (int16_t)((480 - nw) / 2)), HDR_H + 115);
+    tft.setCursor(max((int16_t)10, (int16_t)((480 - nw) / 2)), HDR_H + 110);
     tft.print(nome);
   }
 
-  // orario centrato
   if (orario.length() > 0) {
     tft.setTextColor(C_YELLOW, bg);
     tft.setTextSize(3);
     int16_t ow = orario.length() * 18;
-    tft.setCursor(max((int16_t)10, (int16_t)((480 - ow) / 2)), HDR_H + 168);
+    tft.setCursor(max((int16_t)10, (int16_t)((480 - ow) / 2)), HDR_H + 165);
     tft.print(orario);
   }
 
@@ -286,7 +305,6 @@ void drawAdmin() {
 
   tft.setTextColor(C_YELLOW, C_BG);
   tft.setTextSize(2);
-  // centra titolo: 20 char * 12 = 240px → x = 120
   tft.setCursor(120, HDR_H + 8);
   tft.print("-- CONFIG --");
 
@@ -297,21 +315,15 @@ void drawAdmin() {
   tft.setCursor(10, y); tft.print("Backend: "); tft.print(cfg.backend);   y += 18;
   tft.setCursor(10, y); tft.print("Reader:  "); tft.print(cfg.readerId);  y += 18;
   tft.setCursor(10, y); tft.print("Company: "); tft.print(cfg.companyId); y += 18;
-
   tft.setCursor(10, y); tft.print("WiFi:    ");
-  if (WiFi.status() == WL_CONNECTED) {
-    tft.print("OK  "); tft.print(WiFi.localIP().toString());
-  } else {
-    tft.print("OFFLINE");
-  }
+  if (WiFi.status() == WL_CONNECTED) { tft.print("OK  "); tft.print(WiFi.localIP().toString()); }
+  else tft.print("OFFLINE");
   y += 18;
-
   tft.setCursor(10, y); tft.print("Queue:   "); tft.print(g_queueSize);   y += 18;
   tft.setCursor(10, y); tft.print("NTP:     "); tft.print(g_ntpSynced ? "OK" : "NO SYNC"); y += 18;
   tft.setCursor(10, y); tft.print("Time:    "); tft.print(getISOTimestamp()); y += 18;
   tft.setCursor(10, y); tft.print("FW:      "); tft.print(FW_VERSION);    y += 28;
 
-  // istruzione reset centrata
   tft.setTextColor(C_RED, C_BG);
   tft.setTextSize(2);
   tft.setCursor(60, y);
@@ -327,34 +339,97 @@ void drawAdmin() {
   drawFooter();
 }
 
+void showWaitingNtp() {
+  g_waitingNtp = true;
+
+  // pulisci tutto lo schermo
+  tft.fillScreen(C_BG);
+
+  // header
+  drawHeader();
+
+  // footer vuoto
+  tft.fillRect(0, FTR_Y, 480, 320 - FTR_Y, C_HEADER);
+
+  // icona orologio grande centrata
+  tft.setTextColor(C_YELLOW, C_BG);
+  tft.setTextSize(4);
+  tft.setCursor(195, 65);
+  tft.print("?:??");
+
+  // messaggio principale
+  tft.setTextColor(C_WHITE, C_BG);
+  tft.setTextSize(2);
+  tft.setCursor(85, 145);
+  tft.print("Orario non disponibile");
+
+  // messaggio secondario
+  tft.setTextColor(C_YELLOW, C_BG);
+  tft.setTextSize(1);
+  tft.setCursor(115, 180);
+  if (g_wifiOffline) {
+    tft.print("In attesa del WiFi...");
+  } else {
+    tft.print("Sincronizzazione NTP in corso...");
+  }
+  tft.setCursor(105, 198);
+  tft.print("Le timbrature sono bloccate");
+
+  g_lastNtpRetry = millis();
+}
+
+void taskNtpRetry() {
+  if (!g_waitingNtp) return;
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (millis() - g_lastNtpRetry < NTP_RETRY_MS) return;
+  g_lastNtpRetry = millis();
+  Serial.println("NTP retry...");
+  if (syncNTP()) {
+    g_ntpSynced = true;
+    g_waitingNtp = false;
+    showIdle();
+  } else {
+    // aggiorna il display per mostrare che sta riprovando
+    tft.fillRect(0, HDR_H + 180, 480, 30, C_BG);
+    tft.setTextColor(C_GRAY, C_BG);
+    tft.setTextSize(1);
+    tft.setCursor(90, HDR_H + 185);
+    tft.print("Ultimo tentativo: ");
+    tft.print(millis() / 1000);
+    tft.print("s");
+  }
+}
+
 void updateClock() {
   if (millis() - g_lastClockUpdate < 1000) return;
   g_lastClockUpdate = millis();
 
-  String newOra;
+  // se NTP non sincronizzato non toccare il display
   if (!g_ntpSynced) {
-    newOra = "--:--";
-  } else {
-    time_t now = time(nullptr);
-    struct tm* t = localtime(&now);
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%02d:%02d", t->tm_hour, t->tm_min);
-    newOra = String(buf);
+    static bool lastWifiOffline2 = false;
+    if (lastWifiOffline2 != g_wifiOffline) {
+      lastWifiOffline2 = g_wifiOffline;
+      drawHeader();
+    }
+    return;
   }
 
-  // aggiorna header solo se cambia stato online/offline
+  time_t now = time(nullptr);
+  struct tm* t = localtime(&now);
+  char buf[8];
+  snprintf(buf, sizeof(buf), "%02d:%02d", t->tm_hour, t->tm_min);
+  String newOra = String(buf);
+
   static bool lastWifiOffline = false;
   if (lastWifiOffline != g_wifiOffline) {
     lastWifiOffline = g_wifiOffline;
     drawHeader();
   }
 
-  // aggiorna orologio solo se il minuto e cambiato
   if (ds.status == "ATTESA" && newOra != ds.oraCorrente) {
     ds.oraCorrente = newOra;
     drawClock();
     drawDate();
-
   } else {
     ds.oraCorrente = newOra;
   }
@@ -550,13 +625,11 @@ void taskRfid() {
   // ── TAG ADMIN ──────────────────────
   if (strcmp(g_uid, ADMIN_UID) == 0) {
     if (g_adminMode) {
-      // seconda lettura → RESET
       Serial.println("ADMIN RESET!");
       beepErr();
       tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, C_BG);
       tft.setTextColor(C_RED, C_BG);
       tft.setTextSize(4);
-      // centra RESET: 5char*24=120px → x=(480-120)/2=180
       tft.setCursor(180, 140);
       tft.print("RESET");
       drawHeader(); drawFooter();
@@ -567,24 +640,37 @@ void taskRfid() {
       delay(500);
       ESP.restart();
     } else {
-      // prima lettura → mostra info config
       Serial.println("ADMIN MODE attivato");
       beepOk();
       g_adminMode  = true;
       g_adminTimer = millis();
-      g_lastHash   = 0; // azzera debounce per rilevare seconda lettura
+      g_lastHash   = 0;
       drawAdmin();
     }
     return;
   }
 
-  // tag diverso durante admin mode → esci
   if (g_adminMode) {
     g_adminMode = false;
-    showIdle();
+    if (g_waitingNtp) showWaitingNtp();
+    else showIdle();
   }
 
-  // debounce normale
+  // blocca letture normali se NTP non sincronizzato
+  if (g_waitingNtp) {
+    // nessun buzzer, solo messaggio temporaneo
+    tft.fillRect(0, HDR_H + 180, 480, 40, C_BG);
+    tft.setTextColor(C_RED, C_BG);
+    tft.setTextSize(2);
+    int16_t tw = 18 * 14; // "Orario non pronto" ~14 char
+    tft.setCursor((480 - tw) / 2, HDR_H + 190);
+    tft.print("Orario non pronto");
+    delay(1500);
+    // ridisegna la schermata NTP pulita
+    showWaitingNtp();
+    return;
+  }
+
   if (hash == g_lastHash && millis() - g_lastRead < g_debouncMs) return;
   g_lastHash = hash;
   g_lastRead = millis();
@@ -621,9 +707,14 @@ void taskWifi() {
     if (g_wifiOffline) {
       g_wifiOffline = false;
       Serial.println("WIFI RESTORED");
-      if (syncNTP()) g_ntpSynced = true;
+      rfidInit();
       queueFlush();
-      showIdle();
+      if (syncNTP()) {
+        g_ntpSynced = true;
+        showIdle();
+      } else {
+        showWaitingNtp();
+      }
     }
     return;
   }
@@ -631,7 +722,11 @@ void taskWifi() {
     g_wifiOffline   = true;
     g_lastReconnect = millis();
     Serial.println("WIFI OFFLINE");
-    drawHeader();
+    if (!g_ntpSynced) {
+      showWaitingNtp();
+    } else {
+      drawHeader();
+    }
   }
   if (millis() - g_lastReconnect > RECONNECT_MS) {
     g_lastReconnect = millis();
@@ -644,7 +739,7 @@ void taskWifi() {
 void startProvisioning() {
   tft.fillScreen(C_BG);
   tft.setTextColor(C_WHITE, C_BG); tft.setTextSize(2);
-  tft.setCursor(20, 60);  tft.print("Modalita configurazione");
+  tft.setCursor(20, 60);  tft.print("Configurazione WiFi");
   tft.setCursor(20, 100); tft.print("Connetti al WiFi:");
   tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(3);
   char apName[32];
@@ -687,6 +782,8 @@ void taskSerial() {
     Serial.printf("Time:     %s\n", getISOTimestamp().c_str());
     Serial.printf("DEBOUNCE: %lu ms\n", g_debouncMs);
     Serial.printf("DISPLAY:  %lu ms\n", g_resultTimeout);
+    byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+    Serial.printf("RC522:    0x%02X\n", v);
   } else if (cmd == "FLUSH") {
     queueFlush();
   } else if (cmd.startsWith("DEBOUNCE ")) {
@@ -703,46 +800,78 @@ void taskSerial() {
 // ── SETUP ────────────────────────────
 void setup() {
   Serial.begin(115200);
-  pinMode(TFT_BL_PIN, OUTPUT); digitalWrite(TFT_BL_PIN, HIGH);
-  tft.init(); tft.setRotation(1); tft.fillScreen(C_BG);
+  delay(500);
+  Serial.println("\n\nCONTAORE NFC ESP32 v" FW_VERSION);
 
+  // backlight ON
+  pinMode(TFT_BL_PIN, OUTPUT);
+  digitalWrite(TFT_BL_PIN, HIGH);
+
+  // init display (usa HSPI internamente tramite TFT_eSPI)
+  tft.init();
+  tft.setRotation(1);
+  tft.fillScreen(C_BG);
+
+  // splash
   tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(4);
-  tft.setCursor(150, 100); tft.print("ContaOre");
+  tft.setCursor(130, 100); tft.print("ContaOre");
   tft.setTextColor(C_GRAY, C_BG); tft.setTextSize(2);
-  tft.setCursor(185, 165); tft.print("NFC Reader");
+  tft.setCursor(165, 165); tft.print("NFC Reader");
   tft.setCursor(195, 195); tft.print("v"); tft.print(FW_VERSION);
-  delay(3000);
+  delay(2000);
 
-  SPI.begin(); rfid.PCD_Init();
-  pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW);
+  // buzzer
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  // init RFID su VSPI (bus separato dal TFT)
+  rfidInit();
+
+  // queue
   loadQueue();
 
-  Serial.println("\nCONTAORE NFC ESP32 v" FW_VERSION);
+  // config
+  if (!loadConfig()) {
+    Serial.println("Nessuna config → provisioning");
+    startProvisioning();
+    return;
+  }
 
-  if (!loadConfig()) { startProvisioning(); return; }
-
-  Serial.printf("Backend: %s\nReader: %s\nCompany: %s\nQueue: %d\n",
+  Serial.printf("Backend: %s\nReader:  %s\nCompany: %s\nQueue:   %d\n",
     cfg.backend, cfg.readerId, cfg.companyId, g_queueSize);
 
+  // schermata connessione
   tft.fillScreen(C_BG);
   tft.setTextColor(C_WHITE, C_BG); tft.setTextSize(2);
   tft.setCursor(20, 100); tft.print("Connessione WiFi...");
 
-  WiFi.mode(WIFI_STA); WiFi.begin();
+  WiFi.mode(WIFI_STA);
+  WiFi.begin();
   unsigned long s = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - s < 15000) { delay(500); Serial.print("."); }
+  while (WiFi.status() != WL_CONNECTED && millis() - s < 15000) {
+    delay(500); Serial.print(".");
+  }
   Serial.println();
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("WIFI OK - IP: %s\n", WiFi.localIP().toString().c_str());
-    if (syncNTP()) g_ntpSynced = true;
-    beepOk(); queueFlush();
+    rfidInit();
+    beepOk();
+    queueFlush();
+    if (syncNTP()) {
+      g_ntpSynced = true;
+      showIdle();
+    } else {
+      // NTP fallito → mostra schermata attesa e riprova in background
+      showWaitingNtp();
+    }
   } else {
-    Serial.println("WIFI OFFLINE");
-    g_wifiOffline = true; beepErr();
+    Serial.println("WIFI OFFLINE - modalita offline attiva");
+    g_wifiOffline = true;
+    beepErr();
+    rfidInit();   // ← reinit RFID anche quando WiFi fallisce
+    showWaitingNtp();  // ← mostra direttamente la schermata NTP
   }
-
-  showIdle();
 }
 
 // ── LOOP ─────────────────────────────
@@ -758,7 +887,7 @@ void taskAdmin() {
   if (!g_adminMode) return;
   if (millis() - g_adminTimer >= ADMIN_TIMEOUT_MS) {
     g_adminMode = false;
-    Serial.println("ADMIN timeout → ritorno normale");
+    Serial.println("ADMIN timeout");
     showIdle();
   }
 }
@@ -766,6 +895,7 @@ void taskAdmin() {
 void loop() {
   taskSerial();
   taskWifi();
+  taskNtpRetry();
   updateClock();
   taskResult();
   taskAdmin();
