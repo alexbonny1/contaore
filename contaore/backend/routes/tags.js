@@ -1,21 +1,53 @@
-import { supabase } from '../services/supabase.js'
-import { authenticate } from '../middleware/auth.js'
+import bcrypt    from 'bcrypt'
+import { supabase }         from '../services/supabase.js'
+import { authenticate }     from '../middleware/auth.js'
+import { sendCredenziali }  from '../services/email.js'
+
+// ─── genera password random alfanumerica ─────────────────────────────────────
+function generatePassword(length = 10) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  let pwd = ''
+  for (let i = 0; i < length; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return pwd
+}
+
+// ─── genera username da nome + cognome ───────────────────────────────────────
+function buildUsername(nome, cognome) {
+  const normalize = s =>
+    s.toLowerCase()
+     .normalize('NFD')
+     .replace(/[\u0300-\u036f]/g, '')  // rimuove accenti
+     .replace(/[^a-z0-9]/g, '')        // solo lettere e numeri
+  return `${normalize(nome)}.${normalize(cognome)}`
+}
+
+// ─── trova username non ancora usato ─────────────────────────────────────────
+async function findAvailableUsername(base) {
+  let username = base
+  let attempt  = 1
+  while (true) {
+    const { data } = await supabase
+      .from('user_account')
+      .select('id')
+      .eq('username', username)
+      .maybeSingle()
+    if (!data) return username          // libero
+    attempt++
+    username = `${base}${attempt}`     // es. mario.rossi3
+  }
+}
 
 export default async function tagRoutes(fastify) {
 
-  /*
-    GET TAGS
-  */
-
+  // ─── GET TAGS ───────────────────────────────────────────────────────────────
   fastify.get(
     '/api/tags',
     { preHandler: authenticate },
     async (request, reply) => {
-
       try {
-
         const companyId = request.user.company_id
-
         const { data, error } = await supabase
           .from('tag')
           .select('*, dipendenti(nome, cognome)')
@@ -35,47 +67,33 @@ export default async function tagRoutes(fastify) {
         }))
 
         return reply.send({ success: true, tags })
-
       } catch (err) {
-
         console.log(err)
         return reply.send({ success: false })
-
       }
-
     }
   )
 
-  /*
-    REGISTER TAG + EMPLOYEE
-  */
-
+  // ─── REGISTER TAG + EMPLOYEE (+ account se portale attivo) ─────────────────
   fastify.post(
     '/api/tags/register',
     { preHandler: authenticate },
     async (request, reply) => {
-
       try {
-
         const {
           uid,
           employee_name,
-          employee_cognome
+          employee_cognome,
+          employee_email     // opzionale, richiesto se portale attivo
         } = request.body
 
         const companyId = request.user.company_id
 
         if (!uid || !employee_name) {
-          return reply.send({
-            success: false,
-            error: 'MISSING_FIELDS'
-          })
+          return reply.send({ success: false, error: 'MISSING_FIELDS' })
         }
 
-        /*
-          CHECK UID GIA ESISTENTE NEL TAG
-        */
-
+        // ── controlla UID già esistente ────────────────────────────────────
         const { data: existingTag } = await supabase
           .from('tag')
           .select('id')
@@ -84,15 +102,8 @@ export default async function tagRoutes(fastify) {
           .maybeSingle()
 
         if (existingTag) {
-          return reply.send({
-            success: false,
-            error: 'UID_ALREADY_EXISTS'
-          })
+          return reply.send({ success: false, error: 'UID_ALREADY_EXISTS' })
         }
-
-        /*
-          CHECK UID GIA USATO IN DIPENDENTI
-        */
 
         const { data: existingEmployee } = await supabase
           .from('dipendenti')
@@ -102,39 +113,45 @@ export default async function tagRoutes(fastify) {
           .maybeSingle()
 
         if (existingEmployee) {
+          return reply.send({ success: false, error: 'UID_ALREADY_EXISTS' })
+        }
+
+        // ── controlla se il portale dipendenti è attivo per questa azienda ─
+        const { data: company } = await supabase
+          .from('company')
+          .select('id, nome, portale_dipendenti')
+          .eq('id', companyId)
+          .single()
+
+        const portaleAttivo = !!company?.portale_dipendenti
+
+        if (portaleAttivo && !employee_email) {
           return reply.send({
             success: false,
-            error: 'UID_ALREADY_EXISTS'
+            error:   'EMAIL_REQUIRED',
+            message: 'Il portale dipendenti è attivo: l\'email del dipendente è obbligatoria'
           })
         }
 
-        /*
-          CREA DIPENDENTE
-        */
-
+        // ── crea dipendente ───────────────────────────────────────────────
         const { data: employee, error: employeeError } = await supabase
           .from('dipendenti')
           .insert({
             company_id: companyId,
             nome:       employee_name,
             cognome:    employee_cognome || '-',
-            badge_uid:  uid
+            badge_uid:  uid,
+            email:      employee_email || null
           })
           .select()
           .single()
 
         if (employeeError) {
           console.log(employeeError)
-          return reply.send({
-            success: false,
-            error: employeeError.message
-          })
+          return reply.send({ success: false, error: employeeError.message })
         }
 
-        /*
-          CREA TAG
-        */
-
+        // ── crea tag ──────────────────────────────────────────────────────
         const { data: tag, error: tagError } = await supabase
           .from('tag')
           .insert({
@@ -146,49 +163,71 @@ export default async function tagRoutes(fastify) {
           .single()
 
         if (tagError) {
-
           console.log(tagError)
-
-          /*
-            ROLLBACK: elimina dipendente
-            se il tag non e stato creato
-          */
-
-          await supabase
-            .from('dipendenti')
-            .delete()
-            .eq('id', employee.id)
-
-          return reply.send({
-            success: false,
-            error: tagError.message
-          })
-
+          // rollback dipendente
+          await supabase.from('dipendenti').delete().eq('id', employee.id)
+          return reply.send({ success: false, error: tagError.message })
         }
 
-        return reply.send({ success: true, employee, tag })
+        // ── se portale attivo: crea account dipendente e manda email ──────
+        let accountCreato = false
+        if (portaleAttivo && employee_email) {
+          try {
+            const usernameBase = buildUsername(employee_name, employee_cognome || '')
+            const username     = await findAvailableUsername(usernameBase)
+            const plainPwd     = generatePassword(10)
+            const hashedPwd    = await bcrypt.hash(plainPwd, 10)
+
+            const { error: accountError } = await supabase
+              .from('user_account')
+              .insert({
+                company_id:    companyId,
+                dipendente_id: employee.id,
+                username,
+                email:         employee_email,
+                password:      hashedPwd,
+                role:          'dipendente'
+              })
+
+            if (accountError) {
+              // non è fatale: il dipendente esiste, l'account si può ricreare
+              console.error('Errore creazione account dipendente:', accountError)
+            } else {
+              accountCreato = true
+              // manda email con credenziali
+              await sendCredenziali({
+                email:       employee_email,
+                nome:        employee_name,
+                username,
+                password:    plainPwd,   // password in chiaro SOLO in questa email
+                companyNome: company.nome
+              })
+            }
+          } catch (accErr) {
+            console.error('Errore creazione account:', accErr)
+          }
+        }
+
+        return reply.send({
+          success:        true,
+          employee,
+          tag,
+          account_creato: accountCreato
+        })
 
       } catch (err) {
-
         console.log(err)
         return reply.send({ success: false })
-
       }
-
     }
   )
 
-  /*
-    UPDATE TAG UID
-  */
-
+  // ─── UPDATE TAG UID ─────────────────────────────────────────────────────────
   fastify.put(
     '/api/tags/:id',
     { preHandler: authenticate },
     async (request, reply) => {
-
       try {
-
         const { id }    = request.params
         const { uid }   = request.body
         const companyId = request.user.company_id
@@ -241,28 +280,19 @@ export default async function tagRoutes(fastify) {
           .eq('company_id', companyId)
 
         return reply.send({ success: true })
-
       } catch (err) {
-
         console.log(err)
         return reply.send({ success: false })
-
       }
-
     }
   )
 
-  /*
-    DELETE TAG + EMPLOYEE
-  */
-
+  // ─── DELETE TAG + EMPLOYEE ──────────────────────────────────────────────────
   fastify.delete(
     '/api/tags/:id',
     { preHandler: authenticate },
     async (request, reply) => {
-
       try {
-
         const { id }    = request.params
         const companyId = request.user.company_id
 
@@ -278,7 +308,6 @@ export default async function tagRoutes(fastify) {
         }
 
         let employee = null
-
         if (tag.dipendente_id) {
           const { data } = await supabase
             .from('dipendenti')
@@ -304,6 +333,11 @@ export default async function tagRoutes(fastify) {
           .eq('company_id', companyId)
 
         if (employee) {
+          // elimina account dipendente se esiste
+          await supabase
+            .from('user_account')
+            .delete()
+            .eq('dipendente_id', employee.id)
 
           await supabase
             .from('presenza')
@@ -318,23 +352,27 @@ export default async function tagRoutes(fastify) {
             .eq('company_id', companyId)
 
           await supabase
+            .from('richieste_ferie')
+            .delete()
+            .eq('dipendente_id', employee.id)
+
+          await supabase
+            .from('giustificazioni')
+            .delete()
+            .eq('dipendente_id', employee.id)
+
+          await supabase
             .from('dipendenti')
             .delete()
             .eq('id', employee.id)
             .eq('company_id', companyId)
-
         }
 
         return reply.send({ success: true })
-
       } catch (err) {
-
         console.log(err)
         return reply.send({ success: false })
-
       }
-
     }
   )
-
 }

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard,
   Radio, Sun, Moon, Download, X,
-  CheckSquare, Square, FileText, Table2
+  CheckSquare, Square, FileText, Table2, Calendar
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -475,10 +475,12 @@ export default function Employees() {
 
         <div className="flex gap-3 mb-8 overflow-x-auto">
           {[
-            { title: "Dashboard",   icon: LayoutDashboard, path: "/dashboard" },
-            { title: "Dipendenti",  icon: Users,           path: "/employees" },
-            { title: "Badge",       icon: CreditCard,      path: "/badges"    },
-            { title: "Lettori NFC", icon: Radio,           path: "/readers"   }
+            { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
+            { title: "Richieste",       icon: FileText,        path: "/requests"  },
+            { title: "Pausa aziendale", icon: Calendar,        path: "/pause"     },
+            { title: "Dipendenti",      icon: Users,           path: "/employees" },
+            { title: "Badge",           icon: CreditCard,      path: "/badges"    },
+            { title: "Lettori NFC",     icon: Radio,           path: "/readers"   }
           ].map((item) => {
             const Icon = item.icon;
             return (

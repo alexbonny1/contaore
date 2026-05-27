@@ -87,6 +87,7 @@ export default function EmployeeDetails() {
   const [saving, setSaving] = useState(false);
   const [turnoNome, setTurnoNome] = useState("");
   const [giorno, setGiorno] = useState("Lunedì");
+  const [giorniSelezionati, setGiorniSelezionati] = useState([]); // multi-giorno
   const [ingresso1, setIngresso1] = useState("");
   const [uscita1, setUscita1] = useState("");
   const [ingresso2, setIngresso2] = useState("");
@@ -96,6 +97,12 @@ export default function EmployeeDetails() {
     "Lunedì","Martedì","Mercoledì",
     "Giovedì","Venerdì","Sabato","Domenica"
   ];
+
+  function toggleGiorno(g) {
+    setGiorniSelezionati(prev =>
+      prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
+    );
+  }
 
   useEffect(() => { loadData(); }, []);
 
@@ -198,29 +205,45 @@ export default function EmployeeDetails() {
     try {
 
       const token = localStorage.getItem("token");
-      const url    = editingShiftId
-        ? API_URL + "/api/shifts/" + editingShiftId
-        : API_URL + "/api/employees/" + id + "/shift";
 
-      const response = await fetch(url, {
-        method: editingShiftId ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token
-        },
-        body: JSON.stringify({
-          turno_nome:       turnoNome,
-          giorno_settimana: giorno,
-          ingresso_1:       ingresso1 || null,
-          uscita_1:         uscita1   || null,
-          ingresso_2:       ingresso2 || null,
-          uscita_2:         uscita2   || null
-        })
-      });
-
-      const data = await response.json();
-
-      if (!data.success) { showToast("Errore salvataggio turno", "error"); return; }
+      // In modalità modifica: singolo giorno come prima
+      if (editingShiftId) {
+        const url = API_URL + "/api/shifts/" + editingShiftId;
+        const response = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+          body: JSON.stringify({
+            turno_nome:       turnoNome,
+            giorno_settimana: giorno,
+            ingresso_1:       ingresso1 || null,
+            uscita_1:         uscita1   || null,
+            ingresso_2:       ingresso2 || null,
+            uscita_2:         uscita2   || null
+          })
+        });
+        const data = await response.json();
+        if (!data.success) { showToast("Errore salvataggio turno", "error"); return; }
+      } else {
+        // In modalità creazione: uno per ogni giorno selezionato
+        const giorniDaCreare = giorniSelezionati.length > 0 ? giorniSelezionati : [giorno];
+        for (const g of giorniDaCreare) {
+          const url = API_URL + "/api/employees/" + id + "/shift";
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({
+              turno_nome:       turnoNome,
+              giorno_settimana: g,
+              ingresso_1:       ingresso1 || null,
+              uscita_1:         uscita1   || null,
+              ingresso_2:       ingresso2 || null,
+              uscita_2:         uscita2   || null
+            })
+          });
+          const data = await response.json();
+          if (!data.success) { showToast("Errore salvataggio turno per " + g, "error"); return; }
+        }
+      }
 
       resetForm();
       loadData();
@@ -316,6 +339,8 @@ export default function EmployeeDetails() {
   function resetForm() {
     setEditingShiftId(null);
     setTurnoNome("");
+    setGiorno("Lunedì");
+    setGiorniSelezionati([]);
     setIngresso1("");
     setUscita1("");
     setIngresso2("");
@@ -559,13 +584,42 @@ export default function EmployeeDetails() {
                   onChange={(e) => setTurnoNome(e.target.value)}
                   className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
                 />
-                <select
-                  value={giorno}
-                  onChange={(e) => setGiorno(e.target.value)}
-                  className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
-                >
-                  {giorni.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
+              </div>
+
+              {/* SELEZIONE GIORNI - singolo in modifica, multi in creazione */}
+              <div>
+                <p className="text-xs text-zinc-400 mb-2">
+                  {editingShiftId ? "Giorno" : "Giorni (seleziona uno o più)"}
+                </p>
+                {editingShiftId ? (
+                  <select
+                    value={giorno}
+                    onChange={(e) => setGiorno(e.target.value)}
+                    className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                  >
+                    {giorni.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {giorni.map(g => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => toggleGiorno(g)}
+                        className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all ${
+                          giorniSelezionati.includes(g)
+                            ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent"
+                            : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!editingShiftId && giorniSelezionati.length === 0 && (
+                  <p className="text-xs text-zinc-400 mt-1">Seleziona almeno un giorno, oppure verrà usato Lunedì</p>
+                )}
               </div>
 
               <div>
@@ -769,7 +823,11 @@ export default function EmployeeDetails() {
                             <tr
                               key={day.giorno}
                               className={`align-top ${
-                                day.assente
+                                day.stato === 'ferie'
+                                  ? "bg-blue-50/50 dark:bg-blue-900/10"
+                                  : day.stato === 'giustificata'
+                                  ? "bg-purple-50/50 dark:bg-purple-900/10"
+                                  : day.assente
                                   ? "bg-red-50/50 dark:bg-red-900/10"
                                   : "hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
                               }`}
@@ -783,7 +841,7 @@ export default function EmployeeDetails() {
 
                               <td className="px-5 py-3 text-sm">
                                 <div className="flex flex-col gap-1">
-                                  {day.assente
+                                  {(day.assente || day.stato === 'ferie' || day.stato === 'giustificata')
                                     ? <span className="text-zinc-400">—</span>
                                     : (day.coppie || []).map((coppia, i) => (
                                         <span key={i} className="text-green-600 dark:text-green-400 font-medium">
@@ -796,7 +854,7 @@ export default function EmployeeDetails() {
 
                               <td className="px-5 py-3 text-sm">
                                 <div className="flex flex-col gap-1">
-                                  {day.assente
+                                  {(day.assente || day.stato === 'ferie' || day.stato === 'giustificata')
                                     ? <span className="text-zinc-400">—</span>
                                     : (day.coppie || []).map((coppia, i) => (
                                         <span key={i} className="text-red-500 dark:text-red-400 font-medium">
@@ -825,6 +883,16 @@ export default function EmployeeDetails() {
                                   {day.assente && (
                                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
                                       Assente
+                                    </span>
+                                  )}
+                                  {day.stato === 'ferie' && (
+                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                      Ferie
+                                    </span>
+                                  )}
+                                  {day.stato === 'giustificata' && (
+                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                                      Giustificata
                                     </span>
                                   )}
                                   {day.stato === 'straordinario' && (

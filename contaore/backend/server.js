@@ -10,6 +10,10 @@ import hardwareRoutes from './routes/hardware.js'
 import presenzeRoutes from './routes/presenze.js'
 import adminRoutes from './routes/admin.js'
 import exportRoutes from './routes/export.js'
+import dipendenteRoutes from './routes/dipendente.js'   // ← nuovo
+import ferieRoutes      from './routes/ferie.js'
+import requestsRoutes   from './routes/requests.js'    // ← nuovo
+import pauseRoutes      from './routes/pause.js'       // ← nuovo 
 
 dotenv.config()
 
@@ -30,6 +34,10 @@ await fastify.register(deviceRoutes)
 await fastify.register(authRoutes)
 await fastify.register(scanRoutes)
 await fastify.register(adminRoutes)
+await fastify.register(dipendenteRoutes)   // ← nuovo
+await fastify.register(ferieRoutes)
+await fastify.register(requestsRoutes)     // ← nuovo
+await fastify.register(pauseRoutes)        // ← nuovo  
 
 fastify.get('/', async () => {
   return {

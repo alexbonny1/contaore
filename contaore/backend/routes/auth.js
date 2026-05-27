@@ -1,104 +1,218 @@
 import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
-
+import jwt    from 'jsonwebtoken'
+import crypto from 'crypto'
 import { supabase } from '../services/supabase.js'
+import { sendResetPassword } from '../services/email.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'SUPER_SECRET_KEY'
 
 export default async function authRoutes(fastify) {
 
-  /*
-    LOGIN
-    accetta sia username che email
-  */
-
+  // ─── LOGIN ────────────────────────────────────────────────────────────────
   fastify.post('/api/auth/login', async (request, reply) => {
-
     try {
-
-      const {
-        username,
-        password
-      } = request.body
+      const { username, password } = request.body
 
       if (!username || !password) {
-
-        return reply.status(400).send({
-          error: 'MISSING_FIELDS'
-        })
+        return reply.status(400).send({ error: 'MISSING_FIELDS' })
       }
-
-      /*
-        CERCA PER USERNAME O EMAIL
-      */
 
       const { data: user, error } = await supabase
         .from('user_account')
         .select('*')
-        .or(
-          `username.eq.${username},email.eq.${username}`
-        )
+        .or(`username.eq.${username},email.eq.${username}`)
         .single()
-        console.log('USER:', user)
-        console.log('ERROR:', error)
-      if (error || !user) {
 
-        return reply.status(401).send({
-          error: 'INVALID_CREDENTIALS'
-        })
+      if (error || !user) {
+        return reply.status(401).send({ error: 'INVALID_CREDENTIALS' })
       }
 
-      const validPassword = await bcrypt.compare(
-        password,
-        user.password
-      )
-
-
-console.log('PASSWORD RICEVUTA:', password)
-console.log('VALID:', validPassword)
+      const validPassword = await bcrypt.compare(password, user.password)
 
       if (!validPassword) {
-
-        return reply.status(401).send({
-          error: 'INVALID_CREDENTIALS'
-        })
+        return reply.status(401).send({ error: 'INVALID_CREDENTIALS' })
       }
 
       const token = jwt.sign(
         {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          company_id: user.company_id,
-          role: user.role
+          id:            user.id,
+          username:      user.username,
+          email:         user.email,
+          company_id:    user.company_id,
+          role:          user.role,
+          dipendente_id: user.dipendente_id || null
         },
         JWT_SECRET,
-        {
-          expiresIn: '7d'
-        }
+        { expiresIn: '7d' }
       )
 
       return reply.send({
         success: true,
         token,
         user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          company_id: user.company_id
+          id:            user.id,
+          username:      user.username,
+          email:         user.email,
+          role:          user.role,
+          company_id:    user.company_id,
+          dipendente_id: user.dipendente_id || null
         }
       })
 
     } catch (err) {
-
       console.log(err)
-
-      return reply.status(500).send({
-        error: 'SERVER_ERROR'
-      })
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
-
   })
 
+  // ─── CAMBIA PASSWORD (utente loggato: owner o dipendente) ─────────────────
+  fastify.post('/api/auth/change-password', async (request, reply) => {
+    try {
+      const authHeader = request.headers.authorization
+      if (!authHeader) return reply.status(401).send({ error: 'TOKEN_MISSING' })
+
+      let decoded
+      try {
+        decoded = jwt.verify(authHeader.replace('Bearer ', ''), JWT_SECRET)
+      } catch {
+        return reply.status(401).send({ error: 'INVALID_TOKEN' })
+      }
+
+      const { currentPassword, newPassword } = request.body
+
+      if (!currentPassword || !newPassword) {
+        return reply.status(400).send({ error: 'MISSING_FIELDS' })
+      }
+
+      if (newPassword.length < 6) {
+        return reply.status(400).send({ error: 'PASSWORD_TOO_SHORT' })
+      }
+
+      const { data: user, error } = await supabase
+        .from('user_account')
+        .select('*')
+        .eq('id', decoded.id)
+        .single()
+
+      if (error || !user) {
+        return reply.status(404).send({ error: 'USER_NOT_FOUND' })
+      }
+
+      const valid = await bcrypt.compare(currentPassword, user.password)
+      if (!valid) {
+        return reply.status(401).send({ error: 'WRONG_CURRENT_PASSWORD' })
+      }
+
+      const hashed = await bcrypt.hash(newPassword, 10)
+
+      const { error: updateError } = await supabase
+        .from('user_account')
+        .update({ password: hashed })
+        .eq('id', decoded.id)
+
+      if (updateError) {
+        return reply.status(500).send({ error: 'UPDATE_ERROR' })
+      }
+
+      return reply.send({ success: true })
+
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── FORGOT PASSWORD — invia email con link reset ─────────────────────────
+  fastify.post('/api/auth/forgot-password', async (request, reply) => {
+    try {
+      const { email } = request.body
+
+      if (!email) {
+        return reply.status(400).send({ error: 'MISSING_EMAIL' })
+      }
+
+      const { data: user } = await supabase
+        .from('user_account')
+        .select('id, username, email, role')
+        .eq('email', email)
+        .maybeSingle()
+
+      // Rispondi sempre success per non rivelare se l'email esiste
+      if (!user) {
+        return reply.send({ success: true })
+      }
+
+      // Genera token reset (valido 1 ora)
+      const resetToken = crypto.randomBytes(32).toString('hex')
+      const expiresAt  = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+
+      await supabase
+        .from('user_account')
+        .update({
+          reset_token:            resetToken,
+          reset_token_expires_at: expiresAt
+        })
+        .eq('id', user.id)
+
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`
+
+      await sendResetPassword({
+        email:    user.email,
+        username: user.username,
+        resetUrl
+      })
+
+      return reply.send({ success: true })
+
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── RESET PASSWORD — imposta nuova password dal token ────────────────────
+  fastify.post('/api/auth/reset-password', async (request, reply) => {
+    try {
+      const { token, newPassword } = request.body
+
+      if (!token || !newPassword) {
+        return reply.status(400).send({ error: 'MISSING_FIELDS' })
+      }
+
+      if (newPassword.length < 6) {
+        return reply.status(400).send({ error: 'PASSWORD_TOO_SHORT' })
+      }
+
+      const { data: user } = await supabase
+        .from('user_account')
+        .select('id, reset_token_expires_at')
+        .eq('reset_token', token)
+        .maybeSingle()
+
+      if (!user) {
+        return reply.status(400).send({ error: 'INVALID_TOKEN' })
+      }
+
+      if (new Date(user.reset_token_expires_at) < new Date()) {
+        return reply.status(400).send({ error: 'TOKEN_EXPIRED' })
+      }
+
+      const hashed = await bcrypt.hash(newPassword, 10)
+
+      await supabase
+        .from('user_account')
+        .update({
+          password:               hashed,
+          reset_token:            null,
+          reset_token_expires_at: null
+        })
+        .eq('id', user.id)
+
+      return reply.send({ success: true })
+
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
 }

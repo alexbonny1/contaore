@@ -120,7 +120,10 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi) {
   Costruisce dati strutturati per dipendente:
   { months: [{ name, giorni: [...], totali }] }
 */
-function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedMonth) {
+function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedMonth, ferieApprovate = [], giustificazioni = [], pausaAziendale = null) {
+
+  const isInFerie = (dateStr) => (ferieApprovate || []).some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
+  const giustSet  = new Set((giustificazioni || []).filter(g => g.stato === 'approvata').map(g => g.data))
 
   // raggruppa letture per giorno
   const byDay = {}
@@ -189,7 +192,17 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
         const meseName = new Date(dateStr + 'T00:00:00').toLocaleDateString('it-IT', {
           month: 'long', year: 'numeric'
         })
-        absentDays[dateStr] = { dateStr, meseName, coppie: [], oreLavorate: 0, stato: 'assente', ritardoMin: 0, straordinarioOre: 0, orePreviste, assente: true }
+
+        // pausa aziendale → ferie (priorità massima)
+        if (pausaAziendale && pausaAziendale.attiva && dateStr >= pausaAziendale.data_inizio && dateStr <= pausaAziendale.data_fine) {
+          absentDays[dateStr] = { dateStr, meseName, coppie: [], oreLavorate: 0, stato: 'ferie', ritardoMin: 0, straordinarioOre: 0, orePreviste, assente: false }
+        } else if (isInFerie(dateStr)) {
+          absentDays[dateStr] = { dateStr, meseName, coppie: [], oreLavorate: 0, stato: 'ferie', ritardoMin: 0, straordinarioOre: 0, orePreviste, assente: false }
+        } else if (giustSet.has(dateStr)) {
+          absentDays[dateStr] = { dateStr, meseName, coppie: [], oreLavorate: 0, stato: 'giustificata', ritardoMin: 0, straordinarioOre: 0, orePreviste, assente: true }
+        } else {
+          absentDays[dateStr] = { dateStr, meseName, coppie: [], oreLavorate: 0, stato: 'assente', ritardoMin: 0, straordinarioOre: 0, orePreviste, assente: true }
+        }
       }
       cursor.setDate(cursor.getDate() + 1)
     }
@@ -247,7 +260,25 @@ async function loadEmployeeFullData(id, companyId) {
   const { data: shifts } = await supabase
     .from('turni').select('*').eq('dipendente_id', id)
 
-  return { employee, reads: reads || [], shifts: shifts || [] }
+  const { data: ferieApprovate } = await supabase
+    .from('richieste_ferie')
+    .select('data_inizio, data_fine')
+    .eq('dipendente_id', id)
+    .eq('stato', 'approvata')
+
+  const { data: giustificazioni } = await supabase
+    .from('giustificazioni')
+    .select('data, stato')
+    .eq('dipendente_id', id)
+
+  const { data: pausaAziendale } = await supabase
+    .from('pausa_aziendale')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('attiva', true)
+    .maybeSingle()
+
+  return { employee, reads: reads || [], shifts: shifts || [], ferieApprovate: ferieApprovate || [], giustificazioni: giustificazioni || [], pausaAziendale: pausaAziendale || null }
 }
 
 export default async function exportRoutes(fastify) {
@@ -278,7 +309,7 @@ export default async function exportRoutes(fastify) {
       const periodoLabel = month && month !== 'tutti' ? month : 'Tutto lo storico'
       let isFirst = true
 
-      for (const { employee, reads, shifts } of employeesData) {
+      for (const { employee, reads, shifts, ferieApprovate, giustificazioni, pausaAziendale } of employeesData) {
 
         if (!isFirst) doc.addPage()
         isFirst = false
@@ -286,7 +317,7 @@ export default async function exportRoutes(fastify) {
         const turniAttivi   = !!employee.turni_attivi
         const turniAttivatIl = employee.turni_attivati_il || null
 
-        const months = buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, month)
+        const months = buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, month, ferieApprovate, giustificazioni, pausaAziendale)
 
         // header dipendente
         doc.rect(40, 40, 515, 50).fill('#111827')
@@ -365,12 +396,16 @@ export default async function exportRoutes(fastify) {
             doc.fillColor('#111').fontSize(8).font('Helvetica')
               .text(dataLabel, 50, y + 4, { width: 95 })
 
-            if (day.assente) {
-              doc.fillColor('#dc2626').text('—', 155, y + 4)
-              doc.fillColor('#dc2626').text('—', 255, y + 4)
+            if (day.assente || day.stato === 'ferie' || day.stato === 'giustificata') {
+              const isF = day.stato === 'ferie'
+              const isG = day.stato === 'giustificata'
+              const color = isF ? '#0369a1' : isG ? '#7c3aed' : '#dc2626'
+              const label = isF ? 'FERIE' : isG ? 'GIUSTIF.' : 'ASSENTE'
+              doc.fillColor(color).text('—', 155, y + 4)
+              doc.fillColor(color).text('—', 255, y + 4)
               doc.fillColor('#111').text('—', 350, y + 4)
               doc.fillColor('#111').text(formatOre(day.orePreviste), 400, y + 4)
-              doc.fillColor('#dc2626').font('Helvetica-Bold').text('ASSENTE', 455, y + 4)
+              doc.fillColor(color).font('Helvetica-Bold').text(label, 455, y + 4)
             } else {
               day.coppie.forEach((c, i) => {
                 doc.fillColor('#111').font('Helvetica')
@@ -383,6 +418,10 @@ export default async function exportRoutes(fastify) {
               // stato colorato
               if (day.stato === 'assente') {
                 doc.fillColor('#dc2626').font('Helvetica-Bold').text('ASSENTE', 455, y + 4)
+              } else if (day.stato === 'ferie') {
+                doc.fillColor('#0369a1').font('Helvetica-Bold').text('FERIE', 455, y + 4)
+              } else if (day.stato === 'giustificata') {
+                doc.fillColor('#7c3aed').font('Helvetica-Bold').text('GIUSTIF.', 455, y + 4)
               } else if (day.stato === 'straordinario') {
                 doc.fillColor('#d97706').font('Helvetica-Bold')
                   .text(`+${formatOre(day.straordinarioOre)}`, 455, y + 4)
@@ -433,8 +472,8 @@ export default async function exportRoutes(fastify) {
 
     // Sheet riepilogo
     const riepilogoRows = [['Nome', 'Cognome', 'Ore totali', 'Ore previste', 'Straordinari', 'Assenze', 'Ritardi']]
-    for (const { employee, reads, shifts } of employeesData) {
-      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month)
+    for (const { employee, reads, shifts, ferieApprovate, giustificazioni, pausaAziendale } of employeesData) {
+      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale)
       const totOre    = months.reduce((s, m) => s + m.oreTotali, 0)
       const totPrev   = months.reduce((s, m) => s + m.orePreviste, 0)
       const totStraord = months.reduce((s, m) => s + m.straordinario, 0)
@@ -451,8 +490,8 @@ export default async function exportRoutes(fastify) {
     XLSX.utils.book_append_sheet(wb, wsR, 'Riepilogo')
 
     // Sheet per dipendente
-    for (const { employee, reads, shifts } of employeesData) {
-      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month)
+    for (const { employee, reads, shifts, ferieApprovate, giustificazioni, pausaAziendale } of employeesData) {
+      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale)
 
       const rows = [
         [`${employee.nome} ${employee.cognome || ''}`, '', '', '', '', '', ''],
@@ -468,7 +507,9 @@ export default async function exportRoutes(fastify) {
           const entrate = day.coppie.map(c => c.entrata).join('  ') || '—'
           const uscite  = day.coppie.map(c => c.uscita).join('  ')  || '—'
           let stato = 'Presente'
-          if (day.assente)              stato = 'Assente'
+          if (day.stato === 'ferie')        stato = 'Ferie'
+          else if (day.stato === 'giustificata') stato = 'Giustificata'
+          else if (day.assente)              stato = 'Assente'
           else if (day.stato === 'straordinario') stato = `+${formatOre(day.straordinarioOre)}`
           else if (day.stato === 'ritardo')       stato = `Ritardo ${day.ritardoMin}m`
 

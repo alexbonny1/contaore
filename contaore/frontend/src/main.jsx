@@ -1,24 +1,24 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import EmployeeDetails from "./pages/EmployeeDetails";
-
-import {
-  BrowserRouter,
-  Routes,
-  Route
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import "./index.css";
 
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Employees from "./pages/Employees";
-import Badges from "./pages/Badges";
-import Readers from "./pages/Readers";
-import Admin from "./pages/admin";
+import Login               from "./pages/Login";
+import Dashboard           from "./pages/Dashboard";
+import Requests            from "./pages/Requests";
+import Pause               from "./pages/Pause";
+import Employees           from "./pages/Employees";
+import EmployeeDetails     from "./pages/EmployeeDetails";
+import Badges              from "./pages/Badges";
+import Readers             from "./pages/Readers";
+import Admin               from "./pages/admin";
+import DipendenteDashboard from "./pages/DipendenteDashboard";   // ← nuovo
+import ResetPassword       from "./pages/ResetPassword";
 
 import ProtectedRoute from "./ProtectedRoute";
 
+// fix ngrok in dev
 const originalFetch = window.fetch;
 window.fetch = (url, options = {}) => {
   if (typeof url === "string" && url.includes("ngrok")) {
@@ -31,75 +31,71 @@ window.fetch = (url, options = {}) => {
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-
   <React.StrictMode>
-
     <BrowserRouter>
-
       <Routes>
 
-        <Route
-          path="/"
-          element={<Login />}
-        />
+        <Route path="/" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-        <Route
-  path="/admin"
-  element={
-    <ProtectedRoute requireRole="superadmin">
-      <Admin />
-    </ProtectedRoute>
-  }
-/>
+        {/* superadmin */}
+        <Route path="/admin" element={
+          <ProtectedRoute requireRole="superadmin">
+            <Admin />
+          </ProtectedRoute>
+        } />
 
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+        {/* owner */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
 
-        <Route
-          path="/employees"
-          element={
-            <ProtectedRoute>
-              <Employees />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/requests" element={
+          <ProtectedRoute>
+            <Requests />
+          </ProtectedRoute>
+        } />
 
-        <Route
-          path="/employees/:id"
-          element={
-            <ProtectedRoute>
-              <EmployeeDetails />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/pause" element={
+          <ProtectedRoute>
+            <Pause />
+          </ProtectedRoute>
+        } />
 
-        <Route
-          path="/badges"
-          element={
-            <ProtectedRoute>
-              <Badges />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/employees" element={
+          <ProtectedRoute>
+            <Employees />
+          </ProtectedRoute>
+        } />
 
-        <Route
-          path="/readers"
-          element={
-            <ProtectedRoute>
-              <Readers />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/employees/:id" element={
+          <ProtectedRoute>
+            <EmployeeDetails />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/badges" element={
+          <ProtectedRoute>
+            <Badges />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/readers" element={
+          <ProtectedRoute>
+            <Readers />
+          </ProtectedRoute>
+        } />
+
+        {/* portale dipendente */}
+        <Route path="/portale" element={
+          <ProtectedRoute requireRole="dipendente">
+            <DipendenteDashboard />
+          </ProtectedRoute>
+        } />
 
       </Routes>
-
     </BrowserRouter>
-
   </React.StrictMode>
 );

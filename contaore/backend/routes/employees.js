@@ -90,7 +90,11 @@ function buildCoppie(sorted) {
   return coppie
 }
 
-function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null) {
+function isInFerie(dateStr, ferie = []) {
+  return ferie.some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
+}
+
+function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null) {
 
   const grouped = {}
   reads.forEach(read => {
@@ -180,15 +184,18 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
           }
         }
 
-        absentDays.push({
-          giorno:            dateStr,
-          coppie:            [],
-          ore_totali:        0,
-          ore_previste,
-          ore_straordinario: 0,
-          stato:             'assente',
-          assente:           true
-        })
+        // pausa aziendale → ferie (priorità massima)
+        if (pausaAziendale && pausaAziendale.attiva && dateStr >= pausaAziendale.data_inizio && dateStr <= pausaAziendale.data_fine) {
+          absentDays.push({ giorno: dateStr, coppie: [], ore_totali: 0, ore_previste, ore_straordinario: 0, stato: 'ferie', assente: false })
+        } else if (isInFerie(dateStr, ferieApprovate)) {
+          // ferie approvate
+          absentDays.push({ giorno: dateStr, coppie: [], ore_totali: 0, ore_previste, ore_straordinario: 0, stato: 'ferie', assente: false })
+        } else if (giustificazioni.some(g => g.stato === 'approvata' && g.data === dateStr)) {
+          // giustificazione approvata: assente ma giustificata
+          absentDays.push({ giorno: dateStr, coppie: [], ore_totali: 0, ore_previste, ore_straordinario: 0, stato: 'giustificata', assente: true })
+        } else {
+          absentDays.push({ giorno: dateStr, coppie: [], ore_totali: 0, ore_previste, ore_straordinario: 0, stato: 'assente', assente: true })
+        }
 
       }
 
@@ -391,12 +398,35 @@ export default async function employeeRoutes(fastify) {
 
         const turniAttivi = !!employee.turni_attivi
 
+        // ferie approvate
+        const { data: ferieApprovate } = await supabase
+          .from('richieste_ferie')
+          .select('data_inizio, data_fine')
+          .eq('dipendente_id', id)
+          .eq('stato', 'approvata')
+
+        // giustificazioni
+        const { data: giustificazioni } = await supabase
+          .from('giustificazioni')
+          .select('data, stato')
+          .eq('dipendente_id', id)
+
+        // pausa aziendale attiva
+        const { data: pausaAziendale } = await supabase
+          .from('pausa_aziendale')
+          .select('*')
+          .eq('company_id', companyId)
+          .eq('attiva', true)
+          .maybeSingle()
 
         const days   = groupByDay(
           reads,
           shifts || [],
           turniAttivi,
-          employee.turni_attivati_il || employee.data_inizio
+          employee.turni_attivati_il || employee.data_inizio,
+          ferieApprovate || [],
+          giustificazioni || [],
+          pausaAziendale || null
         )
 
         const months = groupByMonth(days)
@@ -705,4 +735,30 @@ export default async function employeeRoutes(fastify) {
     }
   )
 
+
+  fastify.get(
+    '/api/company/info',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      try {
+        const company_id = request.user.company_id
+
+        const { data, error } = await supabase
+          .from('company')
+          .select('id, nome, slug, portale_dipendenti')
+          .eq('id', company_id)
+          .single()
+
+        if (error || !data) {
+          return reply.status(404).send({ success: false, error: 'NOT_FOUND' })
+        }
+
+        return reply.send({ success: true, ...data })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+      }
+    }
+  )
 }
