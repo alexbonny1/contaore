@@ -111,9 +111,13 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       const dayName   = getDayName(giorno)
       const dayShifts = shifts.filter(s => s.giorno_settimana === dayName)
       ore_previste    = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
-      ore_straordinario = ore_previste > 0
-        ? Number(Math.max(0, oreLavorate - ore_previste).toFixed(2))
-        : 0
+      if (ore_previste > 0) {
+        // giorno con turno programmato: straordinario = ore in più rispetto al turno
+        ore_straordinario = Number(Math.max(0, oreLavorate - ore_previste).toFixed(2))
+      } else {
+        // giorno SENZA turno programmato: tutte le ore lavorate sono straordinario
+        ore_straordinario = Number(oreLavorate.toFixed(2))
+      }
       if (ore_straordinario > 0) stato = 'straordinario'
     }
 
@@ -319,7 +323,7 @@ export default async function employeeRoutes(fastify) {
               total_reads: empReads.length,
               today_reads: todayReads.length,
               month_reads: monthReads.length,
-              total_hours: calculateHours(empReads),
+              total_hours: calculateHours(monthReads),  // ore del mese corrente
               last_read:   empReads.length
                 ? empReads[empReads.length - 1].created_at
                 : null
@@ -407,7 +411,7 @@ export default async function employeeRoutes(fastify) {
             history_days:   days,
             history_months: months,
             stats: {
-              total_hours:       calculateHours(reads),
+              total_hours:       calculateHours(reads.filter(r => getLocalDateStr(r.created_at).slice(0, 7) === new Date().toISOString().slice(0, 7))),  // ore mese corrente
               total_reads:       reads.length,
               ore_straordinario: days.reduce((s, d) => s + d.ore_straordinario, 0).toFixed(2),
               giorni_assenti:    days.filter(d => d.assente).length

@@ -103,9 +103,11 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi) {
   }
 
   // straordinario
+  // - giorno con turno: ore in più rispetto al previsto
+  // - giorno SENZA turno (ore_previste=0): tutte le ore sono straordinario
   const straordinarioOre = orePreviste > 0
     ? Math.max(0, oreLavorate - orePreviste)
-    : 0
+    : oreLavorate
 
   let stato = 'presente'
   if (ritardoMin > 5) stato = 'ritardo'
