@@ -1,5 +1,5 @@
 /*
- * ContaOre NFC Reader Firmware
+ * timbry NFC Reader Firmware
  * ESP32-WROOM + RC522 + ILI9488 TFT 480x320 + Buzzer
  * v2.0.0
  *
@@ -54,7 +54,7 @@
 
 // ── CONFIG ───────────────────────────
 #define FW_VERSION          "2.0.0"
-#define PREF_NAMESPACE      "contaore"
+#define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
 #define DEBOUNCE_DEFAULT    5000UL
@@ -89,6 +89,9 @@
 #define C_GRAY     0x8410
 #define C_CYAN     0x07FF
 #define C_HEADER   0x1082
+#define C_TIMBRY   0x051F  // azzurro ~#0099FF
+// Azzurro Timbry per logo/splash
+#define C_TIMBRY   0x051F  // ~#0099FF in RGB565
 
 // ── OGGETTI ──────────────────────────
 MFRC522         rfid(PIN_RC522_SS, PIN_RC522_RST);
@@ -139,14 +142,106 @@ bool          g_waitingNtp      = false;
 unsigned long g_lastNtpRetry    = 0;
 #define NTP_RETRY_MS  10000UL
 
+// ── LOGO TIMBRY ──────────────────────
+// Disegna il logo: icona badge NFC + testo TIMBRY
+// x,y = angolo top-left dell'icona
+void drawLogo(int16_t x, int16_t y, uint16_t bgColor) {
+  // ── Badge rettangolare
+  tft.drawRect(x, y, 18, 24, C_TIMBRY);
+  tft.fillRect(x+2, y+2, 14, 20, bgColor);
+  // chip interno
+  tft.drawRect(x+5, y+6, 8, 10, C_TIMBRY);
+  // piedini chip
+  tft.drawPixel(x+3, y+8,  C_TIMBRY);
+  tft.drawPixel(x+3, y+10, C_TIMBRY);
+  tft.drawPixel(x+3, y+12, C_TIMBRY);
+  tft.drawPixel(x+14, y+8,  C_TIMBRY);
+  tft.drawPixel(x+14, y+10, C_TIMBRY);
+  tft.drawPixel(x+14, y+12, C_TIMBRY);
+  // ── Onde NFC (3 archi a destra del badge)
+  // Onda 1 (piccola)
+  tft.drawCircle(x+18, y+12, 5,  C_TIMBRY);
+  // Onda 2 (media)
+  tft.drawCircle(x+18, y+12, 9,  C_TIMBRY);
+  // Onda 3 (grande, attenuata)
+  tft.drawCircle(x+18, y+12, 13, 0x02DF); // blu più tenue
+  // Maschera sinistra delle onde (non devono sbucare nel badge)
+  tft.fillRect(x-2, y-2, 22, 28, bgColor);
+  // Ridisegna badge sopra la maschera
+  tft.drawRect(x, y, 18, 24, C_TIMBRY);
+  tft.drawRect(x+5, y+6, 8, 10, C_TIMBRY);
+}
+
+// Splash screen logo (grande, centrato)
+void drawSplashLogo() {
+  tft.fillScreen(C_BG);
+
+  // Sfondo card scuro centrato
+  tft.fillRect(80, 60, 320, 160, 0x0841); // grigio molto scuro
+  tft.drawRect(80, 60, 320, 160, 0x051F);  // bordo azzurro
+
+  // Icona badge grande — disegnata manualmente a 3x
+  int16_t bx = 130, by = 90;
+  // Badge esterno
+  tft.drawRect(bx, by, 36, 48, C_TIMBRY);
+  tft.fillRect(bx+1, by+1, 34, 46, 0x0841);
+  // Chip interno
+  tft.drawRect(bx+8, by+12, 20, 24, C_TIMBRY);
+  tft.fillRect(bx+10, by+14, 16, 20, 0x051F);
+  // Linee chip
+  for (int i = 0; i < 3; i++) {
+    tft.drawFastHLine(bx+5, by+17+i*6, 3, C_TIMBRY);
+    tft.drawFastHLine(bx+28, by+17+i*6, 3, C_TIMBRY);
+  }
+  // Onde NFC
+  tft.drawCircle(bx+36, by+24, 8,  C_TIMBRY);
+  tft.drawCircle(bx+36, by+24, 15, C_TIMBRY);
+  tft.drawCircle(bx+36, by+24, 22, 0x02DF);
+  // Maschera onde sinistra
+  tft.fillRect(bx-4, by-4, 42, 56, 0x0841);
+  // Ridisegna badge
+  tft.drawRect(bx, by, 36, 48, C_TIMBRY);
+  tft.drawRect(bx+8, by+12, 20, 24, C_TIMBRY);
+
+  // Nome TIMBRY
+  tft.setTextColor(C_WHITE, 0x0841);
+  tft.setTextSize(5);
+  tft.setCursor(185, 100);
+  tft.print("TIMBRY");
+
+  // Linea separatrice
+  tft.drawFastHLine(185, 138, 190, C_TIMBRY);
+
+  // Sottotitolo
+  tft.setTextColor(C_TIMBRY, 0x0841);
+  tft.setTextSize(1);
+  tft.setCursor(185, 148);
+  tft.print("NFC READER  v");
+  tft.print(FW_VERSION);
+
+  // Versione piccola in basso
+  tft.setTextColor(0x4208, C_BG);
+  tft.setTextSize(1);
+  tft.setCursor(170, 240);
+  tft.print("Sistema Presenze NFC");
+}
+
 // ── BUZZER ───────────────────────────
 void beepOk() {
-  tone(BUZZER_PIN, 1000, 100);
-  delay(150);
-  tone(BUZZER_PIN, 1200, 100);
+  tone(BUZZER_PIN, 1800, 80);
+  delay(100);
+  tone(BUZZER_PIN, 2200, 80);
 }
-void beepErr()     { tone(BUZZER_PIN, 400, 400); }
-void beepOffline() { tone(BUZZER_PIN, 700, 150); }
+
+void beepErr() {
+  tone(BUZZER_PIN, 900, 150);
+  delay(80);
+  tone(BUZZER_PIN, 700, 150);
+}
+
+void beepOffline() {
+  tone(BUZZER_PIN, 1600, 100);
+}
 
 // ── NTP ──────────────────────────────
 bool syncNTP() {
@@ -195,14 +290,70 @@ void rfidInit() {
 
 // ── DISPLAY ──────────────────────────
 
+// Icona badge NFC piccola per header (12x16 px a partire da x,y)
+void drawLogoIcon(int16_t x, int16_t y, uint16_t bg) {
+  // badge esterno
+  tft.drawRect(x, y, 12, 16, C_TIMBRY);
+  tft.fillRect(x+1, y+1, 10, 14, bg);
+  // chip interno
+  tft.drawRect(x+3, y+4, 6, 7, C_TIMBRY);
+  // piedini sx
+  tft.drawPixel(x+1, y+6,  C_TIMBRY);
+  tft.drawPixel(x+1, y+8,  C_TIMBRY);
+  tft.drawPixel(x+1, y+10, C_TIMBRY);
+  // piedini dx
+  tft.drawPixel(x+10, y+6,  C_TIMBRY);
+  tft.drawPixel(x+10, y+8,  C_TIMBRY);
+  tft.drawPixel(x+10, y+10, C_TIMBRY);
+  // onde NFC (3 archi a destra)
+  tft.drawCircle(x+12, y+8, 4, C_TIMBRY);
+  tft.drawCircle(x+12, y+8, 7, C_TIMBRY);
+  tft.drawCircle(x+12, y+8, 10, 0x02DF);
+  // maschera: copre la parte sinistra degli archi che sbucerebbe nel badge
+  tft.fillRect(x-1, y-1, 14, 18, bg);
+  // ridisegna badge sopra la maschera
+  tft.drawRect(x, y, 12, 16, C_TIMBRY);
+  tft.drawRect(x+3, y+4, 6, 7, C_TIMBRY);
+  tft.drawPixel(x+1, y+6,  C_TIMBRY);
+  tft.drawPixel(x+1, y+8,  C_TIMBRY);
+  tft.drawPixel(x+1, y+10, C_TIMBRY);
+  tft.drawPixel(x+10, y+6,  C_TIMBRY);
+  tft.drawPixel(x+10, y+8,  C_TIMBRY);
+  tft.drawPixel(x+10, y+10, C_TIMBRY);
+}
+
+// Splash screen con logo grande centrato
 void drawHeader() {
   tft.fillRect(0, 0, 480, HDR_H, C_HEADER);
+
+  // ── Logo piccolo (icona badge, 18x24px) a sinistra
+  int16_t lx = 6, ly = 8;
+  tft.drawRect(lx, ly, 12, 16, C_TIMBRY);
+  tft.fillRect(lx+1, ly+1, 10, 14, C_HEADER);
+  tft.drawRect(lx+3, ly+4, 6, 7,  C_TIMBRY);
+  // onde NFC mini
+  tft.drawCircle(lx+12, ly+8, 4, C_TIMBRY);
+  tft.drawCircle(lx+12, ly+8, 7, 0x02DF);
+  // maschera sinistra onde
+  tft.fillRect(lx-1, ly-1, 14, 18, C_HEADER);
+  tft.drawRect(lx, ly, 12, 16, C_TIMBRY);
+  tft.drawRect(lx+3, ly+4, 6, 7, C_TIMBRY);
+
+  // ── Testo: TIMBRY in azzurro + reader ID in bianco
+  tft.setTextColor(C_TIMBRY, C_HEADER);
+  tft.setTextSize(1);
+  tft.setCursor(22, 8);
+  tft.print("TIMBRY");
+
   tft.setTextColor(C_WHITE, C_HEADER);
-  tft.setTextSize(2);
-  tft.setCursor(8, 12);
-  tft.print(cfg.readerId[0] ? cfg.readerId : "ContaOre");
+  tft.setTextSize(1);
+  tft.setCursor(22, 20);
+  tft.print(cfg.readerId[0] ? cfg.readerId : "reader");
+
+  // ── Pallino + ONLINE/OFFLINE a destra
   tft.fillCircle(355, 20, 7, g_wifiOffline ? C_RED : C_GREEN);
   tft.setTextColor(C_WHITE, C_HEADER);
+  tft.setTextSize(2);
   tft.setCursor(368, 12);
   tft.print(g_wifiOffline ? "OFFLINE" : "ONLINE ");
 }
@@ -211,7 +362,7 @@ void drawFooter() {
   tft.fillRect(0, FTR_Y, 480, 320 - FTR_Y, C_HEADER);
   tft.setTextColor(C_GRAY, C_HEADER);
   tft.setTextSize(1);
-  tft.setCursor(10, FTR_Y + 12);
+  tft.setCursor(162, FTR_Y + 12);
   tft.print("Avvicina badge al lettore");
   if (g_queueSize > 0) {
     tft.setTextColor(C_YELLOW, C_HEADER);
@@ -267,8 +418,8 @@ void showResult(String tipo, String nome, String orario) {
 
   uint16_t bg, fg;
   if      (tipo == "ENTRATA") { bg = 0x0320; fg = C_GREEN;  }
-  else if (tipo == "USCITA")  { bg = 0x4000; fg = C_RED;    }
-  else if (tipo == "ERRORE")  { bg = 0x4200; fg = C_ORANGE; }
+  else if (tipo == "USCITA")  { bg = 0x8200; fg = C_RED;    }
+  else if (tipo == "ERRORE")  { bg = 0x4000; fg = C_ORANGE; }
   else                         { bg = 0x2104; fg = C_YELLOW; }
 
   tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, bg);
@@ -341,38 +492,29 @@ void drawAdmin() {
 
 void showWaitingNtp() {
   g_waitingNtp = true;
-
-  // pulisci tutto lo schermo
   tft.fillScreen(C_BG);
-
-  // header
   drawHeader();
-
-  // footer vuoto
   tft.fillRect(0, FTR_Y, 480, 320 - FTR_Y, C_HEADER);
 
-  // icona orologio grande centrata
   tft.setTextColor(C_YELLOW, C_BG);
   tft.setTextSize(4);
   tft.setCursor(195, 65);
   tft.print("?:??");
 
-  // messaggio principale
   tft.setTextColor(C_WHITE, C_BG);
   tft.setTextSize(2);
-  tft.setCursor(85, 145);
+  tft.setCursor(110, 145);
   tft.print("Orario non disponibile");
 
-  // messaggio secondario
   tft.setTextColor(C_YELLOW, C_BG);
   tft.setTextSize(1);
-  tft.setCursor(115, 180);
+  tft.setCursor(180, 180);
   if (g_wifiOffline) {
     tft.print("In attesa del WiFi...");
   } else {
     tft.print("Sincronizzazione NTP in corso...");
   }
-  tft.setCursor(105, 198);
+  tft.setCursor(160, 198);
   tft.print("Le timbrature sono bloccate");
 
   g_lastNtpRetry = millis();
@@ -389,7 +531,6 @@ void taskNtpRetry() {
     g_waitingNtp = false;
     showIdle();
   } else {
-    // aggiorna il display per mostrare che sta riprovando
     tft.fillRect(0, HDR_H + 180, 480, 30, C_BG);
     tft.setTextColor(C_GRAY, C_BG);
     tft.setTextSize(1);
@@ -404,7 +545,6 @@ void updateClock() {
   if (millis() - g_lastClockUpdate < 1000) return;
   g_lastClockUpdate = millis();
 
-  // se NTP non sincronizzato non toccare il display
   if (!g_ntpSynced) {
     static bool lastWifiOffline2 = false;
     if (lastWifiOffline2 != g_wifiOffline) {
@@ -656,17 +796,14 @@ void taskRfid() {
     else showIdle();
   }
 
-  // blocca letture normali se NTP non sincronizzato
   if (g_waitingNtp) {
-    // nessun buzzer, solo messaggio temporaneo
     tft.fillRect(0, HDR_H + 180, 480, 40, C_BG);
     tft.setTextColor(C_RED, C_BG);
     tft.setTextSize(2);
-    int16_t tw = 18 * 14; // "Orario non pronto" ~14 char
+    int16_t tw = 18 * 14;
     tft.setCursor((480 - tw) / 2, HDR_H + 190);
     tft.print("Orario non pronto");
     delay(1500);
-    // ridisegna la schermata NTP pulita
     showWaitingNtp();
     return;
   }
@@ -743,7 +880,7 @@ void startProvisioning() {
   tft.setCursor(20, 100); tft.print("Connetti al WiFi:");
   tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(3);
   char apName[32];
-  snprintf(apName, sizeof(apName), "ContaOre-%06X", (uint32_t)(ESP.getEfuseMac() & 0xFFFFFF));
+  snprintf(apName, sizeof(apName), "timbry-%06X", (uint32_t)(ESP.getEfuseMac() & 0xFFFFFF));
   tft.setCursor(20, 150); tft.print(apName);
   tft.setTextColor(C_GRAY, C_BG); tft.setTextSize(1);
   tft.setCursor(20, 210); tft.print("Poi vai su: 192.168.4.1");
@@ -801,36 +938,25 @@ void taskSerial() {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\n\nCONTAORE NFC ESP32 v" FW_VERSION);
+  Serial.println("\n\ntimbry NFC ESP32 v" FW_VERSION);
 
-  // backlight ON
   pinMode(TFT_BL_PIN, OUTPUT);
   digitalWrite(TFT_BL_PIN, HIGH);
 
-  // init display (usa HSPI internamente tramite TFT_eSPI)
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(C_BG);
 
-  // splash
-  tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(4);
-  tft.setCursor(130, 100); tft.print("ContaOre");
-  tft.setTextColor(C_GRAY, C_BG); tft.setTextSize(2);
-  tft.setCursor(165, 165); tft.print("NFC Reader");
-  tft.setCursor(195, 195); tft.print("v"); tft.print(FW_VERSION);
-  delay(2000);
+  // ── SPLASH con logo Timbry
+  drawSplashLogo();
+  delay(2500);
 
-  // buzzer
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
-  // init RFID su VSPI (bus separato dal TFT)
   rfidInit();
-
-  // queue
   loadQueue();
 
-  // config
   if (!loadConfig()) {
     Serial.println("Nessuna config → provisioning");
     startProvisioning();
@@ -840,7 +966,6 @@ void setup() {
   Serial.printf("Backend: %s\nReader:  %s\nCompany: %s\nQueue:   %d\n",
     cfg.backend, cfg.readerId, cfg.companyId, g_queueSize);
 
-  // schermata connessione
   tft.fillScreen(C_BG);
   tft.setTextColor(C_WHITE, C_BG); tft.setTextSize(2);
   tft.setCursor(20, 100); tft.print("Connessione WiFi...");
@@ -862,15 +987,14 @@ void setup() {
       g_ntpSynced = true;
       showIdle();
     } else {
-      // NTP fallito → mostra schermata attesa e riprova in background
       showWaitingNtp();
     }
   } else {
     Serial.println("WIFI OFFLINE - modalita offline attiva");
     g_wifiOffline = true;
     beepErr();
-    rfidInit();   // ← reinit RFID anche quando WiFi fallisce
-    showWaitingNtp();  // ← mostra direttamente la schermata NTP
+    rfidInit();
+    showWaitingNtp();
   }
 }
 
@@ -880,6 +1004,14 @@ void taskResult() {
   if (millis() - g_resultTimer >= g_resultTimeout) {
     g_resultTimer = 0;
     showIdle();
+  }
+}
+
+void taskRfidHealth() {
+  byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+  if (v == 0x00 || v == 0xFF) {
+    Serial.println("RFID drift, reinit...");
+    rfidInit();
   }
 }
 
@@ -901,5 +1033,6 @@ void loop() {
   taskAdmin();
   taskRfid();
   sendHeartbeat();
+  taskRfidHealth();
   delay(10);
 }
