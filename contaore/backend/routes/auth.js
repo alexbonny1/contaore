@@ -19,7 +19,7 @@ export default async function authRoutes(fastify) {
 
       const { data: user, error } = await supabase
         .from('user_account')
-        .select('*')
+        .select('*, company:company(portale_dipendenti)')
         .or(`username.eq.${username},email.eq.${username}`)
         .single()
 
@@ -33,14 +33,17 @@ export default async function authRoutes(fastify) {
         return reply.status(401).send({ error: 'INVALID_CREDENTIALS' })
       }
 
+      const portale_dipendenti = user.company?.portale_dipendenti ?? false
+
       const token = jwt.sign(
         {
-          id:            user.id,
-          username:      user.username,
-          email:         user.email,
-          company_id:    user.company_id,
-          role:          user.role,
-          dipendente_id: user.dipendente_id || null
+          id:                  user.id,
+          username:            user.username,
+          email:               user.email,
+          company_id:          user.company_id,
+          role:                user.role,
+          dipendente_id:       user.dipendente_id || null,
+          portale_dipendenti
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -50,12 +53,13 @@ export default async function authRoutes(fastify) {
         success: true,
         token,
         user: {
-          id:            user.id,
-          username:      user.username,
-          email:         user.email,
-          role:          user.role,
-          company_id:    user.company_id,
-          dipendente_id: user.dipendente_id || null
+          id:                  user.id,
+          username:            user.username,
+          email:               user.email,
+          role:                user.role,
+          company_id:          user.company_id,
+          dipendente_id:       user.dipendente_id || null,
+          portale_dipendenti
         }
       })
 

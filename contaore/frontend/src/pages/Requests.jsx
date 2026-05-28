@@ -203,6 +203,9 @@ export default function Requests() {
     )
   }
 
+  const user          = JSON.parse(localStorage.getItem('user') || '{}')
+  const portaleAttivo = user.portale_dipendenti !== false
+
   const { ferie, giustificazioni, richieste_timbratura } = richieste.richieste
 
   // Filtra per tab attivo
@@ -259,24 +262,32 @@ export default function Requests() {
         <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
           {[
             { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
-            { title: "Richieste",       icon: FileText,        path: "/requests"  },
+            { title: "Richieste",       icon: FileText,        path: "/requests",  notifica: richieste.counts.totali_in_attesa, nascondiSeSenzaPortale: true },
             { title: "Pausa aziendale", icon: Calendar,        path: "/pause"     },
             { title: "Dipendenti",      icon: Users,           path: "/employees" },
             { title: "Badge",           icon: CreditCard,      path: "/badges"    },
             { title: "Lettori NFC",     icon: Radio,           path: "/readers"   }
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.title} to={item.path}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
-                  location.pathname === item.path
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
-                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
-                }`}>
-                <Icon size={16} />{item.title}
-              </Link>
-            );
-          })}
+          ]
+            .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
+            .map((item) => {
+              const Icon     = item.icon
+              const isActive = location.pathname === item.path
+              return (
+                <Link key={item.title} to={item.path}
+                  className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
+                      : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
+                  }`}>
+                  <Icon size={16} />{item.title}
+                  {!isActive && item.notifica > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                      {item.notifica > 9 ? "9+" : item.notifica}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
         </div>
 
         {/* STATS */}

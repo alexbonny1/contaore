@@ -9,7 +9,7 @@ import { API_URL } from "../api";
 
 const NAV_TABS = [
   { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
-  { title: "Richieste",       icon: FileText,        path: "/requests"  },
+  { title: "Richieste",       icon: FileText,        path: "/requests",  nascondiSeSenzaPortale: true },
   { title: "Pausa aziendale", icon: Calendar,        path: "/pause"     },
   { title: "Dipendenti",      icon: Users,           path: "/employees" },
   { title: "Badge",           icon: CreditCard,      path: "/badges"    },
@@ -73,6 +73,7 @@ export default function Badges() {
   const [toast, setToast]                   = useState(null);
   const [confirm, setConfirm]               = useState(null); // { message, onConfirm }
   const [portaleAttivo, setPortaleAttivo]   = useState(false);
+  const [pendingCount, setPendingCount]     = useState(0);
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -93,6 +94,11 @@ export default function Badges() {
   useEffect(() => {
     loadBadges();
     checkPortale();
+    const token = localStorage.getItem("token");
+    fetch(`${API_URL}/api/requests/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setPendingCount(d.counts?.totali_in_attesa ?? 0); })
+      .catch(() => {});
   }, []);
 
   async function loadBadges() {
@@ -244,20 +250,27 @@ export default function Badges() {
 
         {/* NAV TABS */}
         <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
-          {NAV_TABS.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link key={item.title} to={item.path}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
-                  isActive
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
-                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
-                }`}>
-                <Icon size={16} />{item.title}
-              </Link>
-            );
-          })}
+          {NAV_TABS
+            .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
+            .map((item) => {
+              const Icon     = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link key={item.title} to={item.path}
+                  className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
+                      : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
+                  }`}>
+                  <Icon size={16} />{item.title}
+                  {!isActive && item.nascondiSeSenzaPortale && pendingCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                      {pendingCount > 9 ? "9+" : pendingCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
         </div>
 
         {/* TITLE */}
