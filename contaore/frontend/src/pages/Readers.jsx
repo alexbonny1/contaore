@@ -200,7 +200,7 @@ export default function Readers() {
 
         {/* NAV */}
 
-        <div className="flex gap-3 mb-8 overflow-x-auto">
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
 
           {[
             { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },

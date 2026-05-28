@@ -64,6 +64,7 @@ export default function Admin() {
 
   const [resettingPassword, setResettingPassword] = useState(null); // userId
   const [resetLoading, setResetLoading]     = useState(false);
+  const [resetResult, setResetResult]       = useState(null); // { id, nuova_password } quando email non inviata
 
   const [toast, setToast]                   = useState(null);
   const [confirm, setConfirm]               = useState(null); // { message, onConfirm }
@@ -179,11 +180,13 @@ export default function Admin() {
       });
       const data = await response.json();
       if (!data.success) { showToast("Errore reset password", "error"); return; }
-      setResettingPassword(null);
       if (data.email_inviata) {
+        setResettingPassword(null);
+        setResetResult(null);
         showToast(`Nuova password inviata a ${userEmail}`);
       } else {
-        showToast("Password aggiornata — email non inviata (verifica config Resend)", "error");
+        setResetResult({ id: userId, nuova_password: data.nuova_password });
+        showToast("Password aggiornata — email non inviata", "error");
       }
     } catch (err) {
       console.log(err);
@@ -489,7 +492,28 @@ export default function Admin() {
                             {/* Panel reset password */}
                             {resettingPassword === user.id && (
                               <div className="mt-4 p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                                {user.email ? (
+                                {resetResult?.id === user.id ? (
+                                  <>
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                                      Email non inviata (Resend non configurato). Copia la password e condividila manualmente con il titolare.
+                                    </p>
+                                    <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 mb-3">
+                                      <p className="flex-1 font-mono text-sm text-zinc-900 dark:text-zinc-100 select-all">{resetResult.nuova_password}</p>
+                                      <button
+                                        onClick={() => copyToClipboard(resetResult.nuova_password, `pwd_${user.id}`)}
+                                        className="shrink-0 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                      >
+                                        {copiedId === `pwd_${user.id}` ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
+                                      </button>
+                                    </div>
+                                    <button
+                                      onClick={() => { setResettingPassword(null); setResetResult(null); }}
+                                      className="h-9 px-3 rounded-xl bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm"
+                                    >
+                                      Chiudi
+                                    </button>
+                                  </>
+                                ) : user.email ? (
                                   <>
                                     <p className="text-xs text-zinc-500 mb-3">
                                       Verrà generata una nuova password casuale e inviata via email a <strong className="text-zinc-700 dark:text-zinc-300">{user.email}</strong>

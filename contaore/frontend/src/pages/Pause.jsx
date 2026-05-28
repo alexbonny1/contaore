@@ -203,7 +203,7 @@ export default function Pause() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* NAV */}
-        <div className="flex gap-3 mb-8 overflow-x-auto">
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
           {[
             { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
             { title: "Richieste",       icon: FileText,        path: "/requests"  },

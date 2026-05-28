@@ -256,7 +256,7 @@ export default function Requests() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* NAV */}
-        <div className="flex gap-3 mb-8 overflow-x-auto">
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
           {[
             { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
             { title: "Richieste",       icon: FileText,        path: "/requests"  },
@@ -300,7 +300,7 @@ export default function Requests() {
         </div>
 
         {/* TABS */}
-        <div className="flex gap-3 mb-8 overflow-x-auto">
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
           {[
             { id: 'all', label: 'Tutte', icon: FileText },
             { id: 'ferie', label: 'Ferie', icon: Calendar },
