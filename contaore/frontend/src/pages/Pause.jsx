@@ -24,7 +24,7 @@ export default function Pause() {
   const [toast, setToast] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
 
-  // THEME
+  // THEME 
   useEffect(() => {
     const saved = localStorage.getItem('theme')
     if (saved === 'dark') {
@@ -201,7 +201,7 @@ export default function Pause() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* NAV */}
         <div className="flex gap-3 mb-8 overflow-x-auto">
           {[

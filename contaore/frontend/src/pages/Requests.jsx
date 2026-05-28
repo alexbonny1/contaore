@@ -18,7 +18,7 @@ function statoBadge(stato) {
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
+} 
 
 export default function Requests() {
   const navigate = useNavigate()
@@ -254,7 +254,7 @@ export default function Requests() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* NAV */}
         <div className="flex gap-3 mb-8 overflow-x-auto">
           {[
