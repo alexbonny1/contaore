@@ -167,7 +167,8 @@ export default async function authRoutes(fastify) {
         return reply.status(500).send({ error: 'DB_RESET_TOKEN_ERROR' })
       }
 
-      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`
+      const frontendUrl = request.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5173'
+      const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`
 
       const emailInviata = await sendResetPassword({
         email:    user.email,
