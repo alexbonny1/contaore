@@ -3,9 +3,50 @@ import { useNavigate } from "react-router-dom";
 import {
   Building2, Plus, Trash2, KeyRound,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
-  Users, ToggleLeft, ToggleRight
+  Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle
 } from "lucide-react";
 import { API_URL } from "../api";
+
+function Toast({ message, type, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3500);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className={`
+      fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+      flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium
+      ${type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
+    `}>
+      {type === "success" ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+      {message}
+    </div>
+  );
+}
+
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white dark:bg-[#161618] rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 max-w-sm w-full mx-4 shadow-xl">
+        <p className="text-zinc-900 dark:text-zinc-100 font-medium mb-6 leading-relaxed">{message}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={onConfirm}
+            className="flex-1 h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors"
+          >
+            Elimina
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 h-11 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium"
+          >
+            Annulla
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Admin() {
 
@@ -17,13 +58,15 @@ export default function Admin() {
   const [showCreate, setShowCreate]         = useState(false);
   const [companyName, setCompanyName]       = useState("");
   const [username, setUsername]             = useState("");
-  const [password, setPassword]             = useState("");
   const [ownerEmail, setOwnerEmail]         = useState("");
   const [saving, setSaving]                 = useState(false);
   const [error, setError]                   = useState("");
 
-  const [changingPassword, setChangingPassword] = useState(null);
-  const [newPassword, setNewPassword]       = useState("");
+  const [resettingPassword, setResettingPassword] = useState(null); // userId
+  const [resetLoading, setResetLoading]     = useState(false);
+
+  const [toast, setToast]                   = useState(null);
+  const [confirm, setConfirm]               = useState(null); // { message, onConfirm }
 
   const [copiedId, setCopiedId]             = useState(null);
   const [expandedCompany, setExpandedCompany] = useState(null);
@@ -35,8 +78,11 @@ export default function Admin() {
   const [fasciaNome, setFasciaNome]         = useState("");
   const [savingFascia, setSavingFascia]     = useState(false);
 
-  // portale dipendenti
   const [togglingPortale, setTogglingPortale] = useState(null);
+
+  function showToast(message, type = "success") {
+    setToast({ message, type });
+  }
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -72,15 +118,22 @@ export default function Admin() {
           "Content-Type": "application/json",
           Authorization: "Bearer " + token
         },
-        body: JSON.stringify({ company_name: companyName, username, password, email: ownerEmail || undefined })
+        body: JSON.stringify({ company_name: companyName, username, email: ownerEmail })
       });
       const data = await response.json();
       if (!data.success) {
-        setError(data.error === "USERNAME_ALREADY_EXISTS" ? "Username già esistente" : "Errore nella creazione");
+        if (data.error === "USERNAME_ALREADY_EXISTS") setError("Username già esistente");
+        else if (data.error === "MISSING_FIELDS") setError("Compila tutti i campi obbligatori");
+        else setError("Errore nella creazione");
         return;
       }
-      setCompanyName(""); setUsername(""); setPassword(""); setOwnerEmail("");
+      setCompanyName(""); setUsername(""); setOwnerEmail("");
       setShowCreate(false);
+      if (data.email_inviata) {
+        showToast(`Azienda creata — credenziali inviate a ${ownerEmail}`);
+      } else {
+        showToast("Azienda creata. Attenzione: email non inviata (verifica config Resend)", "error");
+      }
       loadCompanies();
     } catch (err) {
       console.log(err);
@@ -90,8 +143,14 @@ export default function Admin() {
     }
   }
 
-  async function deleteCompany(id, nome) {
-    if (!confirm(`Eliminare l'azienda "${nome}" e tutti i suoi dati?`)) return;
+  function askDeleteCompany(id, nome) {
+    setConfirm({
+      message: `Eliminare l'azienda "${nome}" e tutti i suoi dati?`,
+      onConfirm: () => { setConfirm(null); deleteCompany(id); }
+    });
+  }
+
+  async function deleteCompany(id) {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(API_URL + "/api/admin/companies/" + id, {
@@ -99,34 +158,41 @@ export default function Admin() {
         headers: { Authorization: "Bearer " + token }
       });
       const data = await response.json();
-      if (!data.success) { alert("Errore eliminazione"); return; }
+      if (!data.success) { showToast("Errore eliminazione", "error"); return; }
+      showToast("Azienda eliminata");
       loadCompanies();
     } catch (err) {
       console.log(err);
-      alert("Errore di connessione");
+      showToast("Errore di connessione", "error");
     }
   }
 
-  async function changePassword(userId) {
-    if (!newPassword) return;
+  // Reset password: auto-genera e invia via email
+  async function resetPassword(userId, userEmail) {
+    setResetLoading(true);
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(API_URL + "/api/admin/users/" + userId + "/password", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ password: newPassword })
+        body: JSON.stringify({}) // password auto-generata dal backend
       });
       const data = await response.json();
-      if (!data.success) { alert("Errore aggiornamento password"); return; }
-      setChangingPassword(null); setNewPassword("");
-      alert("Password aggiornata");
+      if (!data.success) { showToast("Errore reset password", "error"); return; }
+      setResettingPassword(null);
+      if (data.email_inviata) {
+        showToast(`Nuova password inviata a ${userEmail}`);
+      } else {
+        showToast("Password aggiornata — email non inviata (verifica config Resend)", "error");
+      }
     } catch (err) {
       console.log(err);
-      alert("Errore di connessione");
+      showToast("Errore di connessione", "error");
+    } finally {
+      setResetLoading(false);
     }
   }
 
-  // ─── TOGGLE PORTALE DIPENDENTI ─────────────────────────────────────────────
   async function togglePortale(companyId, attivoAttuale) {
     setTogglingPortale(companyId);
     try {
@@ -140,18 +206,15 @@ export default function Admin() {
         }
       );
       const data = await response.json();
-      if (!data.success) { alert("Errore aggiornamento portale"); return; }
-      // aggiorna localmente senza ricaricare tutto
+      if (!data.success) { showToast("Errore aggiornamento portale", "error"); return; }
       setCompanies(prev =>
         prev.map(c =>
-          c.id === companyId
-            ? { ...c, portale_dipendenti: !attivoAttuale }
-            : c
+          c.id === companyId ? { ...c, portale_dipendenti: !attivoAttuale } : c
         )
       );
     } catch (err) {
       console.log(err);
-      alert("Errore di connessione");
+      showToast("Errore di connessione", "error");
     } finally {
       setTogglingPortale(null);
     }
@@ -167,19 +230,26 @@ export default function Admin() {
         body: JSON.stringify({ nome: fasciaNome || null, ora_inizio: fasciaOraInizio, ora_fine: fasciaOraFine, tipo: fasciaTipo })
       });
       const data = await response.json();
-      if (!data.success) { alert("Errore salvataggio fascia"); return; }
+      if (!data.success) { showToast("Errore salvataggio fascia", "error"); return; }
       setShowFasciaForm(null); setFasciaNome(""); setFasciaOraInizio("07:00"); setFasciaOraFine("10:00"); setFasciaTipo("ENTRATA");
+      showToast("Fascia oraria aggiunta");
       loadCompanies();
     } catch (err) {
       console.log(err);
-      alert("Errore di connessione");
+      showToast("Errore di connessione", "error");
     } finally {
       setSavingFascia(false);
     }
   }
 
+  function askDeleteFascia(fasciaId) {
+    setConfirm({
+      message: "Eliminare questa fascia oraria?",
+      onConfirm: () => { setConfirm(null); deleteFascia(fasciaId); }
+    });
+  }
+
   async function deleteFascia(fasciaId) {
-    if (!confirm("Eliminare questa fascia oraria?")) return;
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(API_URL + "/api/admin/fasce/" + fasciaId, {
@@ -187,11 +257,12 @@ export default function Admin() {
         headers: { Authorization: "Bearer " + token }
       });
       const data = await response.json();
-      if (!data.success) { alert("Errore eliminazione fascia"); return; }
+      if (!data.success) { showToast("Errore eliminazione fascia", "error"); return; }
+      showToast("Fascia eliminata");
       loadCompanies();
     } catch (err) {
       console.log(err);
-      alert("Errore di connessione");
+      showToast("Errore di connessione", "error");
     }
   }
 
@@ -209,6 +280,15 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10]">
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {confirm && (
+        <ConfirmDialog
+          message={confirm.message}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
@@ -243,24 +323,50 @@ export default function Admin() {
         {showCreate && (
           <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Nuova azienda</h3>
+              <div>
+                <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Nuova azienda</h3>
+                <p className="text-sm text-zinc-500 mt-1">La password viene generata automaticamente e inviata via email al titolare</p>
+              </div>
               <button onClick={() => { setShowCreate(false); setError(""); }}>
                 <X size={20} className="text-zinc-500" />
               </button>
             </div>
             <form onSubmit={createCompany} className="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="Nome azienda" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
-                className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none" required />
-              <input type="email" placeholder="Email titolare (riceverà le credenziali)" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)}
-                className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none" />
-              <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)}
-                className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none" required />
-              <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none" required />
+              <input
+                type="text"
+                placeholder="Nome azienda *"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Username titolare *"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
+                required
+              />
+              <div className="md:col-span-2 relative">
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                <input
+                  type="email"
+                  placeholder="Email titolare * (riceverà username e password)"
+                  value={ownerEmail}
+                  onChange={(e) => setOwnerEmail(e.target.value)}
+                  className="w-full h-12 pl-10 pr-4 rounded-2xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 placeholder-zinc-400"
+                  required
+                />
+              </div>
               {error && <p className="md:col-span-2 text-sm text-red-500">{error}</p>}
-              <button type="submit" disabled={saving}
-                className="md:col-span-2 h-12 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black font-medium disabled:opacity-50">
-                {saving ? "Creazione..." : ownerEmail ? "Crea azienda e invia credenziali via email" : "Crea azienda"}
+              <button
+                type="submit"
+                disabled={saving}
+                className="md:col-span-2 h-12 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Mail size={16} />
+                {saving ? "Creazione in corso..." : "Crea azienda e invia credenziali via email"}
               </button>
             </form>
           </div>
@@ -298,7 +404,7 @@ export default function Admin() {
                         {expandedCompany === company.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         {expandedCompany === company.id ? "Chiudi" : "Dettagli"}
                       </button>
-                      <button onClick={() => deleteCompany(company.id, company.nome)} className="text-red-500 hover:text-red-700">
+                      <button onClick={() => askDeleteCompany(company.id, company.nome)} className="text-red-500 hover:text-red-700">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -307,7 +413,6 @@ export default function Admin() {
                   {/* COMPANY ID + PORTALE ROW */}
                   <div className="flex flex-col sm:flex-row gap-3">
 
-                    {/* company id */}
                     <div className="flex-1 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-3">
                       <div>
                         <p className="text-xs text-zinc-400 mb-0.5">Company ID</p>
@@ -318,18 +423,14 @@ export default function Admin() {
                       </button>
                     </div>
 
-                    {/* ── PORTALE DIPENDENTI TOGGLE ── */}
                     <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-3 min-w-[220px]">
                       <div>
                         <p className="text-xs text-zinc-400 mb-0.5">Portale dipendenti</p>
                         <div className="flex items-center gap-1.5">
                           <Users size={12} className="text-zinc-400" />
-                          {company.account_dipendenti > 0 && (
-                            <p className="text-xs text-zinc-500">
-                              {company.account_dipendenti} account
-                            </p>
-                          )}
-                          {company.account_dipendenti === 0 && (
+                          {company.account_dipendenti > 0 ? (
+                            <p className="text-xs text-zinc-500">{company.account_dipendenti} account</p>
+                          ) : (
                             <p className="text-xs text-zinc-400">Nessun account</p>
                           )}
                         </div>
@@ -347,10 +448,8 @@ export default function Admin() {
                         )}
                       </button>
                     </div>
-
                   </div>
 
-                  {/* banner quando portale attivo */}
                   {company.portale_dipendenti && (
                     <div className="mt-3 flex items-center gap-2 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-2xl px-4 py-2.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
@@ -375,20 +474,48 @@ export default function Admin() {
                               <div>
                                 <p className="text-xs text-zinc-400 mb-0.5">Username</p>
                                 <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{user.username}</p>
+                                {user.email && (
+                                  <p className="text-xs text-zinc-400 mt-0.5">{user.email}</p>
+                                )}
                               </div>
                               <button
-                                onClick={() => { setChangingPassword(user.id); setNewPassword(""); }}
+                                onClick={() => setResettingPassword(resettingPassword === user.id ? null : user.id)}
                                 className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                               >
-                                <KeyRound size={14} /> Reset password
+                                <RefreshCw size={14} /> Reset password
                               </button>
                             </div>
-                            {changingPassword === user.id && (
-                              <div className="mt-3 flex gap-2">
-                                <input type="password" placeholder="Nuova password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                                  className="flex-1 h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                                <button onClick={() => changePassword(user.id)} className="h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium">Salva</button>
-                                <button onClick={() => setChangingPassword(null)} className="h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm">Annulla</button>
+
+                            {/* Panel reset password */}
+                            {resettingPassword === user.id && (
+                              <div className="mt-4 p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                                {user.email ? (
+                                  <>
+                                    <p className="text-xs text-zinc-500 mb-3">
+                                      Verrà generata una nuova password casuale e inviata via email a <strong className="text-zinc-700 dark:text-zinc-300">{user.email}</strong>
+                                    </p>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => resetPassword(user.id, user.email)}
+                                        disabled={resetLoading}
+                                        className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
+                                      >
+                                        <Mail size={13} />
+                                        {resetLoading ? "Invio..." : "Genera e invia via email"}
+                                      </button>
+                                      <button
+                                        onClick={() => setResettingPassword(null)}
+                                        className="h-9 px-3 rounded-xl bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm"
+                                      >
+                                        Annulla
+                                      </button>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                                    Nessuna email associata a questo account. Impossibile inviare le credenziali.
+                                  </p>
+                                )}
                               </div>
                             )}
                           </div>
@@ -400,8 +527,10 @@ export default function Admin() {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Fasce orarie</h4>
-                        <button onClick={() => setShowFasciaForm(showFasciaForm === company.id ? null : company.id)}
-                          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+                        <button
+                          onClick={() => setShowFasciaForm(showFasciaForm === company.id ? null : company.id)}
+                          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                        >
                           <Plus size={13} /> Aggiungi
                         </button>
                       </div>
@@ -467,7 +596,7 @@ export default function Admin() {
                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${fascia.tipo === "ENTRATA" ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300"}`}>
                                   {fascia.tipo}
                                 </span>
-                                <button onClick={() => deleteFascia(fascia.id)} className="text-zinc-400 hover:text-red-500">
+                                <button onClick={() => askDeleteFascia(fascia.id)} className="text-zinc-400 hover:text-red-500">
                                   <Trash2 size={14} />
                                 </button>
                               </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   Calendar, CheckCircle, XCircle, Sun, Moon, X,
   LayoutDashboard, Users, CreditCard, Radio, FileText
@@ -12,6 +12,7 @@ function formatDate(date) {
 
 export default function Pause() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [dark, setDark] = useState(false)
   const [pausa, setPausa] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -125,7 +126,7 @@ export default function Pause() {
   }
 
   async function cancelPausa(id) {
-    if (!confirm('Annullare la pausa aziendale?')) return
+    if (!window.confirm('Annullare la pausa aziendale?')) return
     try {
       setCancelLoading(true)
       const token = localStorage.getItem('token')
@@ -214,7 +215,11 @@ export default function Pause() {
             const Icon = item.icon;
             return (
               <Link key={item.title} to={item.path}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800">
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                  location.pathname === item.path
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
+                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
+                }`}>
                 <Icon size={16} />{item.title}
               </Link>
             );

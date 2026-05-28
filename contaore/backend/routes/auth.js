@@ -65,7 +65,7 @@ export default async function authRoutes(fastify) {
     }
   })
 
-  // ─── CAMBIA PASSWORD (utente loggato: owner o dipendente) ─────────────────
+  // ─── CAMBIA PASSWORD (utente loggato) ─────────────────────────────────────
   fastify.post('/api/auth/change-password', async (request, reply) => {
     try {
       const authHeader = request.headers.authorization
@@ -131,14 +131,15 @@ export default async function authRoutes(fastify) {
         return reply.status(400).send({ error: 'MISSING_EMAIL' })
       }
 
-      const { data: user } = await supabase
+      const { data: user, error: findError } = await supabase
         .from('user_account')
         .select('id, username, email, role')
-        .eq('email', email)
+        .eq('email', email.trim().toLowerCase())
         .maybeSingle()
 
       // Rispondi sempre success per non rivelare se l'email esiste
-      if (!user) {
+      if (findError || !user) {
+        console.log('forgot-password: utente non trovato per email', email)
         return reply.send({ success: true })
       }
 
@@ -146,7 +147,7 @@ export default async function authRoutes(fastify) {
       const resetToken = crypto.randomBytes(32).toString('hex')
       const expiresAt  = new Date(Date.now() + 60 * 60 * 1000).toISOString()
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('user_account')
         .update({
           reset_token:            resetToken,
@@ -154,14 +155,28 @@ export default async function authRoutes(fastify) {
         })
         .eq('id', user.id)
 
+      if (updateError) {
+        // Le colonne reset_token / reset_token_expires_at potrebbero non esistere nel DB.
+        // Aggiungile su Supabase: ALTER TABLE user_account ADD COLUMN reset_token text, ADD COLUMN reset_token_expires_at timestamptz;
+        console.error('forgot-password: errore update reset_token:', updateError.message)
+        console.error('VERIFICA: le colonne reset_token e reset_token_expires_at esistono in user_account?')
+        return reply.status(500).send({ error: 'DB_RESET_TOKEN_ERROR' })
+      }
+
       const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`
 
-      await sendResetPassword({
+      const emailInviata = await sendResetPassword({
         email:    user.email,
         username: user.username,
         resetUrl
       })
 
+      if (!emailInviata) {
+        console.error('forgot-password: invio email fallito per', user.email)
+        // Non bloccare — l'utente vede messaggio generico
+      }
+
+      console.log('forgot-password: reset richiesto per', user.email, '- email inviata:', emailInviata)
       return reply.send({ success: true })
 
     } catch (err) {
@@ -183,13 +198,13 @@ export default async function authRoutes(fastify) {
         return reply.status(400).send({ error: 'PASSWORD_TOO_SHORT' })
       }
 
-      const { data: user } = await supabase
+      const { data: user, error: findError } = await supabase
         .from('user_account')
         .select('id, reset_token_expires_at')
         .eq('reset_token', token)
         .maybeSingle()
 
-      if (!user) {
+      if (findError || !user) {
         return reply.status(400).send({ error: 'INVALID_TOKEN' })
       }
 
@@ -199,7 +214,7 @@ export default async function authRoutes(fastify) {
 
       const hashed = await bcrypt.hash(newPassword, 10)
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('user_account')
         .update({
           password:               hashed,
@@ -207,6 +222,11 @@ export default async function authRoutes(fastify) {
           reset_token_expires_at: null
         })
         .eq('id', user.id)
+
+      if (updateError) {
+        console.error('reset-password: errore update:', updateError.message)
+        return reply.status(500).send({ error: 'UPDATE_ERROR' })
+      }
 
       return reply.send({ success: true })
 

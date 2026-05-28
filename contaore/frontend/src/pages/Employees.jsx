@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard,
   Radio, Sun, Moon, Download, X,
@@ -402,6 +402,7 @@ PAGINA DIPENDENTI
 export default function Employees() {
 
   const navigate = useNavigate();
+  const location = useLocation();
   const [dark, setDark] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -485,8 +486,11 @@ export default function Employees() {
             const Icon = item.icon;
             return (
               <Link to={item.path} key={item.title}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
-              >
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                  location.pathname === item.path
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
+                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
+                }`}>
                 <Icon size={16} />{item.title}
               </Link>
             );

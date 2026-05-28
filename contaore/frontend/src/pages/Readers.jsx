@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import {
   Link,
-  useNavigate
+  useNavigate, useLocation
 } from "react-router-dom";
 
 import {
@@ -21,6 +21,7 @@ import { API_URL } from "../api";
 export default function Readers() {
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [dark, setDark] = useState(false);
 
@@ -217,11 +218,11 @@ export default function Readers() {
               <Link
                 key={item.title}
                 to={item.path}
-                className="
-                  flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium transition-all whitespace-nowrap
-                  bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300
-                  border-zinc-200 dark:border-zinc-800
-                "
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium transition-all whitespace-nowrap ${
+                  location.pathname === item.path
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
+                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
+                }`}
               >
 
                 <Icon size={16} />

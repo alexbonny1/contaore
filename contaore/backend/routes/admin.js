@@ -1,7 +1,19 @@
 import bcrypt from 'bcrypt'
+import crypto from 'crypto'
 import { supabase } from '../services/supabase.js'
 import { authenticateSuperadmin } from '../middleware/auth.js'
 import { sendCredenziali, sendCredenzialiOwner } from '../services/email.js'
+
+// Genera password casuale sicura (12 caratteri: lettere + numeri)
+function generaPassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  let pwd = ''
+  const bytes = crypto.randomBytes(12)
+  for (let i = 0; i < 12; i++) {
+    pwd += chars[bytes[i] % chars.length]
+  }
+  return pwd
+}
 
 export default async function adminRoutes(fastify) {
 
@@ -37,14 +49,13 @@ export default async function adminRoutes(fastify) {
               .eq('company_id', company.id)
               .order('ora_inizio', { ascending: true })
 
-            // numero account dipendenti creati
             const accountDipendenti = (users || []).filter(u => u.role === 'dipendente').length
 
             return {
               ...company,
-              users:               (users || []).filter(u => u.role !== 'dipendente'),
-              fasce:               fasce || [],
-              account_dipendenti:  accountDipendenti
+              users:              (users || []).filter(u => u.role !== 'dipendente'),
+              fasce:              fasce || [],
+              account_dipendenti: accountDipendenti
             }
           })
         )
@@ -59,16 +70,20 @@ export default async function adminRoutes(fastify) {
   )
 
   /*
-    CREATE COMPANY + ACCOUNT
+    CREATE COMPANY + ACCOUNT OWNER
+    - password auto-generata se non fornita
+    - email obbligatoria: le credenziali vengono inviate via email
   */
   fastify.post(
     '/api/admin/companies',
     { preHandler: authenticateSuperadmin },
     async (request, reply) => {
       try {
-        const { company_name, username, password, email } = request.body
+        const { company_name, username, email } = request.body
+        // password opzionale: se non fornita viene auto-generata
+        const passwordInChiaro = request.body.password || generaPassword()
 
-        if (!company_name || !username || !password) {
+        if (!company_name || !username || !email) {
           return reply.status(400).send({ success: false, error: 'MISSING_FIELDS' })
         }
 
@@ -98,14 +113,14 @@ export default async function adminRoutes(fastify) {
           return reply.status(500).send({ success: false, error: 'COMPANY_CREATE_ERROR' })
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10)
+        const hashedPassword = await bcrypt.hash(passwordInChiaro, 10)
 
         const { data: user, error: userError } = await supabase
           .from('user_account')
           .insert({
             username,
             password:   hashedPassword,
-            email:      email || null,
+            email,
             role:       'owner',
             company_id: company.id
           })
@@ -114,29 +129,32 @@ export default async function adminRoutes(fastify) {
 
         if (userError) {
           console.log(userError)
+          // rollback company
+          await supabase.from('company').delete().eq('id', company.id)
           return reply.status(500).send({ success: false, error: 'USER_CREATE_ERROR' })
         }
 
-        // Invia email con credenziali al titolare se email è fornita
-        if (email) {
-          try {
-            const emailSent = await sendCredenzialiOwner({
-              email,
-              username,
-              password,
-              companyNome: company_name
-            })
-            if (emailSent) {
-              console.log('Email credenziali inviata a', email)
-            }
-          } catch (mailErr) {
-            console.log('Errore invio email credenziali:', mailErr.message)
-            // Non blocc l'operazione se l'email fallisce
+        // Invia email con credenziali al titolare
+        let emailInviata = false
+        try {
+          emailInviata = await sendCredenzialiOwner({
+            email,
+            username,
+            password:    passwordInChiaro,
+            companyNome: company_name
+          })
+          if (emailInviata) {
+            console.log('Email credenziali owner inviata a', email)
+          } else {
+            console.warn('Invio email credenziali owner fallito per', email)
           }
+        } catch (mailErr) {
+          console.error('Errore invio email credenziali owner:', mailErr.message)
         }
 
         return reply.send({
           success: true,
+          email_inviata: emailInviata,
           company,
           user: {
             id:         user.id,
@@ -187,21 +205,27 @@ export default async function adminRoutes(fastify) {
   )
 
   /*
-    CAMBIA PASSWORD ACCOUNT AZIENDA
+    CAMBIA PASSWORD ACCOUNT AZIENDA (dal pannello superadmin)
+    Genera una nuova password casuale e la invia via email al titolare
   */
   fastify.put(
     '/api/admin/users/:id/password',
     { preHandler: authenticateSuperadmin },
     async (request, reply) => {
       try {
-        const { id }       = request.params
-        const { password } = request.body
+        const { id } = request.params
+        // Se il body ha una password la usa, altrimenti la auto-genera
+        const passwordInChiaro = request.body.password || generaPassword()
 
-        if (!password) {
-          return reply.status(400).send({ success: false, error: 'MISSING_PASSWORD' })
-        }
+        const hashedPassword = await bcrypt.hash(passwordInChiaro, 10)
 
-        const hashedPassword = await bcrypt.hash(password, 10)
+        // Recupera email e username per invio credenziali
+        const { data: userInfo } = await supabase
+          .from('user_account')
+          .select('username, email, company_id')
+          .eq('id', id)
+          .neq('role', 'superadmin')
+          .maybeSingle()
 
         const { error } = await supabase
           .from('user_account')
@@ -214,7 +238,29 @@ export default async function adminRoutes(fastify) {
           return reply.status(500).send({ success: false, error: 'UPDATE_ERROR' })
         }
 
-        return reply.send({ success: true })
+        // Invia email con nuove credenziali se email disponibile
+        let emailInviata = false
+        if (userInfo?.email) {
+          try {
+            // Recupera nome azienda
+            const { data: company } = await supabase
+              .from('company')
+              .select('nome')
+              .eq('id', userInfo.company_id)
+              .maybeSingle()
+
+            emailInviata = await sendCredenzialiOwner({
+              email:       userInfo.email,
+              username:    userInfo.username,
+              password:    passwordInChiaro,
+              companyNome: company?.nome || ''
+            })
+          } catch (mailErr) {
+            console.error('Errore invio email reset password:', mailErr.message)
+          }
+        }
+
+        return reply.send({ success: true, email_inviata: emailInviata, nuova_password: passwordInChiaro })
 
       } catch (err) {
         console.log(err)
@@ -224,10 +270,7 @@ export default async function adminRoutes(fastify) {
   )
 
   /*
-    ── PORTALE DIPENDENTI ───────────────────────────────────────────────────────
-    PUT /api/admin/companies/:id/portale
-    Abilita o disabilita il portale self-service per una specifica azienda
-    body: { attivo: true | false }
+    TOGGLE PORTALE DIPENDENTI
   */
   fastify.put(
     '/api/admin/companies/:id/portale',
@@ -263,9 +306,7 @@ export default async function adminRoutes(fastify) {
   )
 
   /*
-    ── ACCOUNT DIPENDENTI ───────────────────────────────────────────────────────
-    GET /api/admin/companies/:id/accounts
-    Lista degli account dipendenti creati per una specifica azienda
+    GET ACCOUNT DIPENDENTI
   */
   fastify.get(
     '/api/admin/companies/:id/accounts',
@@ -296,7 +337,7 @@ export default async function adminRoutes(fastify) {
   )
 
   /*
-    GET FASCE ORARIE AZIENDA
+    GET FASCE ORARIE
   */
   fastify.get(
     '/api/admin/companies/:id/fasce',
@@ -327,14 +368,6 @@ export default async function adminRoutes(fastify) {
 
   /*
     CREATE FASCIA ORARIA
-    Supporta creazione di fasce per giorni singoli o multipli
-    body: {
-      nome: 'Turno mattina',
-      ora_inizio: '08:00',
-      ora_fine: '13:00',
-      tipo: 'ENTRATA',
-      giorni: ['lunedì'] | ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì']
-    }
   */
   fastify.post(
     '/api/admin/companies/:id/fasce',
@@ -355,14 +388,12 @@ export default async function adminRoutes(fastify) {
         const GIORNI_VALIDI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica']
         const giorniSelezionati = (giorni && Array.isArray(giorni)) ? giorni : ['lunedì']
 
-        // Valida i giorni selezionati
         for (const giorno of giorniSelezionati) {
           if (!GIORNI_VALIDI.includes(giorno.toLowerCase())) {
             return reply.status(400).send({ success: false, error: 'GIORNO_INVALIDO' })
           }
         }
 
-        // Crea una fascia per ogni giorno selezionato
         const fascePromises = giorniSelezionati.map(giorno =>
           supabase
             .from('fasce_orarie')
@@ -379,7 +410,7 @@ export default async function adminRoutes(fastify) {
         )
 
         const results = await Promise.all(fascePromises)
-        const errors = results.filter(r => r.error)
+        const errors  = results.filter(r => r.error)
 
         if (errors.length > 0) {
           console.log('Errori inserimento fasce:', errors)
@@ -391,7 +422,7 @@ export default async function adminRoutes(fastify) {
         return reply.send({
           success: true,
           fasce,
-          message: `${fasce.length} fascia/e oraria/e create per i giorni selezionati`
+          message: `${fasce.length} fascia/e oraria/e create`
         })
 
       } catch (err) {

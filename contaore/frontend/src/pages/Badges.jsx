@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard,
   Radio, Sun, Moon, CheckCircle2, XCircle, Mail,
   FileText, Calendar
 } from "lucide-react";
 import { API_URL } from "../api";
+
+const NAV_TABS = [
+  { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
+  { title: "Richieste",       icon: FileText,        path: "/requests"  },
+  { title: "Pausa aziendale", icon: Calendar,        path: "/pause"     },
+  { title: "Dipendenti",      icon: Users,           path: "/employees" },
+  { title: "Badge",           icon: CreditCard,      path: "/badges"    },
+  { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
+];
 
 function Toast({ message, type, onClose }) {
   useEffect(() => {
@@ -25,19 +34,45 @@ function Toast({ message, type, onClose }) {
   );
 }
 
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white dark:bg-[#161618] rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 max-w-sm w-full mx-4 shadow-xl">
+        <p className="text-zinc-900 dark:text-zinc-100 font-medium mb-6 leading-relaxed">{message}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={onConfirm}
+            className="flex-1 h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors"
+          >
+            Elimina
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 h-11 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium"
+          >
+            Annulla
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Badges() {
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [dark, setDark]                     = useState(false);
   const [badges, setBadges]                 = useState([]);
   const [uid, setUid]                       = useState("");
   const [employeeName, setEmployeeName]     = useState("");
   const [employeeCognome, setEmployeeCognome] = useState("");
-  const [employeeEmail, setEmployeeEmail]   = useState("");   // ← nuovo
+  const [employeeEmail, setEmployeeEmail]   = useState("");
   const [waitingScan, setWaitingScan]       = useState(false);
   const [toast, setToast]                   = useState(null);
-  const [portaleAttivo, setPortaleAttivo]   = useState(false); // ← nuovo
+  const [confirm, setConfirm]               = useState(null); // { message, onConfirm }
+  const [portaleAttivo, setPortaleAttivo]   = useState(false);
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -69,20 +104,19 @@ export default function Badges() {
     } catch (err) { console.log(err); }
   }
 
-  // controlla se il portale dipendenti è attivo per questa azienda
-async function checkPortale() {
-  try {
-    const token = localStorage.getItem("token");
-    const res   = await fetch(API_URL + "/api/company/info", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) return; // endpoint non ancora aggiunto, ignora
-    const data = await res.json();
-    if (data.success) setPortaleAttivo(!!data.portale_dipendenti);
-  } catch (err) {
-    // silenzioso — portale rimane disattivo
+  async function checkPortale() {
+    try {
+      const token = localStorage.getItem("token");
+      const res   = await fetch(API_URL + "/api/company/info", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success) setPortaleAttivo(!!data.portale_dipendenti);
+    } catch (err) {
+      // silenzioso
+    }
   }
-}
 
   // ─── polling NFC ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -109,7 +143,6 @@ async function checkPortale() {
   async function createBadge(e) {
     e.preventDefault();
 
-    // se portale attivo, email obbligatoria
     if (portaleAttivo && !employeeEmail.trim()) {
       showToast("Il portale dipendenti è attivo: inserisci l'email", "error");
       return;
@@ -154,8 +187,14 @@ async function checkPortale() {
     }
   }
 
+  function askDeleteBadge(id) {
+    setConfirm({
+      message: "Eliminare il badge e il dipendente associato? L'operazione non può essere annullata.",
+      onConfirm: () => { setConfirm(null); deleteBadge(id); }
+    });
+  }
+
   async function deleteBadge(id) {
-    if (!confirm("Eliminare badge e dipendente associato?")) return;
     try {
       const token = localStorage.getItem("token");
       const res   = await fetch(API_URL + "/api/tags/" + id, {
@@ -163,6 +202,7 @@ async function checkPortale() {
       });
       const data = await res.json();
       if (!data.success) { showToast(data.error || "Errore", "error"); return; }
+      showToast("Badge eliminato");
       loadBadges();
     } catch (err) { console.log(err); showToast("Errore server", "error"); }
   }
@@ -173,6 +213,13 @@ async function checkPortale() {
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {confirm && (
+        <ConfirmDialog
+          message={confirm.message}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
@@ -196,19 +243,17 @@ async function checkPortale() {
       <div className="max-w-7xl mx-auto px-6 py-8">
 
         {/* NAV TABS */}
-        <div className="flex gap-3 mb-8 overflow-x-auto">
-          {[
-            { title: "Dashboard",      icon: LayoutDashboard, path: "/dashboard" },
-            { title: "Richieste",      icon: FileText,        path: "/requests"  },
-            { title: "Pausa aziendale",icon: Calendar,        path: "/pause"     },
-            { title: "Dipendenti",     icon: Users,           path: "/employees" },
-            { title: "Badge",          icon: CreditCard,      path: "/badges"    },
-            { title: "Lettori NFC",    icon: Radio,           path: "/readers"   }
-          ].map((item) => {
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
+          {NAV_TABS.map((item) => {
             const Icon = item.icon;
+            const isActive = location.pathname === item.path;
             return (
               <Link key={item.title} to={item.path}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800">
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                  isActive
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
+                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
+                }`}>
                 <Icon size={16} />{item.title}
               </Link>
             );
@@ -265,7 +310,6 @@ async function checkPortale() {
                   className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
                   required />
 
-                {/* EMAIL — visibile solo se portale attivo */}
                 {portaleAttivo && (
                   <div className="relative md:col-span-2">
                     <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
@@ -286,7 +330,6 @@ async function checkPortale() {
                 </button>
 
               </div>
-
             </div>
           )}
         </form>
@@ -299,7 +342,10 @@ async function checkPortale() {
                 <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                   <CreditCard size={20} className="text-zinc-700 dark:text-zinc-200" />
                 </div>
-                <button onClick={() => deleteBadge(badge.id)} className="text-xs text-red-500 hover:text-red-700">
+                <button
+                  onClick={() => askDeleteBadge(badge.id)}
+                  className="text-xs text-red-500 hover:text-red-700 font-medium"
+                >
                   Elimina
                 </button>
               </div>
