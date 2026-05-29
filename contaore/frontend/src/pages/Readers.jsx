@@ -171,7 +171,7 @@ export default function Readers() {
           <div>
 
             <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              ContaOre
+              Timbry
             </h1>
 
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
