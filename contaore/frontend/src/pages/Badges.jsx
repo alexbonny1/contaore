@@ -231,7 +231,7 @@ export default function Badges() {
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">ContaOre</h1>
+            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Timbry</h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Gestione badge NFC</p>
           </div>
           <div className="flex items-center gap-3">
