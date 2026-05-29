@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import rateLimit from '@fastify/rate-limit'
 import dotenv from 'dotenv'
 import deviceRoutes from './routes/devices.js'
 import scanRoutes from './routes/scan.js'
@@ -22,7 +23,11 @@ const fastify = Fastify({
 })
 
 await fastify.register(cors, {
-  origin: true
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173'
+})
+
+await fastify.register(rateLimit, {
+  global: false
 })
 
 await fastify.register(exportRoutes)

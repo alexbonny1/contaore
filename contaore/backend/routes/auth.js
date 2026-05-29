@@ -4,12 +4,23 @@ import crypto from 'crypto'
 import { supabase } from '../services/supabase.js'
 import { sendResetPassword } from '../services/email.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'SUPER_SECRET_KEY'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) throw new Error('Variabile d\'ambiente JWT_SECRET mancante')
 
 export default async function authRoutes(fastify) {
 
   // ─── LOGIN ────────────────────────────────────────────────────────────────
-  fastify.post('/api/auth/login', async (request, reply) => {
+  fastify.post('/api/auth/login', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+        errorResponseBuilder: () => ({
+          error: 'TOO_MANY_REQUESTS'
+        })
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { username, password } = request.body
 
@@ -127,7 +138,17 @@ export default async function authRoutes(fastify) {
   })
 
   // ─── FORGOT PASSWORD — invia email con link reset ─────────────────────────
-  fastify.post('/api/auth/forgot-password', async (request, reply) => {
+  fastify.post('/api/auth/forgot-password', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes',
+        errorResponseBuilder: () => ({
+          error: 'TOO_MANY_REQUESTS'
+        })
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email } = request.body
 
@@ -143,7 +164,6 @@ export default async function authRoutes(fastify) {
 
       // Rispondi sempre success per non rivelare se l'email esiste
       if (findError || !user) {
-        console.log('forgot-password: utente non trovato per email', email)
         return reply.send({ success: true })
       }
 
@@ -181,7 +201,7 @@ export default async function authRoutes(fastify) {
         // Non bloccare — l'utente vede messaggio generico
       }
 
-      console.log('forgot-password: reset richiesto per', user.email, '- email inviata:', emailInviata)
+      console.log('forgot-password: reset richiesto - email inviata:', emailInviata)
       return reply.send({ success: true })
 
     } catch (err) {
