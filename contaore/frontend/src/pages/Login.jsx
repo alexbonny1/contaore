@@ -52,7 +52,7 @@ export default function Login() {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-sm border border-zinc-200 p-8">
 
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">ContaOre</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Timbry</h1>
           <p className="text-zinc-500 mt-2">Gestione NFC presenze</p>
         </div>
 
