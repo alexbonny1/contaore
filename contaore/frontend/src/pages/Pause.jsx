@@ -190,7 +190,7 @@ export default function Pause() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              Pausa aziendale
+              Timbry
             </h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Gestisci le ferie dell'azienda
