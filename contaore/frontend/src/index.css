@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Custom breakpoint for extra small devices */
+@custom-media --xs (min-width: 475px);
+
 :root {
 
   --bg: #d4d4d4bd;
@@ -46,3 +49,4 @@ body {
     color 0.25s ease;
 }
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant xs (@media (--xs));

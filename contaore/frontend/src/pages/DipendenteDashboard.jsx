@@ -250,28 +250,30 @@ export default function DipendenteDashboard() {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-4xl mx-auto px-5 h-16 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-zinc-400 font-mono uppercase tracking-widest">Timbry</p>
-            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-5 h-14 sm:h-16 flex items-center justify-between">
+          <div className="min-w-0 flex-1 pr-2">
+            <p className="text-[10px] sm:text-xs text-zinc-400 font-mono uppercase tracking-widest">Timbry</p>
+            <p className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
               {employee.nome} {employee.cognome}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowChangePassword(true)} className="flex items-center gap-2 h-10 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
-              <Lock size={14} /> Password
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button onClick={() => setShowChangePassword(true)} className="flex items-center gap-1 sm:gap-2 h-9 sm:h-10 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
+              <Lock size={12} className="sm:w-[14px] sm:h-[14px]" />
+              <span className="hidden xs:inline">Password</span>
             </button>
-            <button onClick={logout} className="flex items-center gap-2 h-10 px-4 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
-              <LogOut size={14} /> Esci
+            <button onClick={logout} className="flex items-center gap-1 sm:gap-2 h-9 sm:h-10 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium">
+              <LogOut size={12} className="sm:w-[14px] sm:h-[14px]" />
+              <span className="hidden xs:inline">Esci</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-5 py-7">
+      <div className="max-w-4xl mx-auto px-4 sm:px-5 py-5 sm:py-7">
 
         {/* STATS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {[
             { icon: Clock,     label: "Ore questo mese",   value: `${stats.ore_mese_corrente}h` },
             { icon: UserCheck, label: "Giorni assenti",     value: stats.giorni_assenti },
@@ -280,53 +282,54 @@ export default function DipendenteDashboard() {
           ].map((s) => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4">
-                <Icon size={16} className="text-zinc-400 mb-2" />
-                <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{s.value}</p>
-                <p className="text-xs text-zinc-400 mt-0.5">{s.label}</p>
+              <div key={s.label} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-3 sm:p-4">
+                <Icon size={14} className="sm:w-4 sm:h-4 text-zinc-400 mb-1.5 sm:mb-2" />
+                <p className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{s.value}</p>
+                <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 leading-tight">{s.label}</p>
               </div>
             );
           })}
         </div>
 
         {/* TABS */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-1.5 sm:gap-2 mb-5 sm:mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
-            { id: "storico", label: "Storico presenze" },
-            { id: "ferie",   label: "Ferie" },
-            { id: "richieste",   label: "Richieste" },
-            { id: "turni",   label: "I miei turni" },
+            { id: "storico", label: "Storico presenze", shortLabel: "Storico" },
+            { id: "ferie",   label: "Ferie", shortLabel: "Ferie" },
+            { id: "richieste",   label: "Richieste", shortLabel: "Richieste" },
+            { id: "turni",   label: "I miei turni", shortLabel: "Turni" },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`px-4 py-2 rounded-2xl text-sm font-medium transition-all ${tab === t.id ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black" : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"}`}>
-              {t.label}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${tab === t.id ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black" : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"}`}>
+              <span className="hidden sm:inline">{t.label}</span>
+              <span className="sm:hidden">{t.shortLabel}</span>
             </button>
           ))}
         </div>
 
         {/* ══════════ TAB: STORICO ══════════ */}
         {tab === "storico" && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {Object.keys(months).length === 0 && (
-              <div className="text-center py-16 text-zinc-400">Nessuna presenza registrata</div>
+              <div className="text-center py-12 sm:py-16 text-sm sm:text-base text-zinc-400">Nessuna presenza registrata</div>
             )}
             {Object.entries(months).map(([mese, giorni]) => {
               const oreM   = Number(giorni.reduce((s, d) => s + d.ore_totali, 0).toFixed(2));
               const assM   = giorni.filter(d => d.assente).length;
               const isOpen = openMonth === mese;
               return (
-                <div key={mese} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                <div key={mese} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 overflow-hidden">
 
                   {/* header mese */}
-                  <button className="w-full flex items-center justify-between px-6 py-4" onClick={() => setOpenMonth(isOpen ? null : mese)}>
-                    <div className="flex items-center gap-3">
-                      <Calendar size={16} className="text-zinc-400" />
-                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize">{mese}</span>
+                  <button className="w-full flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4" onClick={() => setOpenMonth(isOpen ? null : mese)}>
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <Calendar size={14} className="sm:w-4 sm:h-4 text-zinc-400 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize truncate">{mese}</span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-xs text-zinc-400">{oreM}h lavorate</span>
-                      {assM > 0 && <span className="text-xs text-red-500">{assM} assenze</span>}
-                      {isOpen ? <ChevronUp size={16} className="text-zinc-400" /> : <ChevronDown size={16} className="text-zinc-400" />}
+                    <div className="flex items-center gap-2 sm:gap-4">
+                      <span className="text-[10px] sm:text-xs text-zinc-400 whitespace-nowrap">{oreM}h</span>
+                      {assM > 0 && <span className="text-[10px] sm:text-xs text-red-500 whitespace-nowrap hidden xs:inline">{assM} assenze</span>}
+                      {isOpen ? <ChevronUp size={14} className="sm:w-4 sm:h-4 text-zinc-400" /> : <ChevronDown size={14} className="sm:w-4 sm:h-4 text-zinc-400" />}
                     </div>
                   </button>
 
@@ -431,8 +434,10 @@ export default function DipendenteDashboard() {
             {/* bottone nuova richiesta */}
             {!showFerieForm && (
               <button onClick={() => setShowFerieForm(true)}
-                className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium mb-6">
-                <Umbrella size={15} /> Nuova richiesta ferie
+                className="flex items-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium mb-5 sm:mb-6">
+                <Umbrella size={14} className="sm:w-[15px] sm:h-[15px]" />
+                <span className="hidden xs:inline">Nuova richiesta ferie</span>
+                <span className="xs:hidden">Nuova richiesta</span>
               </button>
             )}
 
@@ -471,13 +476,13 @@ export default function DipendenteDashboard() {
 
             {/* lista richieste */}
             {ferie.length === 0 ? (
-              <div className="text-center py-16 text-zinc-400">Nessuna richiesta ferie</div>
+              <div className="text-center py-12 sm:py-16 text-sm sm:text-base text-zinc-400">Nessuna richiesta ferie</div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {ferie.map(f => {
                   const { label, color } = statoBadgeFerie(f.stato);
                   return (
-                    <div key={f.id} className="rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-5 py-4 flex items-center justify-between">
+                    <div key={f.id} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-4 sm:px-5 py-3 sm:py-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 xs:gap-0">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <Umbrella size={14} className="text-zinc-400" />
@@ -515,8 +520,8 @@ export default function DipendenteDashboard() {
               
               {!showMissingScanForm && (
                 <button onClick={() => setShowMissingScanForm(true)}
-                  className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium mb-6">
-                  <Clock size={15} /> Nuova richiesta
+                  className="flex items-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium mb-5 sm:mb-6">
+                  <Clock size={14} className="sm:w-[15px] sm:h-[15px]" /> Nuova richiesta
                 </button>
               )}
 

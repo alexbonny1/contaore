@@ -302,27 +302,27 @@ function ExportModal({ employees, onClose, token }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="w-full max-w-lg bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl flex flex-col max-h-[90vh]">
 
-        <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-          <div>
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Esporta presenze</h2>
-            <p className="text-sm text-zinc-500 mt-0.5">Seleziona periodo e dipendenti</p>
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+          <div className="min-w-0 flex-1 pr-3">
+            <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 truncate">Esporta presenze</h2>
+            <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">Seleziona periodo e dipendenti</p>
           </div>
-          <button onClick={onClose} className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-            <X size={16} className="text-zinc-500" />
+          <button onClick={onClose} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
+            <X size={14} className="sm:w-4 sm:h-4 text-zinc-500" />
           </button>
         </div>
 
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div className="overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
 
           <div>
-            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Periodo</p>
+            <p className="text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Periodo</p>
             <select
               value={selectedMonth}
               onChange={e => setSelectedMonth(e.target.value)}
-              className="w-full h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm outline-none"
+              className="w-full h-10 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none"
             >
               <option value="tutti">Tutto lo storico</option>
               {availableMonths.map(m => (
@@ -333,23 +333,23 @@ function ExportModal({ employees, onClose, token }) {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Dipendenti</p>
-              <button onClick={toggleAll} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">
+              <p className="text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300">Dipendenti</p>
+              <button onClick={toggleAll} className="text-[10px] sm:text-xs text-indigo-500 hover:text-indigo-700 font-medium">
                 {selectedIds.length === employees.length ? "Deseleziona tutti" : "Seleziona tutti"}
               </button>
             </div>
-            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-48 sm:max-h-52 overflow-y-auto pr-1">
               {employees.map(emp => (
                 <button
                   key={emp.id}
                   onClick={() => toggleEmployee(emp.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all text-left"
+                  className="w-full flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all text-left"
                 >
                   {selectedIds.includes(emp.id)
-                    ? <CheckSquare size={18} className="text-indigo-500 shrink-0" />
-                    : <Square size={18} className="text-zinc-400 shrink-0" />
+                    ? <CheckSquare size={16} className="sm:w-[18px] sm:h-[18px] text-indigo-500 shrink-0" />
+                    : <Square size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-400 shrink-0" />
                   }
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                     {emp.nome} {emp.cognome}
                   </span>
                 </button>
@@ -359,30 +359,30 @@ function ExportModal({ employees, onClose, token }) {
 
         </div>
 
-        <div className="p-6 border-t border-zinc-200 dark:border-zinc-800 shrink-0 space-y-3">
+        <div className="p-4 sm:p-6 border-t border-zinc-200 dark:border-zinc-800 shrink-0 space-y-3">
 
-          {loading && <p className="text-center text-sm text-zinc-500">Generazione in corso...</p>}
+          {loading && <p className="text-center text-xs sm:text-sm text-zinc-500">Generazione in corso...</p>}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <button
               onClick={exportPDF}
               disabled={loading || selectedIds.length === 0}
-              className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold disabled:opacity-40 transition-all"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 h-11 sm:h-12 rounded-xl sm:rounded-2xl bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
             >
-              <FileText size={16} />
-              Esporta PDF
+              <FileText size={14} className="sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Esporta </span>PDF
             </button>
             <button
               onClick={exportExcel}
               disabled={loading || selectedIds.length === 0}
-              className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-40 transition-all"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 h-11 sm:h-12 rounded-xl sm:rounded-2xl bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
             >
-              <Table2 size={16} />
-              Esporta Excel
+              <Table2 size={14} className="sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Esporta </span>Excel
             </button>
           </div>
 
-          <p className="text-xs text-center text-zinc-400">
+          <p className="text-[10px] sm:text-xs text-center text-zinc-400">
             {selectedIds.length} dipendent{selectedIds.length === 1 ? "e" : "i"} selezionat{selectedIds.length === 1 ? "o" : "i"}
           </p>
 
@@ -457,35 +457,36 @@ export default function Employees() {
       )}
 
       <header className="sticky top-0 z-40 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Timbry</h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Gestione dipendenti</p>
+            <h1 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">Timbry</h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">Gestione dipendenti</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setShowExport(true)}
-              className="flex items-center gap-2 h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >
-              <Download size={15} />
-              Esporta
+              <Download size={14} className="sm:w-[15px] sm:h-[15px]" />
+              <span className="hidden xs:inline">Esporta</span>
             </button>
             <button
               onClick={() => setDark(prev => !prev)}
-              className="w-11 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center"
             >
-              {dark ? <Sun size={18} className="text-zinc-200" /> : <Moon size={18} className="text-zinc-700" />}
+              {dark ? <Sun size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-200" /> : <Moon size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-700" />}
             </button>
-            <button onClick={logout} className="h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
-              Logout
+            <button onClick={logout} className="h-9 sm:h-11 px-3 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium">
+              <span className="hidden sm:inline">Logout</span>
+              <span className="sm:hidden">Esci</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
+        <div className="flex gap-2 sm:gap-3 mb-6 sm:mb-8 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
             { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
             { title: "Richieste",       icon: FileText,        path: "/requests",  notifica: pendingCount, nascondiSeSenzaPortale: true },
@@ -500,14 +501,15 @@ export default function Employees() {
               const isActive = location.pathname === item.path;
               return (
                 <Link to={item.path} key={item.title}
-                  className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                     isActive
                       ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
                       : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
                   }`}>
-                  <Icon size={16} />{item.title}
+                  <Icon size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden xs:inline">{item.title}</span>
                   {!isActive && item.notifica > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                    <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
                       {item.notifica > 9 ? "9+" : item.notifica}
                     </span>
                   )}
@@ -516,48 +518,48 @@ export default function Employees() {
             })}
         </div>
 
-        <div className="mb-8">
-          <h2 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Dipendenti</h2>
-          <p className="text-zinc-500 mt-2">Statistiche presenze realtime</p>
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Dipendenti</h2>
+          <p className="text-sm sm:text-base text-zinc-500 mt-1 sm:mt-2">Statistiche presenze realtime</p>
         </div>
 
         {loading && (
-          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-10 text-center">
-            <p className="text-zinc-500">Caricamento dipendenti...</p>
+          <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-8 sm:p-10 text-center">
+            <p className="text-sm sm:text-base text-zinc-500">Caricamento dipendenti...</p>
           </div>
         )}
 
         {!loading && employees.length === 0 && (
-          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-10 text-center">
-            <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Nessun dipendente</h3>
-            <p className="text-zinc-500">Nessun badge registrato</p>
+          <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-8 sm:p-10 text-center">
+            <h3 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Nessun dipendente</h3>
+            <p className="text-sm sm:text-base text-zinc-500">Nessun badge registrato</p>
           </div>
         )}
 
         {!loading && employees.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
             {employees.map((emp) => (
               <div
                 key={emp.id}
                 onClick={() => navigate("/employees/" + emp.id)}
-                className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 cursor-pointer hover:scale-[1.02] transition-all"
+                className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
-                <div className="flex items-start justify-between mb-5">
-                  <div>
-                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                <div className="flex items-start justify-between mb-4 sm:mb-5">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                       {emp.nome} {emp.cognome}
                     </h3>
-                    <p className="text-sm text-zinc-500 mt-1">{emp.badge_uid || "Nessun badge"}</p>
+                    <p className="text-xs sm:text-sm text-zinc-500 mt-1 truncate">{emp.badge_uid || "Nessun badge"}</p>
                   </div>
-                  <div className={`w-3 h-3 rounded-full mt-2 ${emp.attivo ? "bg-green-500" : "bg-zinc-400"}`} />
+                  <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mt-1 sm:mt-2 flex-shrink-0 ${emp.attivo ? "bg-green-500" : "bg-zinc-400"}`} />
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <Info label="Letture oggi"    value={emp.stats?.today_reads || 0} />
                   <Info label="Letture mese"    value={emp.stats?.month_reads || 0} />
                   <Info label="Ore totali"      value={formatOre(emp.stats?.total_hours || 0)} />
                   <Info
                     label="Ultima presenza"
-                    value={emp.stats?.last_read ? new Date(emp.stats.last_read).toLocaleString("it-IT") : "Mai"}
+                    value={emp.stats?.last_read ? new Date(emp.stats.last_read).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "Mai"}
                   />
                 </div>
               </div>
@@ -572,9 +574,9 @@ export default function Employees() {
 
 function Info({ label, value }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-zinc-500">{label}</span>
-      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{value}</span>
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs sm:text-sm text-zinc-500 truncate">{label}</span>
+      <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{value}</span>
     </div>
   );
 }

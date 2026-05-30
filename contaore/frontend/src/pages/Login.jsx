@@ -48,22 +48,22 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-sm border border-zinc-200 p-8">
+    <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200 p-6 sm:p-8">
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Timbry</h1>
-          <p className="text-zinc-500 mt-2">Gestione NFC presenze</p>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900">Timbry</h1>
+          <p className="text-sm sm:text-base text-zinc-500 mt-1 sm:mt-2">Gestione NFC presenze</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
 
           <input
             type="text"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full h-12 px-4 rounded-2xl border border-zinc-200 outline-none focus:border-zinc-400"
+            className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 text-sm sm:text-base outline-none focus:border-zinc-400 transition"
             required
           />
 
@@ -72,24 +72,24 @@ export default function Login() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-12 px-4 rounded-2xl border border-zinc-200 outline-none focus:border-zinc-400"
+            className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 text-sm sm:text-base outline-none focus:border-zinc-400 transition"
             required
           />
 
           {error && (
-            <p className="text-sm text-red-500 text-center">{error}</p>
+            <p className="text-xs sm:text-sm text-red-500 text-center">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 rounded-2xl bg-zinc-900 text-white font-medium hover:bg-black transition disabled:opacity-50"
+            className="w-full h-11 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-900 text-white text-sm sm:text-base font-medium hover:bg-black transition disabled:opacity-50"
           >
             {loading ? "Caricamento..." : "Accedi"}
           </button>
 
-          <p className="text-center text-sm text-zinc-400">
-            <a href="/reset-password" className="underline hover:text-zinc-600">
+          <p className="text-center text-xs sm:text-sm text-zinc-400 pt-1">
+            <a href="/reset-password" className="underline hover:text-zinc-600 transition">
               Password dimenticata?
             </a>
           </p>

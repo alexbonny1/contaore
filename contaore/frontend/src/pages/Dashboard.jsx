@@ -83,38 +83,40 @@ export default function Dashboard() {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Timbry</h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Dashboard realtime</p>
+            <h1 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">Timbry</h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">Dashboard realtime</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setDark(prev => !prev)}
-              className="w-11 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center"
             >
-              {dark ? <Sun size={18} className="text-zinc-200" /> : <Moon size={18} className="text-zinc-700" />}
+              {dark ? <Sun size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-200" /> : <Moon size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-700" />}
             </button>
             <button
               onClick={() => setShowChangePassword(true)}
-              className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+              className="h-9 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
             >
-              Password
+              <span className="hidden sm:inline">Password</span>
+              <span className="sm:hidden">🔒</span>
             </button>
             <button
               onClick={logout}
-              className="h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
+              className="h-9 sm:h-11 px-3 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium"
             >
-              Logout
+              <span className="hidden sm:inline">Logout</span>
+              <span className="sm:hidden">Esci</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
         {/* NAV */}
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
+        <div className="flex gap-2 sm:gap-3 mb-6 sm:mb-8 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           {navItems.map((item) => {
             const Icon     = item.icon;
             const isActive = location.pathname === item.path;
@@ -122,16 +124,16 @@ export default function Dashboard() {
               <Link
                 key={item.title}
                 to={item.path}
-                className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                   isActive
                     ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
                     : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
                 }`}
               >
-                <Icon size={16} />
-                {item.title}
+                <Icon size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">{item.title}</span>
                 {item.notifica > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                  <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
                     {item.notifica > 9 ? "9+" : item.notifica}
                   </span>
                 )}
@@ -141,22 +143,22 @@ export default function Dashboard() {
         </div>
 
         {/* STATS PRESENZE */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-sm text-zinc-500">Dipendenti</p>
-            <h3 className="text-4xl font-bold mt-3 text-zinc-900 dark:text-zinc-100">{employees.length}</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm text-zinc-500">Dipendenti</p>
+            <h3 className="text-2xl sm:text-4xl font-bold mt-2 sm:mt-3 text-zinc-900 dark:text-zinc-100">{employees.length}</h3>
           </div>
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-sm text-zinc-500">Presenti ora</p>
-            <h3 className="text-4xl font-bold mt-3 text-green-500">{presenti.length}</h3>
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm text-zinc-500">Presenti ora</p>
+            <h3 className="text-2xl sm:text-4xl font-bold mt-2 sm:mt-3 text-green-500">{presenti.length}</h3>
           </div>
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-sm text-zinc-500">Assenti</p>
-            <h3 className="text-4xl font-bold mt-3 text-red-500">{assenti.length}</h3>
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm text-zinc-500">Assenti</p>
+            <h3 className="text-2xl sm:text-4xl font-bold mt-2 sm:mt-3 text-red-500">{assenti.length}</h3>
           </div>
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-sm text-zinc-500">Fuori turno</p>
-            <h3 className="text-4xl font-bold mt-3 text-zinc-500">{fuoriTurno.length}</h3>
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm text-zinc-500">Fuori turno</p>
+            <h3 className="text-2xl sm:text-4xl font-bold mt-2 sm:mt-3 text-zinc-500">{fuoriTurno.length}</h3>
           </div>
         </div>
 
@@ -174,26 +176,26 @@ export default function Dashboard() {
 
 function Section({ title, icon, employees, label, color }) {
   return (
-    <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+      <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
         {icon}
-        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {employees.map(emp => (
-          <div key={emp.id} className="p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex justify-between">
-            <div>
-              <p className="font-medium text-zinc-900 dark:text-zinc-100">{emp.nome}</p>
-              <p className="text-sm text-zinc-500 mt-1">{emp.badge_uid}</p>
+          <div key={emp.id} className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex flex-col xs:flex-row xs:justify-between gap-2 xs:gap-0">
+            <div className="min-w-0">
+              <p className="font-medium text-sm sm:text-base text-zinc-900 dark:text-zinc-100 truncate">{emp.nome}</p>
+              <p className="text-xs sm:text-sm text-zinc-500 mt-0.5 sm:mt-1 truncate">{emp.badge_uid}</p>
             </div>
-            <span className={`text-sm font-medium ${
+            <span className={`text-xs sm:text-sm font-medium whitespace-nowrap self-start xs:self-auto ${
               color === "green" ? "text-green-500" : color === "red" ? "text-red-500" : "text-zinc-500"
             }`}>
               {label}
             </span>
           </div>
         ))}
-        {employees.length === 0 && <p className="text-zinc-500 text-sm">Nessun dipendente</p>}
+        {employees.length === 0 && <p className="text-zinc-500 text-xs sm:text-sm">Nessun dipendente</p>}
       </div>
     </div>
   );
