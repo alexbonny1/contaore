@@ -8,7 +8,7 @@ function generateToken() {
     .toString('hex')
     .toUpperCase()
 }
-
+ 
 async function routes(fastify, options) {
 
   fastify.post('/device/create-claim', async (request, reply) => {
