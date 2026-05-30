@@ -36,19 +36,19 @@ function Toast({ message, type, onClose }) {
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white dark:bg-[#161618] rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 max-w-sm w-full mx-4 shadow-xl">
-        <p className="text-zinc-900 dark:text-zinc-100 font-medium mb-6 leading-relaxed">{message}</p>
-        <div className="flex gap-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-[#161618] rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 max-w-sm w-full shadow-xl">
+        <p className="text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 font-medium mb-4 sm:mb-6 leading-relaxed">{message}</p>
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={onConfirm}
-            className="flex-1 h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors"
+            className="flex-1 h-10 sm:h-11 rounded-xl sm:rounded-2xl bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-medium transition-colors"
           >
             Elimina
           </button>
           <button
             onClick={onCancel}
-            className="flex-1 h-11 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium"
+            className="flex-1 h-10 sm:h-11 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs sm:text-sm font-medium"
           >
             Annulla
           </button>
@@ -229,27 +229,28 @@ export default function Badges() {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Timbry</h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Gestione badge NFC</p>
+            <h1 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">Timbry</h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">Gestione badge NFC</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={() => setDark(p => !p)}
-              className="w-11 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center">
-              {dark ? <Sun size={18} className="text-zinc-200" /> : <Moon size={18} className="text-zinc-700" />}
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center">
+              {dark ? <Sun size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-200" /> : <Moon size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-700" />}
             </button>
-            <button onClick={logout} className="h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
-              Logout
+            <button onClick={logout} className="h-9 sm:h-11 px-3 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium">
+              <span className="hidden sm:inline">Logout</span>
+              <span className="sm:hidden">Esci</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
         {/* NAV TABS */}
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
+        <div className="flex gap-2 sm:gap-3 mb-6 sm:mb-8 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           {NAV_TABS
             .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
             .map((item) => {
@@ -257,14 +258,15 @@ export default function Badges() {
               const isActive = location.pathname === item.path;
               return (
                 <Link key={item.title} to={item.path}
-                  className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                     isActive
                       ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
                       : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
                   }`}>
-                  <Icon size={16} />{item.title}
+                  <Icon size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden xs:inline">{item.title}</span>
                   {!isActive && item.nascondiSeSenzaPortale && pendingCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                    <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
                       {pendingCount > 9 ? "9+" : pendingCount}
                     </span>
                   )}
@@ -274,16 +276,16 @@ export default function Badges() {
         </div>
 
         {/* TITLE */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Badge NFC</h2>
-          <p className="text-zinc-500 mt-2">Registra un nuovo badge e associalo a un dipendente</p>
+        <div className="mb-5 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Badge NFC</h2>
+          <p className="text-xs sm:text-sm text-zinc-500 mt-1 sm:mt-2">Registra un nuovo badge e associalo a un dipendente</p>
         </div>
 
         {/* BANNER PORTALE ATTIVO */}
         {portaleAttivo && (
-          <div className="flex items-center gap-3 mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl px-5 py-3">
-            <Mail size={16} className="text-blue-500 shrink-0" />
-            <p className="text-sm text-blue-700 dark:text-blue-300">
+          <div className="flex items-start sm:items-center gap-2 sm:gap-3 mb-5 sm:mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-3">
+            <Mail size={14} className="sm:w-4 sm:h-4 text-blue-500 flex-shrink-0 mt-0.5 sm:mt-0" />
+            <p className="text-[10px] sm:text-sm text-blue-700 dark:text-blue-300 leading-snug">
               <strong>Portale dipendenti attivo</strong> — inserisci l'email del dipendente per creare automaticamente il suo account e inviargli le credenziali di accesso.
             </p>
           </div>
@@ -291,54 +293,54 @@ export default function Badges() {
 
         {/* FORM */}
         <form onSubmit={createBadge}
-          className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-8">
+          className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-6 sm:mb-8">
 
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <button type="button"
               onClick={() => { setUid(""); setEmployeeName(""); setEmployeeCognome(""); setEmployeeEmail(""); setWaitingScan(true); }}
-              className="h-14 px-8 rounded-2xl bg-black text-white text-sm font-semibold">
+              className="h-10 sm:h-12 px-4 sm:px-8 rounded-xl sm:rounded-2xl bg-black text-white text-xs sm:text-sm font-semibold">
               {waitingScan ? "Attendi scansione..." : "Leggi Tag NFC"}
             </button>
           </div>
 
           {uid && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
 
               {/* UID */}
-              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <CreditCard size={16} className="text-zinc-400 shrink-0" />
-                <p className="text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100">{uid}</p>
+              <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <CreditCard size={14} className="sm:w-4 sm:h-4 text-zinc-400 flex-shrink-0" />
+                <p className="text-xs sm:text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100 truncate">{uid}</p>
               </div>
 
               {/* CAMPI DIPENDENTE */}
-              <div className={`grid gap-4 ${portaleAttivo ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3"}`}>
+              <div className={`grid gap-2.5 sm:gap-4 ${portaleAttivo ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
 
                 <input type="text" placeholder="Nome" value={employeeName}
                   onChange={(e) => setEmployeeName(e.target.value)}
-                  className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
+                  className="h-10 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none"
                   required />
 
                 <input type="text" placeholder="Cognome" value={employeeCognome}
                   onChange={(e) => setEmployeeCognome(e.target.value)}
-                  className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
+                  className="h-10 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none"
                   required />
 
                 {portaleAttivo && (
-                  <div className="relative md:col-span-2">
-                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                  <div className="relative sm:col-span-2">
+                    <Mail size={14} className="sm:w-4 sm:h-4 absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                     <input
                       type="email"
-                      placeholder="Email dipendente (riceverà le credenziali) *"
+                      placeholder="Email dipendente *"
                       value={employeeEmail}
                       onChange={(e) => setEmployeeEmail(e.target.value)}
-                      className="w-full h-12 pl-10 pr-4 rounded-2xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 placeholder-zinc-400"
+                      className="w-full h-10 sm:h-12 pl-8 sm:pl-10 pr-3 sm:pr-4 rounded-xl sm:rounded-2xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none focus:border-blue-500 placeholder-zinc-400"
                       required={portaleAttivo}
                     />
                   </div>
                 )}
 
                 <button type="submit"
-                  className={`h-12 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium ${portaleAttivo ? "md:col-span-2" : ""}`}>
+                  className={`h-10 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium ${portaleAttivo ? "sm:col-span-2" : ""}`}>
                   Registra Badge
                 </button>
 
@@ -348,23 +350,23 @@ export default function Badges() {
         </form>
 
         {/* LISTA BADGE */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {badges.map((badge) => (
-            <div key={badge.id} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-              <div className="flex items-start justify-between mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                  <CreditCard size={20} className="text-zinc-700 dark:text-zinc-200" />
+            <div key={badge.id} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+              <div className="flex items-start justify-between mb-3 sm:mb-5">
+                <div className="w-9 sm:w-12 h-9 sm:h-12 rounded-lg sm:rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                  <CreditCard size={16} className="sm:w-5 sm:h-5 text-zinc-700 dark:text-zinc-200" />
                 </div>
                 <button
                   onClick={() => askDeleteBadge(badge.id)}
-                  className="text-xs text-red-500 hover:text-red-700 font-medium"
+                  className="text-[10px] sm:text-xs text-red-500 hover:text-red-700 font-medium whitespace-nowrap"
                 >
                   Elimina
                 </button>
               </div>
-              <p className="text-xs text-zinc-400 mb-1">UID</p>
-              <h3 className="text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100">{badge.uid}</h3>
-              <p className="text-sm text-zinc-500 mt-3">{badge.nome}</p>
+              <p className="text-[10px] sm:text-xs text-zinc-400 mb-0.5 sm:mb-1">UID</p>
+              <h3 className="text-xs sm:text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100 truncate">{badge.uid}</h3>
+              <p className="text-xs sm:text-sm text-zinc-500 mt-2 sm:mt-3 truncate">{badge.nome}</p>
             </div>
           ))}
         </div>

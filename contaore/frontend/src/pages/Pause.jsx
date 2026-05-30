@@ -187,35 +187,36 @@ export default function Pause() {
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            <h1 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               Timbry
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">
               Gestisci le ferie dell'azienda
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setDark(prev => !prev)}
-              className="w-11 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center"
             >
-              {dark ? <Sun size={18} className="text-zinc-200" /> : <Moon size={18} className="text-zinc-700" />}
+              {dark ? <Sun size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-200" /> : <Moon size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-700" />}
             </button>
             <button
               onClick={logout}
-              className="h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
+              className="h-9 sm:h-11 px-3 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium"
             >
-              Logout
+              <span className="hidden sm:inline">Logout</span>
+              <span className="sm:hidden">Esci</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* NAV */}
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
+        <div className="flex gap-2 sm:gap-3 mb-6 sm:mb-8 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
             { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
             { title: "Richieste",       icon: FileText,        path: "/requests",  notifica: pendingCount, nascondiSeSenzaPortale: true },
@@ -230,14 +231,15 @@ export default function Pause() {
             const isActive = location.pathname === item.path;
             return (
               <Link key={item.title} to={item.path}
-                className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                   isActive
                     ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
                     : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
                 }`}>
-                <Icon size={16} />{item.title}
+                <Icon size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">{item.title}</span>
                 {!isActive && item.notifica > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                  <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
                     {item.notifica > 9 ? "9+" : item.notifica}
                   </span>
                 )}
@@ -248,37 +250,38 @@ export default function Pause() {
 
         {/* SEZIONE PAUSA ATTIVA */}
         {pausa && pausa.attiva && (
-          <div className="mb-8 rounded-3xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-green-900 dark:text-green-300 flex items-center gap-2">
-                  <CheckCircle size={20} />
+          <div className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 p-4 sm:p-6">
+            <div className="flex flex-col xs:flex-row items-start xs:items-center xs:justify-between gap-4 xs:gap-0">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base sm:text-lg font-semibold text-green-900 dark:text-green-300 flex items-center gap-2">
+                  <CheckCircle size={18} className="sm:w-5 sm:h-5 flex-shrink-0" />
                   Pausa aziendale attiva
                 </h2>
-                <p className="text-sm text-green-700 dark:text-green-200 mt-2">
+                <p className="text-xs sm:text-sm text-green-700 dark:text-green-200 mt-2">
                   Dal <strong>{formatDate(pausa.data_inizio)}</strong> al <strong>{formatDate(pausa.data_fine)}</strong>
                 </p>
-                <p className="text-sm text-green-600 dark:text-green-300 mt-1">
+                <p className="text-xs sm:text-sm text-green-600 dark:text-green-300 mt-1">
                   <strong>Motivo:</strong> {pausa.motivo}
                 </p>
-                <p className="text-xs text-green-600 dark:text-green-300 mt-3">
+                <p className="text-[10px] sm:text-xs text-green-600 dark:text-green-300 mt-3">
                   Tutti i dipendenti sono segnati come in ferie durante questo periodo.
                 </p>
               </div>
               <button
                 onClick={() => cancelPausa(pausa.id)}
                 disabled={cancelLoading}
-                className="py-2 px-4 rounded-2xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50 flex items-center gap-2"
+                className="py-2 px-3 sm:px-4 rounded-xl sm:rounded-2xl bg-red-500 text-white text-xs sm:text-sm font-medium hover:bg-red-600 disabled:opacity-50 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0"
               >
                 {cancelLoading ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Annullando...
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span className="hidden xs:inline">Annullando...</span>
                   </>
                 ) : (
                   <>
-                    <X size={16} />
-                    Annulla pausa
+                    <X size={14} className="sm:w-4 sm:h-4" />
+                    <span className="hidden xs:inline">Annulla pausa</span>
+                    <span className="xs:hidden">Annulla</span>
                   </>
                 )}
               </button>
@@ -292,67 +295,67 @@ export default function Pause() {
             {!showForm ? (
               <button
                 onClick={() => setShowForm(true)}
-                className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium mb-8"
+                className="flex items-center gap-2 h-9 sm:h-11 px-3 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium mb-6 sm:mb-8"
               >
-                <Calendar size={16} />
+                <Calendar size={14} className="sm:w-4 sm:h-4" />
                 Crea pausa aziendale
               </button>
             ) : (
-              <form onSubmit={createPausa} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-8">
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Nuova pausa aziendale</h2>
+              <form onSubmit={createPausa} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 mb-6 sm:mb-8">
+                <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3 sm:mb-4">Nuova pausa aziendale</h2>
 
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+                <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-4 sm:mb-6">
                   Durante il periodo di pausa, tutti i dipendenti dell'azienda saranno automaticamente segnati come in ferie.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
                   <div>
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium mb-2">Data inizio</p>
+                    <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium mb-1.5 sm:mb-2">Data inizio</p>
                     <input
                       type="date"
                       value={pausaInizio}
                       onChange={e => setPausaInizio(e.target.value)}
-                      className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm"
+                      className="w-full h-10 sm:h-11 px-3 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-xs sm:text-sm"
                       required
                     />
                   </div>
                   <div>
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium mb-2">Data fine</p>
+                    <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium mb-1.5 sm:mb-2">Data fine</p>
                     <input
                       type="date"
                       value={pausaFine}
                       onChange={e => setPausaFine(e.target.value)}
-                      className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm"
+                      className="w-full h-10 sm:h-11 px-3 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-xs sm:text-sm"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium mb-2">Motivo</p>
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium mb-1.5 sm:mb-2">Motivo</p>
                   <textarea
                     rows={3}
                     placeholder="Es: Ferie estive, chiusura per manutenzione, ecc."
                     value={pausaMotivo}
                     onChange={e => setPausaMotivo(e.target.value)}
-                    className="w-full px-3 py-2 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none resize-none"
+                    className="w-full px-3 py-2 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none resize-none"
                   />
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-2 sm:gap-3">
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-1 py-3 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5 sm:gap-2"
                   >
                     {saving ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         Creando...
                       </>
                     ) : (
                       <>
-                        <Calendar size={16} />
+                        <Calendar size={14} className="sm:w-4 sm:h-4" />
                         Crea pausa
                       </>
                     )}
@@ -360,7 +363,7 @@ export default function Pause() {
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
-                    className="flex-1 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-medium"
+                    className="flex-1 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs sm:text-sm font-medium"
                   >
                     Annulla
                   </button>
@@ -372,12 +375,12 @@ export default function Pause() {
 
         {/* INFORMAZIONI */}
         {!pausa || !pausa.attiva ? (
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-8 text-center">
-            <Calendar size={32} className="mx-auto mb-3 text-zinc-400" />
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 text-center">
+            <Calendar size={28} className="sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-zinc-400" />
+            <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1.5 sm:mb-2">
               Nessuna pausa aziendale
             </h3>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-md mx-auto">
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-md mx-auto">
               Crea una pausa aziendale per segnare tutti i dipendenti come in ferie durante un periodo specifico (es: ferie estive).
             </p>
           </div>
