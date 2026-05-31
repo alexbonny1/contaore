@@ -50,7 +50,7 @@ export default async function tagRoutes(fastify) {
         const companyId = request.user.company_id
         const { data, error } = await supabase
           .from('tag')
-          .select('*, dipendenti(nome, cognome, email)')
+          .select('*, dipendenti(nome, cognome)')
           .eq('company_id', companyId)
           .order('created_at', { ascending: false })
 
