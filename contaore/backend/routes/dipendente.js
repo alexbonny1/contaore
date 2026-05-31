@@ -6,17 +6,6 @@ import { sendNotificaRichiestaFerie } from '../services/email.js'
 
 const GIORNI = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
 
-// ─── censura email come le password ───────────────────────────────────────────
-function censorEmail(email) {
-  if (!email) return null
-  // Mostra solo primo carattere e dominio: a***@example.com
-  const parts = email.split('@')
-  if (parts.length !== 2) return '***@***'
-  const [localPart, domain] = parts
-  if (localPart.length === 0) return '***@' + domain
-  return localPart.charAt(0) + '***@' + domain
-}
-
 function timeToMinutes(t) {
   if (!t) return null
   const [h, m] = t.split(':')
@@ -250,7 +239,7 @@ export default async function dipendenteRoutes(fastify) {
             id:       employee.id,
             nome:     employee.nome,
             cognome:  employee.cognome,
-            email:    censorEmail(employee.email),
+            email:    employee.email,
             badge_uid: employee.badge_uid,
             turni_attivi: employee.turni_attivi
           },

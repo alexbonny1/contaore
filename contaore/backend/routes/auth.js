@@ -31,7 +31,7 @@ export default async function authRoutes(fastify) {
       const { data: user, error } = await supabase
         .from('user_account')
         .select('*, company:company(portale_dipendenti)')
-        .or(`username.eq.${username},email.eq.${username}`)
+        .eq('username', username)
         .single()
 
       if (error || !user) {

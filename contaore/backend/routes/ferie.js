@@ -2,16 +2,6 @@ import { supabase }          from '../services/supabase.js'
 import { authenticateOwner }  from '../middleware/auth.js'
 import { sendEsitoFerie }     from '../services/email.js'
 
-// ─── censura email come le password ───────────────────────────────────────────
-function censorEmail(email) {
-  if (!email) return null
-  const parts = email.split('@')
-  if (parts.length !== 2) return '***@***'
-  const [localPart, domain] = parts
-  if (localPart.length === 0) return '***@' + domain
-  return localPart.charAt(0) + '***@' + domain
-}
-
 export default async function ferieRoutes(fastify) {
 
   /*
@@ -42,15 +32,7 @@ export default async function ferieRoutes(fastify) {
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
-        const censoredFerie = (data || []).map(f => ({
-          ...f,
-          dipendenti: f.dipendenti ? {
-            ...f.dipendenti,
-            email: censorEmail(f.dipendenti.email)
-          } : null
-        }))
-
-        return reply.send({ success: true, ferie: censoredFerie })
+        return reply.send({ success: true, ferie: data || [] })
 
       } catch (err) {
         console.log(err)
@@ -118,15 +100,7 @@ export default async function ferieRoutes(fastify) {
           })
         }
 
-        const censoredRichiesta = {
-          ...updated,
-          dipendenti: richiesta.dipendenti ? {
-            ...richiesta.dipendenti,
-            email: censorEmail(richiesta.dipendenti.email)
-          } : null
-        }
-
-        return reply.send({ success: true, richiesta: censoredRichiesta })
+        return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
         console.log(err)
@@ -194,15 +168,7 @@ export default async function ferieRoutes(fastify) {
           })
         }
 
-        const censoredRichiesta = {
-          ...updated,
-          dipendenti: richiesta.dipendenti ? {
-            ...richiesta.dipendenti,
-            email: censorEmail(richiesta.dipendenti.email)
-          } : null
-        }
-
-        return reply.send({ success: true, richiesta: censoredRichiesta })
+        return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
         console.log(err)
@@ -386,19 +352,10 @@ export default async function ferieRoutes(fastify) {
         if (stato) queryTimb = queryTimb.eq('stato', stato)
         const { data: richieste_timbratura } = await queryTimb
 
-        // Censura email nelle ferie
-        const censoredFerie = (ferie || []).map(f => ({
-          ...f,
-          dipendenti: f.dipendenti ? {
-            ...f.dipendenti,
-            email: censorEmail(f.dipendenti.email)
-          } : null
-        }))
-
         return reply.send({
           success: true,
           richieste: {
-            ferie:                 censoredFerie,
+            ferie:                 ferie || [],
             giustificazioni:       giustificazioni || [],
             richieste_timbratura:  richieste_timbratura || []
           },

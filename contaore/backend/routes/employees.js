@@ -6,17 +6,6 @@ const GIORNI_SETTIMANA = [
   'Giovedì','Venerdì','Sabato'
 ]
 
-// ─── censura email come le password ───────────────────────────────────────────
-function censorEmail(email) {
-  if (!email) return null
-  // Mostra solo primo carattere e dominio: a***@example.com
-  const parts = email.split('@')
-  if (parts.length !== 2) return '***@***'
-  const [localPart, domain] = parts
-  if (localPart.length === 0) return '***@' + domain
-  return localPart.charAt(0) + '***@' + domain
-}
-
 function getDayName(dateStr) {
   return GIORNI_SETTIMANA[new Date(dateStr).getDay()]
 }
@@ -335,7 +324,6 @@ export default async function employeeRoutes(fastify) {
 
           return {
             ...emp,
-            email: censorEmail(emp.email),
             attivo:  presente,
             assente,
             stats: {
@@ -447,7 +435,6 @@ export default async function employeeRoutes(fastify) {
           success: true,
           employee: {
             ...employee,
-            email: censorEmail(employee.email),
             attivo:         isEmployeeInside(reads),
             shifts:         shifts || [],
             reads,

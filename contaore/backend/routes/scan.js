@@ -44,31 +44,37 @@ export default async function scanRoutes(fastify) {
           })
         }
 
-        // ── VALIDAZIONE LETTORE: deve appartenere alla stessa azienda del tag ────
-        if (reader_id) {
-          const {
-            data: reader,
-            error: readerError
-          } = await supabase
-            .from('dispositivo')
-            .select('company_id')
-            .eq('id', reader_id)
-            .single()
+        // ── VALIDAZIONE LETTORE: OBBLIGATORIO e deve appartenere alla stessa azienda del tag ────
+        if (!reader_id) {
+          return reply.send({
+            success: false,
+            error: 'READER_ID_REQUIRED'
+          })
+        }
 
-          if (readerError || !reader) {
-            return reply.send({
-              success: false,
-              error: 'READER_NOT_FOUND'
-            })
-          }
+        const {
+          data: reader,
+          error: readerError
+        } = await supabase
+          .from('dispositivo')
+          .select('company_id')
+          .eq('id', reader_id)
+          .single()
 
-          // ── Verifica che il lettore appartiene alla stessa azienda del tag ──
-          if (reader.company_id !== tag.company_id) {
-            return reply.send({
-              success: false,
-              error: 'READER_NOT_AUTHORIZED'
-            })
-          }
+        if (readerError || !reader) {
+          return reply.send({
+            success: false,
+            error: 'READER_NOT_FOUND'
+          })
+        }
+
+        // ── Verifica che il lettore appartiene alla stessa azienda del tag ──
+        if (reader.company_id !== tag.company_id) {
+          return reply.send({
+            success: false,
+            error: 'READER_NOT_AUTHORIZED',
+            message: `Lettore non autorizzato: appartiene a un'azienda diversa`
+          })
         }
 
         const limitDate =
