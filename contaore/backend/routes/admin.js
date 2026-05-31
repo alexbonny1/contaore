@@ -4,6 +4,16 @@ import { supabase } from '../services/supabase.js'
 import { authenticateSuperadmin } from '../middleware/auth.js'
 import { sendCredenziali, sendCredenzialiOwner } from '../services/email.js'
 
+// ─── censura email come le password ───────────────────────────────────────────
+function censorEmail(email) {
+  if (!email) return null
+  const parts = email.split('@')
+  if (parts.length !== 2) return '***@***'
+  const [localPart, domain] = parts
+  if (localPart.length === 0) return '***@' + domain
+  return localPart.charAt(0) + '***@' + domain
+}
+
 // Genera password casuale sicura (12 caratteri: lettere + numeri)
 function generaPassword() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -51,9 +61,16 @@ export default async function adminRoutes(fastify) {
 
             const accountDipendenti = (users || []).filter(u => u.role === 'dipendente').length
 
+            const censoredUsers = (users || [])
+              .filter(u => u.role !== 'dipendente')
+              .map(u => ({
+                ...u,
+                email: censorEmail(u.email)
+              }))
+
             return {
               ...company,
-              users:              (users || []).filter(u => u.role !== 'dipendente'),
+              users:              censoredUsers,
               fasce:              fasce || [],
               account_dipendenti: accountDipendenti
             }
@@ -159,7 +176,7 @@ export default async function adminRoutes(fastify) {
           user: {
             id:         user.id,
             username:   user.username,
-            email:      user.email,
+            email:      censorEmail(user.email),
             role:       user.role,
             company_id: user.company_id
           }
@@ -327,7 +344,12 @@ export default async function adminRoutes(fastify) {
           return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         }
 
-        return reply.send({ success: true, accounts: data || [] })
+        const censoredAccounts = (data || []).map(acc => ({
+          ...acc,
+          email: censorEmail(acc.email)
+        }))
+
+        return reply.send({ success: true, accounts: censoredAccounts })
 
       } catch (err) {
         console.log(err)
