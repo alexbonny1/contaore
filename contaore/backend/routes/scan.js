@@ -44,6 +44,33 @@ export default async function scanRoutes(fastify) {
           })
         }
 
+        // ── VALIDAZIONE LETTORE: deve appartenere alla stessa azienda del tag ────
+        if (reader_id) {
+          const {
+            data: reader,
+            error: readerError
+          } = await supabase
+            .from('dispositivo')
+            .select('company_id')
+            .eq('id', reader_id)
+            .single()
+
+          if (readerError || !reader) {
+            return reply.send({
+              success: false,
+              error: 'READER_NOT_FOUND'
+            })
+          }
+
+          // ── Verifica che il lettore appartiene alla stessa azienda del tag ──
+          if (reader.company_id !== tag.company_id) {
+            return reply.send({
+              success: false,
+              error: 'READER_NOT_AUTHORIZED'
+            })
+          }
+        }
+
         const limitDate =
           new Date(Date.now() - 5000).toISOString()
 

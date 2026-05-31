@@ -3,6 +3,17 @@ import { supabase }         from '../services/supabase.js'
 import { authenticate }     from '../middleware/auth.js'
 import { sendCredenziali }  from '../services/email.js'
 
+// ─── censura email come le password ───────────────────────────────────────────
+function censorEmail(email) {
+  if (!email) return null
+  // Mostra solo primo carattere e dominio: a***@example.com
+  const parts = email.split('@')
+  if (parts.length !== 2) return '***@***'
+  const [localPart, domain] = parts
+  if (localPart.length === 0) return '***@' + domain
+  return localPart.charAt(0) + '***@' + domain
+}
+
 // ─── genera password random alfanumerica ─────────────────────────────────────
 function generatePassword(length = 10) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -50,7 +61,7 @@ export default async function tagRoutes(fastify) {
         const companyId = request.user.company_id
         const { data, error } = await supabase
           .from('tag')
-          .select('*, dipendenti(nome, cognome)')
+          .select('*, dipendenti(nome, cognome, email)')
           .eq('company_id', companyId)
           .order('created_at', { ascending: false })
 
@@ -61,6 +72,10 @@ export default async function tagRoutes(fastify) {
 
         const tags = (data || []).map(tag => ({
           ...tag,
+          dipendenti: tag.dipendenti ? {
+            ...tag.dipendenti,
+            email: censorEmail(tag.dipendenti.email)
+          } : null,
           nome: tag.dipendenti
             ? `${tag.dipendenti.nome} ${tag.dipendenti.cognome}`
             : tag.uid
@@ -210,7 +225,10 @@ export default async function tagRoutes(fastify) {
 
         return reply.send({
           success:        true,
-          employee,
+          employee: {
+            ...employee,
+            email: censorEmail(employee.email)
+          },
           tag,
           account_creato: accountCreato
         })
