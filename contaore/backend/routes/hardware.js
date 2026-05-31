@@ -1,4 +1,5 @@
 import { supabase } from '../services/supabase.js'
+import { authenticateOwner } from '../middleware/auth.js'
 import latestReads from '../state/LatestReads.js'
 
 /*
@@ -45,21 +46,32 @@ export default async function hardwareRoutes(fastify) {
 
   fastify.post(
     '/api/hardware/ping',
+    {
+      preHandler: authenticateOwner
+    },
     async (request, reply) => {
 
       try {
 
-        const { reader_id, company_id, firmware } = request.body
+        const { reader_id, firmware } = request.body
+        const company_id = request.user.company_id
 
-        if (!reader_id || !company_id) {
+        if (!reader_id) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
         }
 
-        const { data: existingReader } = await supabase
+        // ── Verifica che il lettore appartiene all'azienda autenticata ──
+        const { data: existingReader, error: searchError } = await supabase
           .from('dispositivo')
           .select('id')
           .eq('reader_id', reader_id)
+          .eq('company_id', company_id)
           .maybeSingle()
+
+        if (searchError) {
+          console.log('Search reader error:', searchError)
+          return reply.send({ success: false, error: 'DATABASE_ERROR' })
+        }
 
         if (!existingReader) {
 
@@ -73,7 +85,10 @@ export default async function hardwareRoutes(fastify) {
               stato:       'online'
             })
 
-          if (error) console.log('insert dispositivo error:', error)
+          if (error) {
+            console.log('insert dispositivo error:', error)
+            return reply.send({ success: false, error: 'DATABASE_ERROR' })
+          }
 
         } else {
 
@@ -85,8 +100,12 @@ export default async function hardwareRoutes(fastify) {
               stato:       'online'
             })
             .eq('reader_id', reader_id)
+            .eq('company_id', company_id)
 
-          if (error) console.log('update dispositivo error:', error)
+          if (error) {
+            console.log('update dispositivo error:', error)
+            return reply.send({ success: false, error: 'DATABASE_ERROR' })
+          }
 
         }
 
@@ -108,6 +127,9 @@ export default async function hardwareRoutes(fastify) {
 
   fastify.post(
     '/api/hardware/tag',
+    {
+      preHandler: authenticateOwner
+    },
     async (request, reply) => {
 
       try {
@@ -115,12 +137,36 @@ export default async function hardwareRoutes(fastify) {
         const {
           uid,
           reader_id,
-          company_id,
           timestamp   // opzionale — mandato dalle letture offline
         } = request.body
 
-        if (!uid || !reader_id || !company_id) {
+        // ── company_id viene preso dall'utente autenticato ──
+        const company_id = request.user.company_id
+
+        if (!uid || !reader_id) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
+        }
+
+        // ── Verifica che il reader_id appartiene all'azienda autenticata ──
+        const { data: reader, error: readerError } = await supabase
+          .from('dispositivo')
+          .select('id')
+          .eq('reader_id', reader_id)
+          .eq('company_id', company_id)
+          .maybeSingle()
+
+        if (readerError) {
+          console.log('Reader search error:', readerError)
+          return reply.send({ success: false, error: 'DATABASE_ERROR' })
+        }
+
+        if (!reader) {
+          console.log('READER NOT FOUND OR NOT AUTHORIZED:', reader_id)
+          return reply.send({
+            success: false,
+            error: 'READER_NOT_AUTHORIZED',
+            message: 'Lettore non trovato o non autorizzato per questa azienda'
+          })
         }
 
         /*
