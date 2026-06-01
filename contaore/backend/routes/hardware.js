@@ -51,17 +51,24 @@ export default async function hardwareRoutes(fastify) {
 
         const { reader_id, company_id, firmware } = request.body
 
-        if (!reader_id || !company_id) {
+        if (!reader_id) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
         }
 
-        const { data: existingReader } = await supabase
+        // SECURITY FIX: Check if reader exists
+        const { data: existingReader, error: readerError } = await supabase
           .from('dispositivo')
-          .select('id')
+          .select('company_id')
           .eq('reader_id', reader_id)
           .maybeSingle()
 
+        // If reader doesn't exist, use company_id from request to create it
+        // (only for first registration from hardware)
         if (!existingReader) {
+
+          if (!company_id) {
+            return reply.send({ success: false, error: 'MISSING_FIELDS' })
+          }
 
           const { error } = await supabase
             .from('dispositivo')
@@ -76,6 +83,9 @@ export default async function hardwareRoutes(fastify) {
           if (error) console.log('insert dispositivo error:', error)
 
         } else {
+
+          // SECURITY FIX: Use reader's company_id, ignore company_id from request
+          const readerCompanyId = existingReader.company_id
 
           const { error } = await supabase
             .from('dispositivo')
@@ -119,9 +129,27 @@ export default async function hardwareRoutes(fastify) {
           timestamp   // opzionale — mandato dalle letture offline
         } = request.body
 
-        if (!uid || !reader_id || !company_id) {
+        if (!uid || !reader_id) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
         }
+
+        // SECURITY FIX: Validate that reader exists and get its company_id
+        const { data: reader, error: readerError } = await supabase
+          .from('dispositivo')
+          .select('company_id')
+          .eq('reader_id', reader_id)
+          .maybeSingle()
+
+        // Reader must exist and have a company_id association
+        if (readerError || !reader) {
+          return reply.send({
+            success: false,
+            error: 'READER_NOT_FOUND'
+          })
+        }
+
+        // Use reader's company_id, ignore company_id from request
+        const readerCompanyId = reader.company_id
 
         /*
           DATA EFFETTIVA DELLA LETTURA
@@ -139,7 +167,7 @@ export default async function hardwareRoutes(fastify) {
           .from('dipendenti')
           .select('id, nome, cognome')
           .eq('badge_uid', uid)
-          .eq('company_id', company_id)
+          .eq('company_id', readerCompanyId)
           .maybeSingle()
 
         /*
@@ -147,7 +175,7 @@ export default async function hardwareRoutes(fastify) {
           serve per la registrazione badge
         */
 
-        latestReads[company_id] = {
+        latestReads[readerCompanyId] = {
           uid,
           reader_id,
           timestamp: Date.now()
@@ -177,7 +205,7 @@ export default async function hardwareRoutes(fastify) {
         const { data: fasce } = await supabase
           .from('fasce_orarie')
           .select('*')
-          .eq('company_id', company_id)
+          .eq('company_id', readerCompanyId)
           .order('ora_inizio', { ascending: true })
 
         /*
@@ -189,7 +217,7 @@ export default async function hardwareRoutes(fastify) {
           .from('presenza')
           .select('tipo, created_at')
           .eq('tag_uid', uid)
-          .eq('company_id', company_id)
+          .eq('company_id', readerCompanyId)
           .lt('created_at', readDate.toISOString())
           .order('created_at', { ascending: false })
           .limit(1)
@@ -251,7 +279,7 @@ export default async function hardwareRoutes(fastify) {
         const { data: insertedPresence, error: insertError } = await supabase
           .from('presenza')
           .insert({
-            company_id,
+            company_id: readerCompanyId,
             tag_uid:    uid,
             reader_id,
             tipo,
