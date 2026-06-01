@@ -84,8 +84,10 @@ export default async function hardwareRoutes(fastify) {
 
         } else {
 
-          // SECURITY FIX: Use reader's company_id, ignore company_id from request
-          const readerCompanyId = existingReader.company_id
+          // Validate company_id from request matches reader's registered company_id
+          if (company_id && company_id !== existingReader.company_id) {
+            return reply.send({ success: false, error: 'COMPANY_MISMATCH' })
+          }
 
           const { error } = await supabase
             .from('dispositivo')
@@ -129,11 +131,11 @@ export default async function hardwareRoutes(fastify) {
           timestamp   // opzionale — mandato dalle letture offline
         } = request.body
 
-        if (!uid || !reader_id) {
+        if (!uid || !reader_id || !company_id) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
         }
 
-        // SECURITY FIX: Validate that reader exists and get its company_id
+        // Validate that reader exists and get its company_id
         const { data: reader, error: readerError } = await supabase
           .from('dispositivo')
           .select('company_id')
@@ -148,7 +150,14 @@ export default async function hardwareRoutes(fastify) {
           })
         }
 
-        // Use reader's company_id, ignore company_id from request
+        // Validate company_id from request matches reader's registered company_id
+        if (company_id !== reader.company_id) {
+          return reply.send({
+            success: false,
+            error: 'COMPANY_MISMATCH'
+          })
+        }
+
         const readerCompanyId = reader.company_id
 
         /*
