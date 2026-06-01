@@ -19,7 +19,10 @@ import {
   AlertCircle,
   TrendingUp,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Plus,
+  X,
+  Pencil
 } from "lucide-react";
 
 import { API_URL } from "../api";
@@ -79,8 +82,63 @@ export default function EmployeeDetails() {
   const [showManualUid, setShowManualUid] = useState(false);
   const [toast, setToast] = useState(null);
 
+  const [showAddPresence, setShowAddPresence]   = useState(false);
+  const [addTipo, setAddTipo]                   = useState("ENTRATA");
+  const [addDate, setAddDate]                   = useState("");
+  const [addTime, setAddTime]                   = useState("09:00");
+  const [addPresenceSaving, setAddPresenceSaving] = useState(false);
+
   function showToast(message, type = "success") {
     setToast({ message, type });
+  }
+
+  function startAddPresence(dateStr) {
+    setAddDate(dateStr || new Date().toISOString().split("T")[0]);
+    setAddTipo("ENTRATA");
+    setAddTime("09:00");
+    setShowAddPresence(true);
+  }
+
+  async function addPresence() {
+    if (!addDate || !addTime) return;
+    setAddPresenceSaving(true);
+    try {
+      const token    = localStorage.getItem("token");
+      const datetime = `${addDate}T${addTime}:00`;
+      const res      = await fetch(`${API_URL}/api/employees/${id}/presence`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ tipo: addTipo, datetime })
+      });
+      const data = await res.json();
+      if (!data.success) { showToast(data.error || "Errore", "error"); return; }
+      showToast("Timbratura aggiunta");
+      setShowAddPresence(false);
+      loadData();
+    } catch (err) {
+      console.log(err);
+      showToast("Errore server", "error");
+    } finally {
+      setAddPresenceSaving(false);
+    }
+  }
+
+  async function deletePresence(presenceId) {
+    if (!confirm("Eliminare questa timbratura?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res   = await fetch(`${API_URL}/api/presenze/${presenceId}`, {
+        method:  "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!data.success) { showToast("Errore eliminazione", "error"); return; }
+      showToast("Timbratura eliminata");
+      loadData();
+    } catch (err) {
+      console.log(err);
+      showToast("Errore server", "error");
+    }
   }
 
   const [editingShiftId, setEditingShiftId] = useState(null);
@@ -716,12 +774,21 @@ export default function EmployeeDetails() {
                 <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Storico presenze</h2>
                 <p className="text-sm text-zinc-500 mt-0.5">{employee.nome} {employee.cognome}</p>
               </div>
-              <button
-                onClick={() => setShowStorico(false)}
-                className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300"
-              >
-                Chiudi
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => startAddPresence()}
+                  className="h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium flex items-center gap-1.5"
+                >
+                  <Plus size={14} />
+                  Timbratura
+                </button>
+                <button
+                  onClick={() => setShowStorico(false)}
+                  className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300"
+                >
+                  Chiudi
+                </button>
+              </div>
             </div>
 
             <div className="overflow-y-auto p-6 space-y-4">
@@ -813,6 +880,7 @@ export default function EmployeeDetails() {
                             <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Ore</th>
                             {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Previste</th>}
                             {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Stato</th>}
+                            <th className="px-3 py-3"></th>
                           </tr>
                         </thead>
 
@@ -844,9 +912,17 @@ export default function EmployeeDetails() {
                                   {(day.assente || day.stato === 'ferie' || day.stato === 'giustificata')
                                     ? <span className="text-zinc-400">—</span>
                                     : (day.coppie || []).map((coppia, i) => (
-                                        <span key={i} className="text-green-600 dark:text-green-400 font-medium">
-                                          {coppia.entrata || "—"}
-                                        </span>
+                                        <div key={i} className="flex items-center gap-1">
+                                          <span className={coppia.entrata_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-green-600 dark:text-green-400 font-medium"}>
+                                            {coppia.entrata || "—"}
+                                          </span>
+                                          {coppia.entrata_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
+                                          {coppia.entrata_id && (
+                                            <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.entrata_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
+                                              <X size={10} />
+                                            </button>
+                                          )}
+                                        </div>
                                       ))
                                   }
                                 </div>
@@ -857,9 +933,17 @@ export default function EmployeeDetails() {
                                   {(day.assente || day.stato === 'ferie' || day.stato === 'giustificata')
                                     ? <span className="text-zinc-400">—</span>
                                     : (day.coppie || []).map((coppia, i) => (
-                                        <span key={i} className="text-red-500 dark:text-red-400 font-medium">
-                                          {coppia.uscita || "—"}
-                                        </span>
+                                        <div key={i} className="flex items-center gap-1">
+                                          <span className={coppia.uscita_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-red-500 dark:text-red-400 font-medium"}>
+                                            {coppia.uscita || "—"}
+                                          </span>
+                                          {coppia.uscita_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
+                                          {coppia.uscita_id && (
+                                            <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.uscita_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
+                                              <X size={10} />
+                                            </button>
+                                          )}
+                                        </div>
                                       ))
                                   }
                                 </div>
@@ -913,6 +997,16 @@ export default function EmployeeDetails() {
                                 </td>
                               )}
 
+                              <td className="px-3 py-3 text-right">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); startAddPresence(day.giorno); }}
+                                  title="Aggiungi timbratura"
+                                  className="text-zinc-300 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </td>
+
                             </tr>
 
                           ))}
@@ -929,6 +1023,88 @@ export default function EmployeeDetails() {
 
               )}
 
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* MODALE AGGIUNGI TIMBRATURA MANUALE */}
+
+      {showAddPresence && (
+
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+
+          <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
+
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Aggiungi timbratura</h3>
+            <p className="text-xs text-zinc-400 mb-5">La timbratura sarà marcata come <span className="text-amber-500 font-medium">manuale</span> in storico, PDF ed Excel</p>
+
+            <div className="space-y-4">
+
+              {/* TIPO */}
+              <div>
+                <p className="text-xs text-zinc-400 mb-2">Tipo</p>
+                <div className="flex gap-2">
+                  {["ENTRATA", "USCITA"].map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setAddTipo(t)}
+                      className={`flex-1 h-10 rounded-2xl text-sm font-medium border transition-all ${
+                        addTipo === t
+                          ? t === "ENTRATA"
+                            ? "bg-green-500 text-white border-transparent"
+                            : "bg-red-500 text-white border-transparent"
+                          : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                      }`}
+                    >
+                      {t === "ENTRATA" ? "Entrata" : "Uscita"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* DATA */}
+              <div>
+                <p className="text-xs text-zinc-400 mb-2">Data</p>
+                <input
+                  type="date"
+                  value={addDate}
+                  onChange={(e) => setAddDate(e.target.value)}
+                  className="w-full h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                />
+              </div>
+
+              {/* ORA */}
+              <div>
+                <p className="text-xs text-zinc-400 mb-2">Ora</p>
+                <input
+                  type="time"
+                  value={addTime}
+                  onChange={(e) => setAddTime(e.target.value)}
+                  className="w-full h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                />
+              </div>
+
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={addPresence}
+                disabled={addPresenceSaving || !addDate || !addTime}
+                className="flex-1 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
+              >
+                {addPresenceSaving ? "Aggiunta..." : "Aggiungi"}
+              </button>
+              <button
+                onClick={() => setShowAddPresence(false)}
+                className="flex-1 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300"
+              >
+                Annulla
+              </button>
             </div>
 
           </div>

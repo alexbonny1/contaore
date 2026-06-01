@@ -67,22 +67,22 @@ function buildCoppie(sorted) {
       const entrata = sorted[i]
       const uscita  = sorted[i + 1]?.tipo === 'USCITA' ? sorted[i + 1] : null
       coppie.push({
-        entrata: new Date(entrata.created_at).toLocaleTimeString('it-IT', {
-          hour: '2-digit', minute: '2-digit'
-        }),
-        uscita: uscita
-          ? new Date(uscita.created_at).toLocaleTimeString('it-IT', {
-              hour: '2-digit', minute: '2-digit'
-            })
-          : null
+        entrata:          new Date(entrata.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+        uscita:           uscita ? new Date(uscita.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null,
+        entrata_id:       entrata.id,
+        uscita_id:        uscita?.id || null,
+        entrata_manuale:  !!entrata.manuale,
+        uscita_manuale:   uscita ? !!uscita.manuale : false
       })
       i += uscita ? 2 : 1
     } else {
       coppie.push({
-        entrata: null,
-        uscita: new Date(sorted[i].created_at).toLocaleTimeString('it-IT', {
-          hour: '2-digit', minute: '2-digit'
-        })
+        entrata:          null,
+        uscita:           new Date(sorted[i].created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+        entrata_id:       null,
+        uscita_id:        sorted[i].id,
+        entrata_manuale:  false,
+        uscita_manuale:   !!sorted[i].manuale
       })
       i++
     }
@@ -735,6 +735,97 @@ export default async function employeeRoutes(fastify) {
     }
   )
 
+
+  // ─── ADD MANUAL PRESENCE ────────────────────────────────────────────────────
+  fastify.post(
+    '/api/employees/:id/presence',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      try {
+        const { id }            = request.params
+        const companyId         = request.user.company_id
+        const { tipo, datetime } = request.body
+
+        if (!tipo || !datetime || !['ENTRATA', 'USCITA'].includes(tipo)) {
+          return reply.send({ success: false, error: 'INVALID_PARAMS' })
+        }
+
+        const { data: employee } = await supabase
+          .from('dipendenti')
+          .select('badge_uid')
+          .eq('id', id)
+          .eq('company_id', companyId)
+          .single()
+
+        if (!employee) {
+          return reply.send({ success: false, error: 'NOT_FOUND' })
+        }
+
+        const ts = new Date(datetime).toISOString()
+
+        const { data, error } = await supabase
+          .from('presenza')
+          .insert({
+            company_id: companyId,
+            tag_uid:    employee.badge_uid,
+            tipo,
+            manuale:    true,
+            created_at: ts,
+            timestamp:  ts
+          })
+          .select()
+          .single()
+
+        if (error) {
+          console.log(error)
+          return reply.send({ success: false, error: error.message })
+        }
+
+        return reply.send({ success: true, presenza: data })
+      } catch (err) {
+        console.log(err)
+        return reply.send({ success: false })
+      }
+    }
+  )
+
+  // ─── DELETE SINGLE PRESENCE ──────────────────────────────────────────────────
+  fastify.delete(
+    '/api/presenze/:id',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      try {
+        const { id }    = request.params
+        const companyId = request.user.company_id
+
+        const { data: presenza } = await supabase
+          .from('presenza')
+          .select('id')
+          .eq('id', id)
+          .eq('company_id', companyId)
+          .single()
+
+        if (!presenza) {
+          return reply.send({ success: false, error: 'NOT_FOUND' })
+        }
+
+        const { error } = await supabase
+          .from('presenza')
+          .delete()
+          .eq('id', id)
+
+        if (error) {
+          console.log(error)
+          return reply.send({ success: false })
+        }
+
+        return reply.send({ success: true })
+      } catch (err) {
+        console.log(err)
+        return reply.send({ success: false })
+      }
+    }
+  )
 
   fastify.get(
     '/api/company/info',
