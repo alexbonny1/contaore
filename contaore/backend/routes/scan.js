@@ -22,7 +22,7 @@ export default async function scanRoutes(fastify) {
         if (!uid) {
           return reply.send({ success: false })
         }
-
+ 
         // SECURITY FIX: Validate that reader_id is provided (REQUIRED)
         if (!reader_id) {
           return reply.send({
