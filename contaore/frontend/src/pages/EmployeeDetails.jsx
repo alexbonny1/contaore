@@ -927,7 +927,7 @@ export default function EmployeeDetails() {
                                             {coppia.entrata || "—"}
                                           </span>
                                           {coppia.entrata_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
-                                          {!portaleAttivo && coppia.entrata_id && (
+                                          {!portaleAttivo && coppia.entrata_manuale && coppia.entrata_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.entrata_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
                                             </button>
@@ -948,7 +948,7 @@ export default function EmployeeDetails() {
                                             {coppia.uscita || "—"}
                                           </span>
                                           {coppia.uscita_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
-                                          {!portaleAttivo && coppia.uscita_id && (
+                                          {!portaleAttivo && coppia.uscita_manuale && coppia.uscita_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.uscita_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
                                             </button>
@@ -1079,26 +1079,26 @@ export default function EmployeeDetails() {
                 </div>
               </div>
 
-              {/* DATA */}
-              <div>
-                <p className="text-xs text-zinc-400 mb-2">Data</p>
-                <input
-                  type="date"
-                  value={addDate}
-                  onChange={(e) => setAddDate(e.target.value)}
-                  className="w-full h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
-                />
-              </div>
-
-              {/* ORA */}
-              <div>
-                <p className="text-xs text-zinc-400 mb-2">Ora</p>
-                <input
-                  type="time"
-                  value={addTime}
-                  onChange={(e) => setAddTime(e.target.value)}
-                  className="w-full h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
-                />
+              {/* DATA + ORA */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-zinc-400 mb-2">Data</p>
+                  <input
+                    type="date"
+                    value={addDate}
+                    onChange={(e) => setAddDate(e.target.value)}
+                    className="w-full min-w-0 h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-zinc-400 mb-2">Ora</p>
+                  <input
+                    type="time"
+                    value={addTime}
+                    onChange={(e) => setAddTime(e.target.value)}
+                    className="w-full min-w-0 h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                  />
+                </div>
               </div>
 
             </div>
