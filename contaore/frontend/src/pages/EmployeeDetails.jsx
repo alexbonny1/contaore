@@ -82,6 +82,7 @@ export default function EmployeeDetails() {
   const [showManualUid, setShowManualUid] = useState(false);
   const [toast, setToast] = useState(null);
 
+  const [portaleAttivo, setPortaleAttivo]       = useState(true); // default true = nascosto finché non carica
   const [showAddPresence, setShowAddPresence]   = useState(false);
   const [addTipo, setAddTipo]                   = useState("ENTRATA");
   const [addDate, setAddDate]                   = useState("");
@@ -196,17 +197,24 @@ export default function EmployeeDetails() {
 
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await fetch(
-        API_URL + "/api/employees/" + id,
-        { headers: { Authorization: "Bearer " + token } }
-      );
-      const data = await response.json();
 
-      if (data.success) {
-        setEmployee(data.employee);
-        setTurni(data.employee.shifts || []);
-        setTurniAttivi(!!data.employee.turni_attivi);
-        setHistoryMonths(data.employee.history_months || []);
+      const [empRes, companyRes] = await Promise.all([
+        fetch(API_URL + "/api/employees/" + id, { headers: { Authorization: "Bearer " + token } }),
+        fetch(API_URL + "/api/company/info",    { headers: { Authorization: "Bearer " + token } })
+      ]);
+
+      const empData     = await empRes.json();
+      const companyData = await companyRes.json();
+
+      if (companyData.success) {
+        setPortaleAttivo(!!companyData.portale_dipendenti);
+      }
+
+      if (empData.success) {
+        setEmployee(empData.employee);
+        setTurni(empData.employee.shifts || []);
+        setTurniAttivi(!!empData.employee.turni_attivi);
+        setHistoryMonths(empData.employee.history_months || []);
       }
 
     } catch (err) {
@@ -775,13 +783,15 @@ export default function EmployeeDetails() {
                 <p className="text-sm text-zinc-500 mt-0.5">{employee.nome} {employee.cognome}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => startAddPresence()}
-                  className="h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium flex items-center gap-1.5"
-                >
-                  <Plus size={14} />
-                  Timbratura
-                </button>
+                {!portaleAttivo && (
+                  <button
+                    onClick={() => startAddPresence()}
+                    className="h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium flex items-center gap-1.5"
+                  >
+                    <Plus size={14} />
+                    Timbratura
+                  </button>
+                )}
                 <button
                   onClick={() => setShowStorico(false)}
                   className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300"
@@ -880,7 +890,7 @@ export default function EmployeeDetails() {
                             <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Ore</th>
                             {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Previste</th>}
                             {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Stato</th>}
-                            <th className="px-3 py-3"></th>
+                            {!portaleAttivo && <th className="px-3 py-3"></th>}
                           </tr>
                         </thead>
 
@@ -917,7 +927,7 @@ export default function EmployeeDetails() {
                                             {coppia.entrata || "—"}
                                           </span>
                                           {coppia.entrata_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
-                                          {coppia.entrata_id && (
+                                          {!portaleAttivo && coppia.entrata_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.entrata_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
                                             </button>
@@ -938,7 +948,7 @@ export default function EmployeeDetails() {
                                             {coppia.uscita || "—"}
                                           </span>
                                           {coppia.uscita_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
-                                          {coppia.uscita_id && (
+                                          {!portaleAttivo && coppia.uscita_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.uscita_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
                                             </button>
@@ -997,15 +1007,17 @@ export default function EmployeeDetails() {
                                 </td>
                               )}
 
-                              <td className="px-3 py-3 text-right">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); startAddPresence(day.giorno); }}
-                                  title="Aggiungi timbratura"
-                                  className="text-zinc-300 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-                                >
-                                  <Plus size={14} />
-                                </button>
-                              </td>
+                              {!portaleAttivo && (
+                                <td className="px-3 py-3 text-right">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); startAddPresence(day.giorno); }}
+                                    title="Aggiungi timbratura"
+                                    className="text-zinc-300 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                  >
+                                    <Plus size={14} />
+                                  </button>
+                                </td>
+                              )}
 
                             </tr>
 
@@ -1031,9 +1043,9 @@ export default function EmployeeDetails() {
 
       )}
 
-      {/* MODALE AGGIUNGI TIMBRATURA MANUALE */}
+      {/* MODALE AGGIUNGI TIMBRATURA MANUALE — solo se portale disattivo */}
 
-      {showAddPresence && (
+      {showAddPresence && !portaleAttivo && (
 
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
 

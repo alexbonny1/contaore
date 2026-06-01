@@ -750,6 +750,16 @@ export default async function employeeRoutes(fastify) {
           return reply.send({ success: false, error: 'INVALID_PARAMS' })
         }
 
+        const { data: company } = await supabase
+          .from('company')
+          .select('portale_dipendenti')
+          .eq('id', companyId)
+          .single()
+
+        if (company?.portale_dipendenti) {
+          return reply.send({ success: false, error: 'PORTAL_ACTIVE' })
+        }
+
         const { data: employee } = await supabase
           .from('dipendenti')
           .select('badge_uid')
@@ -797,6 +807,16 @@ export default async function employeeRoutes(fastify) {
       try {
         const { id }    = request.params
         const companyId = request.user.company_id
+
+        const { data: company } = await supabase
+          .from('company')
+          .select('portale_dipendenti')
+          .eq('id', companyId)
+          .single()
+
+        if (company?.portale_dipendenti) {
+          return reply.send({ success: false, error: 'PORTAL_ACTIVE' })
+        }
 
         const { data: presenza } = await supabase
           .from('presenza')
