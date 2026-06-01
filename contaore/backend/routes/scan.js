@@ -36,8 +36,9 @@ export default async function scanRoutes(fastify) {
           .from('dispositivo')
           .select('company_id')
           .eq('reader_id', reader_id)
-          .single()
+          .maybeSingle()
 
+        // Reader must exist and have a company_id association
         if (readerError || !reader) {
           return reply.send({
             success: false,
@@ -107,7 +108,7 @@ export default async function scanRoutes(fastify) {
         const { error } = await supabase
           .from('presenza')
           .insert({
-            company_id: tag.company_id,
+            company_id: readerCompanyId,
             tag_uid:    uid,
             reader_id:  reader_id || null,
             tipo
