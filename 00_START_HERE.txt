@@ -1,0 +1,129 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                          ║
+║     🎯 NFC TAG READING SYSTEM - DEBUGGING DOCUMENTATION                  ║
+║                                                                          ║
+║     Problem: "Tag reads don't create presence records"                  ║
+║     Status: ✅ Complete Analysis & Solutions Provided                    ║
+║                                                                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+📚 DOCUMENTATION GUIDE
+═══════════════════════════════════════════════════════════════════════════
+
+⚡ QUICK FIX (5-10 minutes)
+  → Read: QUICK_TROUBLESHOOT.md
+    - Issue #1: TAG_NOT_REGISTERED → Register tag to employee
+    - Issue #2: No Presence Records → Add timestamp column  
+    - Issue #3: Wrong Type → Check time ranges
+    - Issue #4: Can't Connect → Test network
+
+📋 COMPLETE ANALYSIS (15 minutes)
+  → Read: COMPLETE_ANALYSIS.md
+    - System overview
+    - Root cause analysis
+    - Step-by-step fixes
+    - File locations & troubleshooting tree
+
+🔄 WORKFLOW GUIDE (10 minutes)
+  → Read: TAG_READING_WORKFLOW_SUMMARY.md
+    - Visual architecture diagram
+    - Critical code sections with line numbers
+    - Decision flow chart
+    - Expected database state
+
+🔍 TECHNICAL DEEP-DIVE (20 minutes)
+  → Read: NFC_TAG_READING_DEBUG.md
+    - Complete technical documentation
+    - All failure points explained
+    - Full debugging checklist
+    - Expected database state
+
+🔧 DATABASE DIAGNOSTICS (5 minutes)
+  → Run: DIAGNOSE_TAG_READING.sql
+    - Copy entire file
+    - Paste in Supabase SQL Editor
+    - Execute and review results
+    - Look for ❌ marks for issues
+
+═══════════════════════════════════════════════════════════════════════════
+
+🚀 START HERE:
+
+1. Read QUICK_TROUBLESHOOT.md (5 min)
+   ↓
+2. Run DIAGNOSE_TAG_READING.sql in database (5 min)
+   ↓
+3. Follow the fix for your specific issue (5-10 min)
+   ↓
+4. Test tag reading again
+   ↓
+5. Read COMPLETE_ANALYSIS.md if you want full understanding (15 min)
+
+═══════════════════════════════════════════════════════════════════════════
+
+📊 MOST LIKELY ISSUES (In Order of Probability):
+
+1. ❌ TAG NOT REGISTERED TO EMPLOYEE
+   → Tag UID not in dipendenti.badge_uid field
+   → Fix: Update dipendenti SET badge_uid = 'YOUR_TAG_UID'
+   → Time to fix: 2 minutes
+
+2. ❌ MISSING TIMESTAMP COLUMN
+   → Database lacks timestamp column in presenza table
+   → Fix: ALTER TABLE presenza ADD COLUMN timestamp TIMESTAMP
+   → Time to fix: 1 minute
+   → Note: Already applied in FIX_DATABASE.sql
+
+3. ❌ WRONG COMPANY ID
+   → Arduino sends company_id that doesn't match employee
+   → Fix: Update Arduino config with correct UUID
+   → Time to fix: 5-10 minutes
+
+4. ❌ NETWORK CONNECTIVITY
+   → Arduino can't reach backend server
+   → Fix: Check WiFi, verify backend URL, test ping
+   → Time to fix: 10-15 minutes
+
+═══════════════════════════════════════════════════════════════════════════
+
+📁 KEY FILES IN PROJECT:
+
+Backend Tag Processor:
+  /contaore/backend/routes/hardware.js (lines 109-294)
+  ↳ Processes tags, creates presence records
+
+Arduino Tag Reader:
+  /contaore/arduino/arduino.ino (line 780)
+  ↳ Reads NFC tag, sends to backend
+
+Database Tables:
+  dipendenti (employees with badge_uid)
+  presenza (attendance records)
+  fasce_orarie (time ranges)
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ HOW TO VERIFY SYSTEM IS WORKING:
+
+$ SELECT * FROM presenza 
+  WHERE tag_uid = 'YOUR_TAG_UID' 
+  ORDER BY created_at DESC LIMIT 5;
+
+Expected: Rows appearing with tipo (ENTRATA/USCITA) alternating
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎯 NEXT STEPS:
+
+1. Open QUICK_TROUBLESHOOT.md in your text editor
+2. Follow the issue that matches your situation
+3. If not fixed, run DIAGNOSE_TAG_READING.sql
+4. Reference detailed guides as needed
+
+═══════════════════════════════════════════════════════════════════════════
+
+Created: 31 Maggio 2026
+Status: Complete Documentation with Solutions
+
+Questions? Check README_DEBUG_GUIDES.md for the full index.
+
