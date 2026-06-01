@@ -1,6 +1,6 @@
-import { supabase } from '../services/supabase.js'
-
-global.lastRead = null
+import { supabase }    from '../services/supabase.js'
+import { authenticate } from '../middleware/auth.js'
+import latestReads      from '../state/LatestReads.js'
 
 export default async function scanRoutes(fastify) {
 
@@ -48,9 +48,10 @@ export default async function scanRoutes(fastify) {
 
         const readerCompanyId = reader.company_id
 
-        global.lastRead = {
+        latestReads[readerCompanyId] = {
           uid,
-          created_at: new Date().toISOString()
+          reader_id,
+          timestamp: Date.now()
         }
 
         // SECURITY FIX: Query tag with company_id filter (prevent cross-company reads)
@@ -137,26 +138,27 @@ export default async function scanRoutes(fastify) {
 
   fastify.get(
     '/api/latest-read',
+    { preHandler: authenticate },
     async (request, reply) => {
 
       try {
 
+        const companyId = request.user.company_id
         const { after } = request.query
 
-        if (!global.lastRead) {
+        const lastRead = latestReads[companyId]
+
+        if (!lastRead) {
           return reply.send({ success: false })
         }
 
-        if (
-          after &&
-          new Date(global.lastRead.created_at) <= new Date(after)
-        ) {
+        if (after && lastRead.timestamp <= new Date(after).getTime()) {
           return reply.send({ success: false })
         }
 
         return reply.send({
           success: true,
-          uid: global.lastRead.uid
+          uid: lastRead.uid
         })
 
       } catch (err) {
