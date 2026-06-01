@@ -4,7 +4,7 @@ import { authenticate } from '../middleware/auth.js'
 export default async function deviceRoutes(fastify) {
  
   /*
-    GET READERS
+    GET READERS 
   */
 
   fastify.get(
