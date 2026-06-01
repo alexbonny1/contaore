@@ -7,7 +7,7 @@ export default async function scanRoutes(fastify) {
   /*
     REGISTER PRESENCE
   */
-
+ 
   fastify.post(
     '/api/scan',
     async (request, reply) => {
