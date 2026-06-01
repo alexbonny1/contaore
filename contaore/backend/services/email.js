@@ -14,25 +14,12 @@
 
 import { Resend } from 'resend'
 
-// Initialize Resend with API key if available
-// Email service is optional - if no API key, functions will return false
-let resend = null
-if (process.env.RESEND_API_KEY) {
-  try {
-    resend = new Resend(process.env.RESEND_API_KEY)
-  } catch (err) {
-    console.warn('Resend initialization failed (email service disabled):', err.message)
-  }
-}
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM = process.env.EMAIL_FROM || 'Timbry <onboarding@resend.dev>'
 
 // ─── Invia credenziali al TITOLARE quando il superadmin crea l'azienda ───────
 export async function sendCredenzialiOwner({ email, username, password, companyNome }) {
-  if (!resend) {
-    console.warn('Email service disabled: RESEND_API_KEY not configured')
-    return false
-  }
   try {
     const { data, error } = await resend.emails.send({
       from:    FROM,
@@ -85,10 +72,6 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
 
 // ─── Invia credenziali al dipendente appena creato ───────────────────────────
 export async function sendCredenziali({ email, nome, username, password, companyNome }) {
-  if (!resend) {
-    console.warn('Email service disabled: RESEND_API_KEY not configured')
-    return false
-  }
   try {
     const { data, error } = await resend.emails.send({
       from:    FROM,
@@ -142,10 +125,6 @@ export async function sendCredenziali({ email, nome, username, password, company
 
 // ─── Notifica al titolare: nuova richiesta ferie ──────────────────────────────
 export async function sendNotificaRichiestaFerie({ emailOwner, nomeDipendente, dataInizio, dataFine, companyNome }) {
-  if (!resend) {
-    console.warn('Email service disabled: RESEND_API_KEY not configured')
-    return false
-  }
   try {
     await resend.emails.send({
       from:    FROM,
@@ -178,10 +157,6 @@ export async function sendNotificaRichiestaFerie({ emailOwner, nomeDipendente, d
 
 // ─── Notifica al dipendente: ferie approvate o rifiutate ─────────────────────
 export async function sendEsitoFerie({ emailDipendente, nome, dataInizio, dataFine, approvata }) {
-  if (!resend) {
-    console.warn('Email service disabled: RESEND_API_KEY not configured')
-    return false
-  }
   try {
     await resend.emails.send({
       from:    FROM,
@@ -209,10 +184,6 @@ export async function sendEsitoFerie({ emailDipendente, nome, dataInizio, dataFi
 }
 // ─── Reset password: invia link all'utente (owner o dipendente) ──────────────
 export async function sendResetPassword({ email, username, resetUrl }) {
-  if (!resend) {
-    console.warn('Email service disabled: RESEND_API_KEY not configured')
-    return false
-  }
   try {
     const { data, error } = await resend.emails.send({
       from:    FROM,
