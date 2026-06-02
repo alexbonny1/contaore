@@ -54,8 +54,7 @@ export default async function pauseRoutes(fastify) {
             data_inizio,
             data_fine,
             motivo: motivo.trim(),
-            attiva: true,
-            creata_da: request.user.id
+            attiva: true
           })
           .select()
           .single()
@@ -138,7 +137,7 @@ export default async function pauseRoutes(fastify) {
 
         const { data: updated, error } = await supabase
           .from('pausa_aziendale')
-          .update({ attiva: false, annullata_il: new Date().toISOString() })
+          .update({ attiva: false })
           .eq('id', id)
           .select()
           .single()
