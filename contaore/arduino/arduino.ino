@@ -2,7 +2,8 @@
  * timbry NFC Reader Firmware
  * ESP32-WROOM + RC522 + ILI9488 TFT 480x320 + Buzzer
  * v2.2.0
- *
+ * 
+
  * PIN MAP:
  * ─────────────────────────────────────
  * TFT ILI9488 (SPI)
