@@ -40,70 +40,70 @@ function page(title, sub) {
 
 // titoletto sezione
 function sec(text) {
-  checkPage(36)
-  doc.moveDown(0.4)
+  checkPage(30)
+  doc.y += 6
   const sy = doc.y
-  doc.rect(L, sy, TW, 22).fillColor(LGRAY).fill()
-  doc.rect(L, sy, 3, 22).fillColor(BLU).fill()
-  doc.fillColor(DARK).font('Helvetica-Bold').fontSize(10).text(text, L + 10, sy + 6, { width: TW - 14 })
-  doc.y = sy + 27
+  doc.rect(L, sy, TW, 20).fillColor(LGRAY).fill()
+  doc.rect(L, sy, 3, 20).fillColor(BLU).fill()
+  doc.fillColor(DARK).font('Helvetica-Bold').fontSize(10).text(text, L + 10, sy + 5, { width: TW - 14 })
+  doc.y = sy + 24
 }
 
 // testo paragrafo
 function txt(t) {
-  checkPage(28)
+  checkPage(24)
   doc.fillColor(GRAY).font('Helvetica').fontSize(9.5)
-     .text(t, L, doc.y, { width: TW, lineGap: 2.5 })
-  doc.moveDown(0.3)
+     .text(t, L, doc.y, { width: TW, lineGap: 2 })
+  doc.y += 4
 }
 
 // voce puntata semplice
 function li(t, color) {
-  checkPage(20)
+  checkPage(18)
   const cy = doc.y
   doc.circle(L + 4, cy + 5, 2.5).fillColor(color || BLU).fill()
   doc.fillColor(DARK).font('Helvetica').fontSize(9.5)
-     .text(t, L + 12, cy, { width: TW - 12, lineGap: 2.5 })
-  doc.moveDown(0.1)
+     .text(t, L + 12, cy, { width: TW - 12, lineGap: 2 })
+  doc.y += 2
 }
 
 // riga chiave → valore (righe alternate)
 let _r = 0
 function kvReset() { _r = 0 }
 function kv(k, v) {
-  checkPage(20)
+  checkPage(18)
   const ky = doc.y
-  doc.rect(L, ky, TW, 19).fillColor(_r++ % 2 ? WHITE : LGRAY).fill()
-  doc.fillColor(DARK).font('Helvetica-Bold').fontSize(9).text(k, L + 8, ky + 5, { width: 148 })
-  doc.fillColor(GRAY).font('Helvetica').fontSize(9).text(v, L + 160, ky + 5, { width: TW - 164 })
-  doc.y = ky + 21
+  doc.rect(L, ky, TW, 18).fillColor(_r++ % 2 ? WHITE : LGRAY).fill()
+  doc.fillColor(DARK).font('Helvetica-Bold').fontSize(9).text(k, L + 8, ky + 4, { width: 148 })
+  doc.fillColor(GRAY).font('Helvetica').fontSize(9).text(v, L + 160, ky + 4, { width: TW - 164 })
+  doc.y = ky + 19
 }
 
 // box colorato con testo — calcola h prima di disegnare
 function box(text, bg, border) {
-  checkPage(44)
+  checkPage(40)
   bg = bg || '#EFF6FF'; border = border || BLU
-  const h = doc.heightOfString(text, { width: TW - 22, fontSize: 9, lineGap: 2.5 }) + 18
-  const by = doc.y
+  const h = doc.heightOfString(text, { width: TW - 22, fontSize: 9, lineGap: 2 }) + 16
+  const by = doc.y + 4
   doc.rect(L, by, TW, h).fillColor(bg).fill()
   doc.rect(L, by, 3, h).fillColor(border).fill()
   doc.fillColor(GRAY).font('Helvetica').fontSize(9)
-     .text(text, L + 12, by + 9, { width: TW - 22, lineGap: 2.5 })
-  doc.y = by + h + 8
+     .text(text, L + 12, by + 8, { width: TW - 22, lineGap: 2 })
+  doc.y = by + h + 6
 }
 
 // step numerato
 function step(n, bold, desc) {
-  checkPage(28)
+  checkPage(24)
   const sy = doc.y
   doc.rect(L, sy, 18, 18).fillColor(BLU).fill()
   doc.fillColor(WHITE).font('Helvetica-Bold').fontSize(8.5).text(String(n), L, sy + 4, { width: 18, align: 'center' })
   doc.fillColor(DARK).font('Helvetica-Bold').fontSize(9.5).text(bold, L + 24, sy + 2, { width: TW - 24 })
   if (desc) {
     doc.fillColor(GRAY).font('Helvetica').fontSize(9)
-       .text(desc, L + 24, doc.y + 1, { width: TW - 24, lineGap: 2.5 })
+       .text(desc, L + 24, doc.y + 1, { width: TW - 24, lineGap: 2 })
   }
-  doc.moveDown(0.35)
+  doc.y += 5
 }
 
 // ══════════════════════════════════════════════════════════
@@ -142,10 +142,9 @@ const TOC = [
   ['3', 'Dipendenti',                 'Lista, scheda individuale, storico presenze'],
   ['4', 'Badge NFC',                  'Registrare un badge e creare account dipendente'],
   ['5', 'Lettori NFC',                'Monitoraggio dispositivi fisici'],
-  ['6', 'Fasce orarie',               'Regole automatiche entrata / uscita'],
-  ['7', 'Richieste',                  'Gestire ferie, giustificazioni, timbrature mancate'],
-  ['8', 'Pausa aziendale',            'Chiusura collettiva per un periodo'],
-  ['9', 'Portale dipendente',         'Storico personale, ferie, richieste dal portale'],
+  ['6', 'Richieste',                  'Gestire ferie, giustificazioni, timbrature mancate'],
+  ['7', 'Pausa aziendale',            'Chiusura collettiva per un periodo'],
+  ['8', 'Portale dipendente',         'Storico personale, ferie, richieste dal portale'],
 ]
 TOC.forEach(([n, t, d], i) => {
   const ry = doc.y
@@ -196,6 +195,8 @@ sec('Header e menu')
 txt('In alto a destra ci sono i pulsanti: Luna/Sole per cambiare tema, Password per cambiare la tua password, Logout per uscire.')
 txt('Il menu sotto l\'header ha le voci: Dashboard · Richieste · Pausa aziendale · Dipendenti · Badge · Lettori NFC.')
 box('La voce "Richieste" appare solo se il portale dipendenti è attivo. Se è attivo e ci sono richieste in attesa, compare un numero rosso sul pulsante.')
+
+box('Le fasce orarie (regole che stabiliscono se una timbratura è ENTRATA o USCITA in base all\'ora) vengono configurate al momento dell\'installazione insieme a chi gestisce il sistema. Non è necessario modificarle durante l\'uso normale.', '#F0FDF4', GREEN)
 
 // ══════════════════════════════════════════════════════════
 // 3 — DIPENDENTI
@@ -273,27 +274,9 @@ li('Controlla che lo schermo del lettore mostri ONLINE.')
 li('Se necessario, stacca e riattacca l\'alimentazione — il lettore si riconnette da solo.')
 
 // ══════════════════════════════════════════════════════════
-// 6 — FASCE ORARIE
+// 6 — RICHIESTE
 // ══════════════════════════════════════════════════════════
-page('6 · Fasce orarie', 'Regole automatiche entrata / uscita')
-
-txt('Le fasce orarie dicono al sistema quando una timbratura vale come ENTRATA e quando come USCITA. Senza fasce il sistema alterna automaticamente entrata e uscita.')
-
-sec('Esempio')
-txt('Vuoi che chi timbra la mattina entri e chi timbra il pomeriggio esca:')
-li('Fascia Mattina: 07:30 – 09:30 → tipo ENTRATA')
-li('Fascia Sera: 17:00 – 19:30 → tipo USCITA')
-
-sec('Aggiungere una fascia')
-step(1, 'Vai su Fasce orarie', 'Dal menu o dalla scheda azienda nel pannello superadmin.')
-step(2, 'Compila il form', 'Nome (opzionale), ora inizio, ora fine, tipo ENTRATA o USCITA.')
-step(3, 'Salva', 'La fascia è attiva immediatamente per tutte le timbrature successive.')
-box('Se un dipendente timbra due volte nella stessa fascia (es. badge passato per errore due volte di mattina), il sistema inverte automaticamente il tipo per la seconda lettura.')
-
-// ══════════════════════════════════════════════════════════
-// 7 — RICHIESTE
-// ══════════════════════════════════════════════════════════
-page('7 · Richieste', 'Ferie, giustificazioni, timbrature mancate')
+page('6 · Richieste', 'Ferie, giustificazioni, timbrature mancate')
 
 txt('Questa sezione è visibile solo quando il portale dipendenti è attivo. I dipendenti inviano richieste dal loro portale e tu le gestisci qui.')
 
@@ -320,9 +303,9 @@ sec('Filtri per tab')
 txt('In cima alla lista ci sono quattro tab: Tutte · Ferie · Giustificazioni · Timbrature. Clicca per filtrare le richieste per tipo.')
 
 // ══════════════════════════════════════════════════════════
-// 8 — PAUSA AZIENDALE
+// 7 — PAUSA AZIENDALE
 // ══════════════════════════════════════════════════════════
-page('8 · Pausa aziendale', 'Chiusura collettiva per un intero periodo')
+page('7 · Pausa aziendale', 'Chiusura collettiva per un intero periodo')
 
 txt('Segna tutti i dipendenti come in ferie per un intervallo di date senza dover creare una richiesta per ognuno. Utile per ferie estive, chiusure natalizie e simili.')
 
@@ -338,9 +321,9 @@ sec('Annullare una pausa')
 txt('Clicca il pulsante rosso "Annulla pausa" nel riquadro verde. La pausa viene disattivata immediatamente.')
 
 // ══════════════════════════════════════════════════════════
-// 9 — PORTALE DIPENDENTE
+// 8 — PORTALE DIPENDENTE
 // ══════════════════════════════════════════════════════════
-page('9 · Portale dipendente', 'Cosa vede e può fare il dipendente')
+page('8 · Portale dipendente', 'Cosa vede e può fare il dipendente')
 
 txt('Il dipendente accede con le credenziali ricevute via email. Il sistema mostra solo i propri dati personali.')
 
