@@ -313,8 +313,17 @@ String getLocalTime() {
 // ── RFID INIT ────────────────────────
 void rfidInit() {
   SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
-  rfid.PCD_Init(); delay(100);
-  byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+  rfid.PCD_Init();
+  delay(50);
+
+  byte v = 0;
+  for (int i = 0; i < 5; i++) {
+    v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+    if (v == 0x91 || v == 0x92) break;
+    delay(150);
+    rfid.PCD_Init();
+    delay(50);
+  }
   Serial.printf("RC522 version: 0x%02X %s\n", v,
     (v == 0x91 || v == 0x92) ? "OK" : "WARN");
 }
