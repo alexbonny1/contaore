@@ -61,7 +61,7 @@ export default async function pauseRoutes(fastify) {
 
         if (error) {
           console.log(error)
-          return reply.status(500).send({ error: 'INSERT_ERROR' })
+          return reply.status(500).send({ error: 'INSERT_ERROR', detail: error.message })
         }
 
         return reply.send({ success: true, pausa })

@@ -399,7 +399,7 @@ export default async function adminRoutes(fastify) {
 
         if (error) {
           console.log('Errore inserimento fascia:', error)
-          return reply.status(500).send({ success: false, error: 'INSERT_ERROR' })
+          return reply.status(500).send({ success: false, error: 'INSERT_ERROR', detail: error.message })
         }
 
         return reply.send({ success: true, fasce: [fascia], message: '1 fascia oraria creata' })
