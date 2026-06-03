@@ -1,6 +1,7 @@
 import { supabase }    from '../services/supabase.js'
 import { authenticate } from '../middleware/auth.js'
 import latestReads      from '../state/LatestReads.js'
+import { onBadgeNonRiconosciuto, onRitardo } from '../services/notifiche.js'
 
 export default async function scanRoutes(fastify) {
 
@@ -66,6 +67,8 @@ export default async function scanRoutes(fastify) {
           .single()
 
         if (tagError || !tag) {
+          // Fire-and-forget notification for unknown badge
+          onBadgeNonRiconosciuto({ uid, readerId, companyId: readerCompanyId })
           return reply.send({
             success: false,
             error: 'TAG_COMPANY_MISMATCH'
@@ -118,6 +121,11 @@ export default async function scanRoutes(fastify) {
         if (error) {
           console.log(error)
           return reply.send({ success: false })
+        }
+
+        // Fire-and-forget: check for late arrival
+        if (tipo === 'ENTRATA') {
+          onRitardo({ uid, companyId: readerCompanyId })
         }
 
         return reply.send({ success: true, tipo })

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard, Radio, Sun, Moon,
-  CheckCircle, XCircle, Clock3, FileText, Calendar, Coffee
+  CheckCircle, XCircle, Clock3, FileText, Calendar, Coffee, Bell
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -73,6 +73,7 @@ export default function Dashboard() {
     { title: "Dipendenti",      icon: Users,           path: "/employees" },
     { title: "Badge",           icon: CreditCard,      path: "/badges"    },
     { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
+    { title: "Notifiche",       icon: Bell,            path: "/notifications" },
   ].filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo));
 
   return (

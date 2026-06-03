@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard,
   Radio, Sun, Moon, CheckCircle2, XCircle, Mail,
-  FileText, Calendar
+  FileText, Calendar, Bell
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -14,6 +14,7 @@ const NAV_TABS = [
   { title: "Dipendenti",      icon: Users,           path: "/employees" },
   { title: "Badge",           icon: CreditCard,      path: "/badges"    },
   { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
+  { title: "Notifiche",       icon: Bell,            path: "/notifications" },
 ];
 
 function Toast({ message, type, onClose }) {

@@ -15,6 +15,7 @@ import Readers             from "./pages/Readers";
 import Admin               from "./pages/admin";
 import DipendenteDashboard from "./pages/DipendenteDashboard";   // ← nuovo
 import ResetPassword       from "./pages/ResetPassword";
+import Notifications       from "./pages/Notifications";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -85,6 +86,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Route path="/readers" element={
           <ProtectedRoute>
             <Readers />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/notifications" element={
+          <ProtectedRoute>
+            <Notifications />
           </ProtectedRoute>
         } />
 

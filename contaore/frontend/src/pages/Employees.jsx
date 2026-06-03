@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard,
   Radio, Sun, Moon, Download, X,
-  CheckSquare, Square, FileText, Table2, Calendar
+  CheckSquare, Square, FileText, Table2, Calendar, Bell
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -678,7 +678,8 @@ export default function Employees() {
             { title: "Pausa aziendale", icon: Calendar,        path: "/pause"     },
             { title: "Dipendenti",      icon: Users,           path: "/employees" },
             { title: "Badge",           icon: CreditCard,      path: "/badges"    },
-            { title: "Lettori NFC",     icon: Radio,           path: "/readers"   }
+            { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
+            { title: "Notifiche",       icon: Bell,            path: "/notifications" }
           ]
             .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
             .map((item) => {
