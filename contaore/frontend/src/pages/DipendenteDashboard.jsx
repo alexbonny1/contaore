@@ -232,6 +232,7 @@ export default function DipendenteDashboard() {
   if (!data) return null;
 
   const { employee, shifts, history_days, stats, giustificazioni } = data;
+  const inPausa = !!data.in_pausa;
 
   // raggruppa per mese
   const months = {};
@@ -271,6 +272,17 @@ export default function DipendenteDashboard() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-5 py-5 sm:py-7">
+
+        {/* PAUSA BANNER */}
+        {inPausa && (
+          <div className="mb-4 sm:mb-6 flex items-center gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+            <span className="text-xl sm:text-2xl">☕</span>
+            <div>
+              <p className="text-sm sm:text-base font-semibold text-amber-800 dark:text-amber-300">Sei in pausa</p>
+              <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">Il tuo turno riprende dopo la pausa programmata</p>
+            </div>
+          </div>
+        )}
 
         {/* STATS */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">

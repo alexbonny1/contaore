@@ -28,6 +28,56 @@ function calculateHours(reads = []) {
   return Number((totalMinutes / 60).toFixed(2))
 }
 
+function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
+  let deductionMins   = 0
+  let lastEntrataMins = null
+  const now     = new Date()
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+  for (const read of sortedReads) {
+    const dt       = new Date(read.created_at)
+    const readMins = dt.getHours() * 60 + dt.getMinutes()
+    if (read.tipo === 'ENTRATA') {
+      lastEntrataMins = readMins
+    } else if (read.tipo === 'USCITA' && lastEntrataMins !== null) {
+      const winStart = Math.max(lastEntrataMins, breakStartMins)
+      const winEnd   = Math.min(readMins, breakEndMins)
+      if (winEnd > winStart) deductionMins += winEnd - winStart
+      lastEntrataMins = null
+    }
+  }
+  if (lastEntrataMins !== null) {
+    const winStart = Math.max(lastEntrataMins, breakStartMins)
+    const winEnd   = Math.min(nowMins, breakEndMins)
+    if (winEnd > winStart) deductionMins += winEnd - winStart
+  }
+  return deductionMins
+}
+
+function calculateHoursWithBreaks(reads, empShifts) {
+  const byDay = {}
+  reads.forEach(r => {
+    const day = getLocalDateStr(r.created_at)
+    if (!byDay[day]) byDay[day] = []
+    byDay[day].push(r)
+  })
+  let totalMins = 0
+  for (const [day, dayReads] of Object.entries(byDay)) {
+    const sorted    = [...dayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    let dayMins     = calculateHours(sorted) * 60
+    const dayName   = GIORNI[new Date(day).getDay()]
+    const dayShifts = empShifts.filter(s => s.giorno_settimana === dayName)
+    for (const s of dayShifts) {
+      if (s.uscita_1 && s.ingresso_2) {
+        const bStart = timeToMinutes(s.uscita_1)
+        const bEnd   = timeToMinutes(s.ingresso_2)
+        if (bEnd > bStart) dayMins -= computeBreakDeductionMins(sorted, bStart, bEnd)
+      }
+    }
+    totalMins += Math.max(0, dayMins)
+  }
+  return Number((totalMins / 60).toFixed(2))
+}
+
 function shiftExpectedHours(shift) {
   let mins = 0
   if (shift.ingresso_1 && shift.uscita_1)
@@ -82,14 +132,27 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
   )
 
   const presentDays = Object.entries(grouped).map(([giorno, items]) => {
-    const sorted      = [...items].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    const oreLavorate = calculateHours(sorted)
+    const sorted    = [...items].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    let oreLavorate = calculateHours(sorted)
     let ore_previste = 0, ore_straordinario = 0, stato = 'presente'
 
     if (turniAttivi && shifts.length > 0) {
       const dayName   = GIORNI[new Date(giorno).getDay()]
       const dayShifts = shifts.filter(s => s.giorno_settimana === dayName)
       ore_previste    = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
+
+      let breakDeductMins = 0
+      for (const s of dayShifts) {
+        if (s.uscita_1 && s.ingresso_2) {
+          const bStart = timeToMinutes(s.uscita_1)
+          const bEnd   = timeToMinutes(s.ingresso_2)
+          if (bEnd > bStart) breakDeductMins += computeBreakDeductionMins(sorted, bStart, bEnd)
+        }
+      }
+      if (breakDeductMins > 0) {
+        oreLavorate = Number(Math.max(0, oreLavorate - breakDeductMins / 60).toFixed(2))
+      }
+
       ore_straordinario = Number(Math.max(0, oreLavorate - (ore_previste > 0 ? ore_previste : 0)).toFixed(2))
       if (ore_previste === 0) ore_straordinario = Number(oreLavorate.toFixed(2))
       if (ore_straordinario > 0) stato = 'straordinario'
@@ -230,11 +293,28 @@ export default async function dipendenteRoutes(fastify) {
           pausaAziendale || null
         )
 
-        const thisMonth = new Date().toISOString().slice(0, 7)
+        const now       = new Date()
+        const today     = now.toISOString().split('T')[0]
+        const nowMins   = now.getHours() * 60 + now.getMinutes()
+        const todayName = GIORNI[now.getDay()]
+        const thisMonth = now.toISOString().slice(0, 7)
         const monthReads = (reads || []).filter(r => getLocalDateStr(r.created_at).slice(0, 7) === thisMonth)
+
+        const todayReads = (reads || []).filter(r => getLocalDateStr(r.created_at) === today)
+        const presente   = todayReads.length > 0 && todayReads[todayReads.length - 1].tipo === 'ENTRATA'
+        let inPausa = false
+        if (presente && employee.turni_attivi) {
+          inPausa = (shifts || []).some(s => {
+            if (s.giorno_settimana !== todayName || !s.uscita_1 || !s.ingresso_2) return false
+            const pausaStart = timeToMinutes(s.uscita_1)
+            const pausaEnd   = timeToMinutes(s.ingresso_2)
+            return nowMins >= pausaStart && nowMins < pausaEnd
+          })
+        }
 
         return reply.send({
           success: true,
+          in_pausa: inPausa,
           employee: {
             id:       employee.id,
             nome:     employee.nome,
@@ -247,7 +327,9 @@ export default async function dipendenteRoutes(fastify) {
           history_days:   days,
           giustificazioni: giustificazioni || [],
           stats: {
-            ore_mese_corrente:  calculateHours(monthReads),
+            ore_mese_corrente:  employee.turni_attivi
+              ? calculateHoursWithBreaks(monthReads, shifts || [])
+              : calculateHours(monthReads),
             giorni_assenti:     days.filter(d => d.assente).length,
             giorni_ferie:       days.filter(d => d.stato === 'ferie').length,
             ore_straordinario:  Number(days.reduce((s, d) => s + d.ore_straordinario, 0).toFixed(2))

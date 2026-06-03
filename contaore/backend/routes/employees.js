@@ -55,6 +55,60 @@ function calculateHours(reads = []) {
   return Number((totalMinutes / 60).toFixed(2))
 }
 
+// Minutes of shift-break time that the employee "covered" without explicit badge
+function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
+  let deductionMins  = 0
+  let lastEntrataMins = null
+  const now     = new Date()
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+
+  for (const read of sortedReads) {
+    const dt       = new Date(read.created_at)
+    const readMins = dt.getHours() * 60 + dt.getMinutes()
+    if (read.tipo === 'ENTRATA') {
+      lastEntrataMins = readMins
+    } else if (read.tipo === 'USCITA' && lastEntrataMins !== null) {
+      const winStart = Math.max(lastEntrataMins, breakStartMins)
+      const winEnd   = Math.min(readMins, breakEndMins)
+      if (winEnd > winStart) deductionMins += winEnd - winStart
+      lastEntrataMins = null
+    }
+  }
+  // Employee still inside — deduct break time that has already elapsed
+  if (lastEntrataMins !== null) {
+    const winStart = Math.max(lastEntrataMins, breakStartMins)
+    const winEnd   = Math.min(nowMins, breakEndMins)
+    if (winEnd > winStart) deductionMins += winEnd - winStart
+  }
+  return deductionMins
+}
+
+// calculateHours with per-day break deduction based on shift schedule
+function calculateHoursWithBreaks(reads, empShifts) {
+  const byDay = {}
+  reads.forEach(r => {
+    const day = getLocalDateStr(r.created_at)
+    if (!byDay[day]) byDay[day] = []
+    byDay[day].push(r)
+  })
+  let totalMins = 0
+  for (const [day, dayReads] of Object.entries(byDay)) {
+    const sorted   = [...dayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    let dayMins    = calculateHours(sorted) * 60
+    const dayName  = getDayName(day)
+    const dayShifts = empShifts.filter(s => s.giorno_settimana === dayName)
+    for (const s of dayShifts) {
+      if (s.uscita_1 && s.ingresso_2) {
+        const bStart = timeToMinutes(s.uscita_1)
+        const bEnd   = timeToMinutes(s.ingresso_2)
+        if (bEnd > bStart) dayMins -= computeBreakDeductionMins(sorted, bStart, bEnd)
+      }
+    }
+    totalMins += Math.max(0, dayMins)
+  }
+  return Number((totalMins / 60).toFixed(2))
+}
+
 function getLocalDateStr(dateStr) {
   return new Date(dateStr).toISOString().split('T')[0]
 }
@@ -105,7 +159,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
 
   const presentDays = Object.entries(grouped).map(([giorno, items]) => {
     const sorted      = [...items].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    const oreLavorate = calculateHours(sorted)
+    let oreLavorate   = calculateHours(sorted)
 
     let ore_previste      = 0
     let ore_straordinario = 0
@@ -115,6 +169,20 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       const dayName   = getDayName(giorno)
       const dayShifts = shifts.filter(s => s.giorno_settimana === dayName)
       ore_previste    = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
+
+      // Deduct break time that the employee covered without explicit badge
+      let breakDeductMins = 0
+      for (const s of dayShifts) {
+        if (s.uscita_1 && s.ingresso_2) {
+          const bStart = timeToMinutes(s.uscita_1)
+          const bEnd   = timeToMinutes(s.ingresso_2)
+          if (bEnd > bStart) breakDeductMins += computeBreakDeductionMins(sorted, bStart, bEnd)
+        }
+      }
+      if (breakDeductMins > 0) {
+        oreLavorate = Number(Math.max(0, oreLavorate - breakDeductMins / 60).toFixed(2))
+      }
+
       if (ore_previste > 0) {
         // giorno con turno programmato: straordinario = ore in più rispetto al turno
         ore_straordinario = Number(Math.max(0, oreLavorate - ore_previste).toFixed(2))
@@ -300,18 +368,27 @@ export default async function employeeRoutes(fastify) {
 
           const presente = isEmployeeInside(empReads)
 
+          const empShifts = (allShifts || []).filter(s => s.dipendente_id === emp.id)
+          const todayShifts = empShifts.filter(s => s.giorno_settimana === todayName)
+
+          // Employee is in their scheduled break window right now
+          let inPausa = false
+          if (presente && emp.turni_attivi) {
+            inPausa = todayShifts.some(s => {
+              if (!s.uscita_1 || !s.ingresso_2) return false
+              const pausaStart = timeToMinutes(s.uscita_1)
+              const pausaEnd   = timeToMinutes(s.ingresso_2)
+              return nowMins >= pausaStart && nowMins < pausaEnd
+            })
+          }
+
           let assente = false
 
           if (emp.turni_attivi && !presente) {
 
-            const empShifts = (allShifts || []).filter(
-              s => s.dipendente_id === emp.id &&
-                   s.giorno_settimana === todayName
-            )
+            if (todayShifts.length > 0) {
 
-            if (empShifts.length > 0) {
-
-              assente = empShifts.some(s => {
+              assente = todayShifts.some(s => {
                 if (!s.ingresso_1 || !s.uscita_1) return false
                 const inizio = timeToMinutes(s.ingresso_1)
                 const fine   = timeToMinutes(s.uscita_1)
@@ -324,14 +401,17 @@ export default async function employeeRoutes(fastify) {
 
           return {
             ...emp,
-            attivo:  presente,
+            attivo:   presente && !inPausa,
+            in_pausa: inPausa,
             assente,
             stats: {
               total_reads: empReads.length,
               today_reads: todayReads.length,
               month_reads: monthReads.length,
-              total_hours: calculateHours(monthReads),  // ore del mese corrente
-              last_read:   empReads.length
+              total_hours: emp.turni_attivi
+                ? calculateHoursWithBreaks(monthReads, empShifts)
+                : calculateHours(monthReads),
+              last_read: empReads.length
                 ? empReads[empReads.length - 1].created_at
                 : null
             }
