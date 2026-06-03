@@ -440,6 +440,13 @@ function AssignShiftModal({ selectedEmployees, onClose, token }) {
         }
       }
       if (errors === 0) {
+        for (const emp of selectedEmployees) {
+          await fetch(`${API_URL}/api/employees/${emp.id}/toggle-turni`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ turni_attivi: true })
+          });
+        }
         setToast({ msg: `Turni assegnati a ${selectedEmployees.length} dipendent${selectedEmployees.length === 1 ? "e" : "i"}`, type: "ok" });
         setTimeout(onClose, 1500);
       } else {
