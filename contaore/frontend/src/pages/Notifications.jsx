@@ -11,76 +11,84 @@ import { API_URL } from "../api";
 
 const CONFIGS = [
   {
-    tipo:  "assente",
-    icon:  UserX,
-    color: "text-red-500",
-    bg:    "bg-red-50 dark:bg-red-900/10",
-    title: "Dipendente assente",
-    desc:  "Email quando un dipendente non timbra entro la tolleranza dall'inizio del turno",
-    params: [{ key: "minuti_tolleranza", label: "Minuti di tolleranza", type: "number", min: 5, max: 120, default: 30, unit: "min" }]
+    tipo:       "assente",
+    icon:       UserX,
+    color:      "text-red-500",
+    bg:         "bg-red-50 dark:bg-red-900/10",
+    title:      "Dipendente assente",
+    desc:       "Email quando un dipendente non timbra entro la tolleranza dall'inizio del turno",
+    targetType: "employee",
+    params:     [{ key: "minuti_tolleranza", label: "Minuti di tolleranza", type: "number", min: 5, max: 120, default: 30, unit: "min" }]
   },
   {
-    tipo:  "ritardo",
-    icon:  Clock,
-    color: "text-amber-500",
-    bg:    "bg-amber-50 dark:bg-amber-900/10",
-    title: "Ritardo",
-    desc:  "Email quando un dipendente timbra l'entrata dopo l'orario del turno",
-    params: [{ key: "minuti_tolleranza", label: "Tolleranza prima di notificare", type: "number", min: 0, max: 60, default: 5, unit: "min" }]
+    tipo:       "ritardo",
+    icon:       Clock,
+    color:      "text-amber-500",
+    bg:         "bg-amber-50 dark:bg-amber-900/10",
+    title:      "Ritardo",
+    desc:       "Email quando un dipendente timbra l'entrata dopo l'orario del turno",
+    targetType: "employee",
+    params:     [{ key: "minuti_tolleranza", label: "Tolleranza prima di notificare", type: "number", min: 0, max: 60, default: 5, unit: "min" }]
   },
   {
-    tipo:  "timbratura_mancante",
-    icon:  LogOut,
-    color: "text-orange-500",
-    bg:    "bg-orange-50 dark:bg-orange-900/10",
-    title: "Timbratura uscita mancante",
-    desc:  "Email quando un dipendente è ancora dentro dopo il tempo limite",
-    params: [{ key: "ore_soglia", label: "Ore senza uscita", type: "number", min: 1, max: 24, default: 10, unit: "h" }]
+    tipo:       "timbratura_mancante",
+    icon:       LogOut,
+    color:      "text-orange-500",
+    bg:         "bg-orange-50 dark:bg-orange-900/10",
+    title:      "Timbratura uscita mancante",
+    desc:       "Email quando un dipendente è ancora dentro dopo il tempo limite",
+    targetType: "employee",
+    params:     [{ key: "ore_soglia", label: "Ore senza uscita", type: "number", min: 1, max: 24, default: 10, unit: "h" }]
   },
   {
-    tipo:  "badge_non_riconosciuto",
-    icon:  ShieldAlert,
-    color: "text-red-600",
-    bg:    "bg-red-50 dark:bg-red-900/10",
-    title: "Badge non riconosciuto",
-    desc:  "Email quando viene scansionato un badge non registrato nel sistema",
-    params: []
+    tipo:       "badge_non_riconosciuto",
+    icon:       ShieldAlert,
+    color:      "text-red-600",
+    bg:         "bg-red-50 dark:bg-red-900/10",
+    title:      "Badge non riconosciuto",
+    desc:       "Email quando viene scansionato un badge non registrato nel sistema",
+    targetType: "reader",
+    params:     []
   },
   {
-    tipo:  "lettore_offline",
-    icon:  WifiOff,
-    color: "text-zinc-500",
-    bg:    "bg-zinc-50 dark:bg-zinc-800/40",
-    title: "Lettore NFC offline",
-    desc:  "Email quando un lettore non invia dati da troppo tempo",
-    params: [{ key: "minuti_assenza", label: "Minuti senza dati", type: "number", min: 15, max: 1440, default: 60, unit: "min" }]
+    tipo:       "lettore_offline",
+    icon:       WifiOff,
+    color:      "text-zinc-500",
+    bg:         "bg-zinc-50 dark:bg-zinc-800/40",
+    title:      "Lettore NFC offline",
+    desc:       "Email quando un lettore non invia dati da troppo tempo",
+    targetType: "reader",
+    params:     [{ key: "minuti_assenza", label: "Minuti senza dati", type: "number", min: 15, max: 1440, default: 60, unit: "min" }]
   },
   {
-    tipo:  "straordinario_mensile",
-    icon:  TrendingUp,
-    color: "text-purple-500",
-    bg:    "bg-purple-50 dark:bg-purple-900/10",
-    title: "Straordinario mensile",
-    desc:  "Email quando un dipendente supera il limite di ore straordinario nel mese",
-    params: [{ key: "ore_soglia", label: "Soglia ore straordinario", type: "number", min: 1, max: 200, default: 10, unit: "h" }]
+    tipo:       "straordinario_mensile",
+    icon:       TrendingUp,
+    color:      "text-purple-500",
+    bg:         "bg-purple-50 dark:bg-purple-900/10",
+    title:      "Straordinario mensile",
+    desc:       "Email quando un dipendente supera il limite di ore straordinario nel mese",
+    targetType: "employee",
+    params:     [{ key: "ore_soglia", label: "Soglia ore straordinario", type: "number", min: 1, max: 200, default: 10, unit: "h" }]
   },
   {
-    tipo:  "riepilogo_giornaliero",
-    icon:  BarChart2,
-    color: "text-blue-500",
-    bg:    "bg-blue-50 dark:bg-blue-900/10",
-    title: "Riepilogo giornaliero",
-    desc:  "Email ogni sera con il riepilogo delle presenze del giorno",
-    params: [{ key: "ora_invio", label: "Ora di invio", type: "time", default: "18:00" }]
+    tipo:       "riepilogo_giornaliero",
+    icon:       BarChart2,
+    color:      "text-blue-500",
+    bg:         "bg-blue-50 dark:bg-blue-900/10",
+    title:      "Riepilogo giornaliero",
+    desc:       "Email ogni sera con il riepilogo delle presenze del giorno",
+    targetType: "employee",
+    params:     [{ key: "ora_invio", label: "Ora di invio", type: "time", default: "18:00" }]
   },
   {
-    tipo:  "riepilogo_settimanale",
-    icon:  Calendar,
-    color: "text-indigo-500",
-    bg:    "bg-indigo-50 dark:bg-indigo-900/10",
-    title: "Riepilogo settimanale",
-    desc:  "Email ogni lunedì con il riepilogo ore della settimana precedente",
-    params: [{ key: "ora_invio", label: "Ora di invio (lunedì)", type: "time", default: "08:00" }]
+    tipo:       "riepilogo_settimanale",
+    icon:       Calendar,
+    color:      "text-indigo-500",
+    bg:         "bg-indigo-50 dark:bg-indigo-900/10",
+    title:      "Riepilogo settimanale",
+    desc:       "Email ogni lunedì con il riepilogo ore della settimana precedente",
+    targetType: "employee",
+    params:     [{ key: "ora_invio", label: "Ora di invio (lunedì)", type: "time", default: "08:00" }]
   }
 ];
 
@@ -104,42 +112,108 @@ function Toggle({ checked, onChange, disabled }) {
       type="button"
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${checked ? "bg-zinc-900 dark:bg-zinc-100" : "bg-zinc-200 dark:bg-zinc-700"} ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${checked ? "bg-zinc-900 dark:bg-zinc-100" : "bg-zinc-200 dark:bg-zinc-700"} ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
     >
       <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white dark:bg-zinc-900 shadow transition-transform duration-200 ${checked ? "translate-x-5" : "translate-x-0"}`} />
     </button>
   );
 }
 
+// ─── target selector ─────────────────────────────────────────────────────────
+
+function TargetSelector({ targetType, items, selectedIds, onChange }) {
+  const allSelected = !selectedIds || selectedIds.length === 0;
+  const label       = targetType === "employee" ? "Dipendenti monitorati" : "Lettori monitorati";
+  const countLabel  = targetType === "employee" ? "dipendenti selezionati" : "lettori selezionati";
+
+  function toggleAll() { onChange(null); }
+
+  function toggleItem(id) {
+    if (allSelected) {
+      onChange([id]);
+    } else if (selectedIds.includes(id)) {
+      const next = selectedIds.filter(x => x !== id);
+      onChange(next.length ? next : null);
+    } else {
+      onChange([...selectedIds, id]);
+    }
+  }
+
+  return (
+    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-zinc-100 dark:border-zinc-800">
+      <p className="text-[10px] sm:text-xs font-medium text-zinc-500 mb-2">{label}</p>
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={toggleAll}
+          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+            allSelected
+              ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black"
+              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          }`}
+        >
+          Tutti
+        </button>
+        {items.map(item => {
+          const isSelected = !allSelected && selectedIds.includes(item.id);
+          return (
+            <button
+              key={item.id}
+              onClick={() => toggleItem(item.id)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                isSelected
+                  ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              }`}
+            >
+              {item.nome}
+            </button>
+          );
+        })}
+      </div>
+      {!allSelected && (
+        <p className="mt-1.5 text-[10px] text-zinc-400">{selectedIds.length} {countLabel}</p>
+      )}
+    </div>
+  );
+}
+
 // ─── notification card ────────────────────────────────────────────────────────
 
-function NotifCard({ config, setting, onSave, saving }) {
-  const Icon  = config.icon;
+function NotifCard({ config, setting, employees, readers, onSave, saving }) {
+  const Icon   = config.icon;
   const active = setting?.attiva ?? false;
-  const params = setting?.parametri ?? {};
+
   const [localParams, setLocalParams] = useState(
     () => config.params.reduce((acc, p) => {
-      acc[p.key] = params[p.key] ?? p.default;
+      acc[p.key] = (setting?.parametri ?? {})[p.key] ?? p.default;
       return acc;
     }, {})
   );
+  const [localTargetIds, setLocalTargetIds] = useState(() => setting?.target_ids ?? null);
 
-  // Sync when external setting changes
   useEffect(() => {
     setLocalParams(config.params.reduce((acc, p) => {
       acc[p.key] = (setting?.parametri ?? {})[p.key] ?? p.default;
       return acc;
     }, {}));
+    setLocalTargetIds(setting?.target_ids ?? null);
   }, [setting]);
 
+  const items = config.targetType === "employee" ? employees : readers;
+
   function handleToggle(val) {
-    onSave(config.tipo, val, localParams);
+    onSave(config.tipo, val, localParams, localTargetIds);
   }
 
   function handleParamChange(key, val) {
     const next = { ...localParams, [key]: val };
     setLocalParams(next);
-    onSave(config.tipo, active, next);
+    onSave(config.tipo, active, next, localTargetIds);
+  }
+
+  function handleTargetChange(newIds) {
+    setLocalTargetIds(newIds);
+    onSave(config.tipo, active, localParams, newIds);
   }
 
   const lastTriggered = setting?.last_triggered_at
@@ -190,6 +264,15 @@ function NotifCard({ config, setting, onSave, saving }) {
         </div>
       )}
 
+      {active && config.targetType && items.length > 0 && (
+        <TargetSelector
+          targetType={config.targetType}
+          items={items}
+          selectedIds={localTargetIds}
+          onChange={handleTargetChange}
+        />
+      )}
+
       {lastTriggered && (
         <p className="mt-3 text-[10px] sm:text-xs text-zinc-400">Ultimo invio: {lastTriggered}</p>
       )}
@@ -208,6 +291,8 @@ export default function Notifications() {
   const [saving, setSaving]     = useState(false);
   const [toast, setToast]       = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [employees, setEmployees] = useState([]);
+  const [readers, setReaders]     = useState([]);
   const token = localStorage.getItem("token");
 
   const user          = JSON.parse(localStorage.getItem("user") || "{}");
@@ -223,9 +308,9 @@ export default function Notifications() {
     else { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
   }, [dark]);
 
-  useEffect(() => { loadSettings(); }, []);
-
   useEffect(() => {
+    loadSettings();
+    loadTargetLists();
     fetch(`${API_URL}/api/requests/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => { if (d.success) setPendingCount(d.counts?.totali_in_attesa ?? 0); }).catch(() => {});
   }, []);
@@ -239,9 +324,21 @@ export default function Notifications() {
     finally { setLoading(false); }
   }
 
+  async function loadTargetLists() {
+    try {
+      const [empRes, readerRes] = await Promise.all([
+        fetch(`${API_URL}/api/employees`,      { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/readers`,        { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      const [empData, readerData] = await Promise.all([empRes.json(), readerRes.json()]);
+      if (empData.success)    setEmployees((empData.employees || []).map(e => ({ id: e.id, nome: e.nome })));
+      if (readerData.success) setReaders((readerData.readers || []).map(r => ({ id: r.id, nome: r.nome || r.reader_id })));
+    } catch (e) { console.error(e); }
+  }
+
   const saveDebounceRef = {};
 
-  const handleSave = useCallback((tipo, attiva, parametri) => {
+  const handleSave = useCallback((tipo, attiva, parametri, targetIds = null) => {
     clearTimeout(saveDebounceRef[tipo]);
     saveDebounceRef[tipo] = setTimeout(async () => {
       setSaving(true);
@@ -249,14 +346,14 @@ export default function Notifications() {
         const res  = await fetch(`${API_URL}/api/notifications/settings/${tipo}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ attiva, parametri })
+          body: JSON.stringify({ attiva, parametri, target_ids: targetIds })
         });
         const data = await res.json();
         if (data.success) {
           setSettings(prev => {
             const exists = prev.find(s => s.tipo === tipo);
-            if (exists) return prev.map(s => s.tipo === tipo ? { ...s, attiva, parametri } : s);
-            return [...prev, { tipo, attiva, parametri, last_triggered_at: null }];
+            if (exists) return prev.map(s => s.tipo === tipo ? { ...s, attiva, parametri, target_ids: targetIds } : s);
+            return [...prev, { tipo, attiva, parametri, target_ids: targetIds, last_triggered_at: null }];
           });
           setToast({ msg: attiva ? "Notifica attivata" : "Notifica disattivata", type: "ok" });
         } else {
@@ -348,6 +445,8 @@ export default function Notifications() {
                 key={config.tipo}
                 config={config}
                 setting={settings.find(s => s.tipo === config.tipo)}
+                employees={employees}
+                readers={readers}
                 onSave={handleSave}
                 saving={saving}
               />

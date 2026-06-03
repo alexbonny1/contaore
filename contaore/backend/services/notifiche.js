@@ -91,7 +91,14 @@ export async function onBadgeNonRiconosciuto({ uid, readerId, companyId }) {
     const key = `${companyId}:badge_nr:${uid}:${todayStr()}`
     if (!canSend(key)) return
     const settings = await getActive('badge_non_riconosciuto')
-    if (!settings.find(s => s.company_id === companyId)) return
+    const setting  = settings.find(s => s.company_id === companyId)
+    if (!setting) return
+    const targetIds = setting.target_ids?.length ? setting.target_ids : null
+    if (targetIds) {
+      const { data: device } = await supabase.from('dispositivo')
+        .select('id').eq('reader_id', readerId).eq('company_id', companyId).maybeSingle()
+      if (!device || !targetIds.includes(device.id)) return
+    }
     const { email, nome } = await ctx(companyId)
     if (!email) return
     await sendNotificaBadgeNonRiconosciuto({ emailOwner: email, companyNome: nome, uid, readerId })
@@ -109,11 +116,13 @@ export async function onRitardo({ uid, companyId }) {
     if (!setting) return
 
     const minutiTolleranza = setting.parametri?.minuti_tolleranza ?? 5
+    const targetIds        = setting.target_ids?.length ? setting.target_ids : null
 
     const { data: emp } = await supabase.from('dipendenti')
       .select('id, nome, turni_attivi').eq('badge_uid', uid)
       .eq('company_id', companyId).maybeSingle()
     if (!emp?.turni_attivi) return
+    if (targetIds && !targetIds.includes(emp.id)) return
 
     const { data: shifts } = await supabase.from('turni')
       .select('ingresso_1').eq('dipendente_id', emp.id).eq('giorno_settimana', todayName)
@@ -150,8 +159,9 @@ export async function checkAssenti() {
   const today     = todayStr()
 
   for (const setting of settings) {
-    const cid  = setting.company_id
-    const tol  = setting.parametri?.minuti_tolleranza ?? 30
+    const cid       = setting.company_id
+    const tol       = setting.parametri?.minuti_tolleranza ?? 30
+    const targetIds = setting.target_ids?.length ? setting.target_ids : null
 
     const [{ data: emps }, { data: shifts }, { data: pres }] = await Promise.all([
       supabase.from('dipendenti').select('id, nome, badge_uid').eq('company_id', cid).eq('turni_attivi', true),
@@ -161,9 +171,10 @@ export async function checkAssenti() {
 
     if (!emps?.length || !shifts?.length) continue
 
-    const entered = new Set((pres || []).filter(p => p.tipo === 'ENTRATA').map(p => p.tag_uid))
+    const entered      = new Set((pres || []).filter(p => p.tipo === 'ENTRATA').map(p => p.tag_uid))
+    const filteredEmps = targetIds ? emps.filter(e => targetIds.includes(e.id)) : emps
 
-    for (const emp of emps) {
+    for (const emp of filteredEmps) {
       if (entered.has(emp.badge_uid)) continue
       const empShifts = (shifts || []).filter(s => s.dipendente_id === emp.id)
       if (!empShifts.length) continue
@@ -191,8 +202,9 @@ export async function checkTimbraturaMancante() {
   const today = todayStr()
 
   for (const setting of settings) {
-    const cid  = setting.company_id
-    const ore  = setting.parametri?.ore_soglia ?? 10
+    const cid       = setting.company_id
+    const ore       = setting.parametri?.ore_soglia ?? 10
+    const targetIds = setting.target_ids?.length ? setting.target_ids : null
 
     const [{ data: emps }, { data: pres }] = await Promise.all([
       supabase.from('dipendenti').select('id, nome, badge_uid').eq('company_id', cid),
@@ -200,7 +212,9 @@ export async function checkTimbraturaMancante() {
         .gte('created_at', today + 'T00:00:00.000Z').order('created_at', { ascending: true })
     ])
 
-    for (const emp of (emps || [])) {
+    const filteredEmps = targetIds ? (emps || []).filter(e => targetIds.includes(e.id)) : (emps || [])
+
+    for (const emp of filteredEmps) {
       const empP   = (pres || []).filter(p => p.tag_uid === emp.badge_uid)
       let lastIn   = null
       for (const p of empP) {
@@ -231,14 +245,17 @@ export async function checkLettoriOffline() {
   const today = todayStr()
 
   for (const setting of settings) {
-    const cid  = setting.company_id
-    const mins = setting.parametri?.minuti_assenza ?? 60
+    const cid       = setting.company_id
+    const mins      = setting.parametri?.minuti_assenza ?? 60
+    const targetIds = setting.target_ids?.length ? setting.target_ids : null
 
     const { data: readers } = await supabase.from('dispositivo')
-      .select('reader_id, nome').eq('company_id', cid)
+      .select('id, reader_id, nome').eq('company_id', cid)
     if (!readers?.length) continue
 
-    for (const reader of readers) {
+    const filteredReaders = targetIds ? readers.filter(r => targetIds.includes(r.id)) : readers
+
+    for (const reader of filteredReaders) {
       const { data: last } = await supabase.from('presenza')
         .select('created_at').eq('company_id', cid).eq('reader_id', reader.reader_id)
         .order('created_at', { ascending: false }).limit(1).maybeSingle()
@@ -275,6 +292,8 @@ export async function checkRiepilogoGiornaliero() {
     if (nowMins < timeToMins(ora)) continue
     if (setting.last_triggered_at?.startsWith(today)) continue
 
+    const targetIds = setting.target_ids?.length ? setting.target_ids : null
+
     const [{ data: emps }, { data: pres }, { data: shifts }] = await Promise.all([
       supabase.from('dipendenti').select('id, nome, badge_uid, turni_attivi').eq('company_id', cid),
       supabase.from('presenza').select('tag_uid, tipo').eq('company_id', cid).gte('created_at', today + 'T00:00:00.000Z'),
@@ -284,10 +303,11 @@ export async function checkRiepilogoGiornaliero() {
     const lastTipo = {}
     ;(pres || []).forEach(p => { lastTipo[p.tag_uid] = p.tipo })
 
-    const withShift = new Set((shifts || []).map(s => s.dipendente_id))
-    const presenti  = [], assenti = []
+    const withShift    = new Set((shifts || []).map(s => s.dipendente_id))
+    const filteredEmps = targetIds ? (emps || []).filter(e => targetIds.includes(e.id)) : (emps || [])
+    const presenti     = [], assenti = []
 
-    for (const emp of (emps || [])) {
+    for (const emp of filteredEmps) {
       if (lastTipo[emp.badge_uid] === 'ENTRATA') { presenti.push(emp.nome) }
       else if (withShift.has(emp.id) && emp.turni_attivi && !lastTipo[emp.badge_uid]) { assenti.push(emp.nome) }
     }
@@ -324,14 +344,17 @@ export async function checkRiepilogoSettimanale() {
     const lastSun = new Date(lastMon)
     lastSun.setDate(lastSun.getDate() + 6); lastSun.setHours(23, 59, 59, 999)
 
+    const targetIds = setting.target_ids?.length ? setting.target_ids : null
+
     const [{ data: emps }, { data: pres }] = await Promise.all([
       supabase.from('dipendenti').select('id, nome, badge_uid').eq('company_id', cid),
       supabase.from('presenza').select('tag_uid, tipo, created_at').eq('company_id', cid)
         .gte('created_at', lastMon.toISOString()).lte('created_at', lastSun.toISOString())
     ])
 
-    const empHours = {}
-    for (const emp of (emps || [])) {
+    const filteredEmps = targetIds ? (emps || []).filter(e => targetIds.includes(e.id)) : (emps || [])
+    const empHours     = {}
+    for (const emp of filteredEmps) {
       const empP = (pres || []).filter(p => p.tag_uid === emp.badge_uid)
       empHours[emp.nome] = Number(calcHours(empP).toFixed(1))
     }
@@ -357,8 +380,9 @@ export async function checkStraordinarioMensile() {
   const thisMonth  = now.toISOString().slice(0, 7)
 
   for (const setting of settings) {
-    const cid      = setting.company_id
-    const soglia   = setting.parametri?.ore_soglia ?? 10
+    const cid       = setting.company_id
+    const soglia    = setting.parametri?.ore_soglia ?? 10
+    const targetIds = setting.target_ids?.length ? setting.target_ids : null
 
     const [{ data: emps }, { data: pres }, { data: allShifts }] = await Promise.all([
       supabase.from('dipendenti').select('id, nome, badge_uid').eq('company_id', cid).eq('turni_attivi', true),
@@ -366,7 +390,9 @@ export async function checkStraordinarioMensile() {
       supabase.from('turni').select('*').eq('company_id', cid)
     ])
 
-    for (const emp of (emps || [])) {
+    const filteredEmps = targetIds ? (emps || []).filter(e => targetIds.includes(e.id)) : (emps || [])
+
+    for (const emp of filteredEmps) {
       const empP      = (pres || []).filter(p => p.tag_uid === emp.badge_uid)
       const empShifts = (allShifts || []).filter(s => s.dipendente_id === emp.id)
       const oreLav    = calcHours(empP)
