@@ -179,7 +179,7 @@ export default function Pause() {
     setTimeout(() => setToast(null), 3500)
   }
 
-  function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }
+  function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/') }
 
   const today = new Date().toISOString().split('T')[0]
 

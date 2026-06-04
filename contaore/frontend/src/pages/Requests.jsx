@@ -112,7 +112,7 @@ export default function Requests() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }
+  function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/') }
 
   if (loading) return (
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">

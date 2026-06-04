@@ -247,7 +247,7 @@ export default function Badges() {
     finally { setEditSaving(false); }
   }
 
-  function logout() { localStorage.removeItem("token"); navigate("/"); }
+  function logout() { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/"); }
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">

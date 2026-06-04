@@ -393,7 +393,7 @@ export default function Notifications() {
     }, 600);
   }, [token]);
 
-  function logout() { localStorage.removeItem("token"); navigate("/"); }
+  function logout() { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/"); }
 
   const navItems = [
     { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
