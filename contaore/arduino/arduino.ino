@@ -1,8 +1,8 @@
 /*
  * timbry NFC Reader Firmware
  * ESP32-WROOM + RC522 + ILI9488 TFT 480x320 + Buzzer
- * v2.2.0
- * 
+ * v2.3.0
+ *
 
  * PIN MAP:
  * ─────────────────────────────────────
@@ -25,7 +25,7 @@
  *   1a lettura → mostra config (schermata admin)
  *   2a lettura entro 60s → entra in PROVISIONING (WiFi portal)
  *     Nel portale puoi:
- *       - cambiare Backend URL, Reader ID, Company ID, Tema
+ *       - cambiare Backend URL, Reader ID, Company ID, Tema, Debounce
  *       - scrivere "RESET" nel campo Backend per cancellare tutto
  *   timeout 60s → torna normale senza fare nulla
  *
@@ -77,7 +77,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "2.2.0"
+#define FW_VERSION          "2.3.0"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -158,11 +158,12 @@ Preferences prefs;
 
 // ── STRUTTURE ────────────────────────
 struct Config {
-  char    backend[128];
-  char    readerId[64];
-  char    companyId[64];
-  uint8_t theme;
-  bool    valid;
+  char     backend[128];
+  char     readerId[64];
+  char     companyId[64];
+  uint8_t  theme;
+  uint32_t debounce;
+  bool     valid;
 };
 Config cfg;
 
@@ -552,15 +553,18 @@ bool loadConfig() {
   String backend   = prefs.getString("backend",   "");
   String readerId  = prefs.getString("readerId",  "");
   String companyId = prefs.getString("companyId", "");
-  uint8_t theme    = (uint8_t)prefs.getUInt("theme", 0);
+  uint8_t  theme    = (uint8_t)prefs.getUInt("theme", 0);
+  uint32_t debounce = prefs.getUInt("debounce", (uint32_t)DEBOUNCE_DEFAULT);
   prefs.end();
   if (backend.length() < 4 || readerId.length() < 2 || companyId.length() < 10) return false;
   strlcpy(cfg.backend,   backend.c_str(),   sizeof(cfg.backend));
   strlcpy(cfg.readerId,  readerId.c_str(),  sizeof(cfg.readerId));
   strlcpy(cfg.companyId, companyId.c_str(), sizeof(cfg.companyId));
-  cfg.theme = (theme < THEME_COUNT) ? theme : 0;
-  cfg.valid = true;
+  cfg.theme     = (theme < THEME_COUNT) ? theme : 0;
+  cfg.debounce  = (debounce >= 500 && debounce <= 30000) ? debounce : (uint32_t)DEBOUNCE_DEFAULT;
+  cfg.valid     = true;
   applyTheme(cfg.theme);
+  g_debouncMs   = cfg.debounce;
   return true;
 }
 
@@ -570,6 +574,7 @@ void saveConfig() {
   prefs.putString("readerId",  cfg.readerId);
   prefs.putString("companyId", cfg.companyId);
   prefs.putUInt("theme",       cfg.theme);
+  prefs.putUInt("debounce",    cfg.debounce);
   prefs.end();
 }
 
@@ -895,15 +900,19 @@ void startProvisioning() {
 
   char themeStr[4];
   snprintf(themeStr, sizeof(themeStr), "%d", cfg.theme);
-  // La descrizione elenca tutti i temi
   WiFiManagerParameter p_t("theme",
     "Tema: 0=Nero 1=Blu 2=Verde 3=Viola 4=Bianco 5=Grigio 6=Bordeaux 7=Arancio 8=Teal",
     themeStr, 2);
+
+  char debounceStr[8];
+  snprintf(debounceStr, sizeof(debounceStr), "%lu", (unsigned long)cfg.debounce);
+  WiFiManagerParameter p_d("debounce", "Debounce tag (ms, 500-30000)", debounceStr, 6);
 
   wm.addParameter(&p_b);
   wm.addParameter(&p_r);
   wm.addParameter(&p_c);
   wm.addParameter(&p_t);
+  wm.addParameter(&p_d);
 
   if (!wm.startConfigPortal(apName)) { ESP.restart(); return; }
 
@@ -929,6 +938,12 @@ void startProvisioning() {
 
   int themeVal = atoi(p_t.getValue());
   cfg.theme = (themeVal >= 0 && themeVal < THEME_COUNT) ? (uint8_t)themeVal : 0;
+
+  unsigned long debounceVal = strtoul(p_d.getValue(), nullptr, 10);
+  cfg.debounce = (debounceVal >= 500 && debounceVal <= 30000)
+                 ? (uint32_t)debounceVal
+                 : (uint32_t)DEBOUNCE_DEFAULT;
+  g_debouncMs = cfg.debounce;
 
   // Rimuovi trailing slash
   int len = strlen(cfg.backend);
