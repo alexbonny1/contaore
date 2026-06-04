@@ -414,20 +414,30 @@ export default async function dipendenteRoutes(fastify) {
     { preHandler: authenticateDipendente },
     async (request, reply) => {
       try {
-        const { dipendente_id } = request.user
+        const { dipendente_id, company_id } = request.user
 
-        const { data, error } = await supabase
-          .from('richieste_ferie')
-          .select('*')
-          .eq('dipendente_id', dipendente_id)
-          .order('created_at', { ascending: false })
+        const [{ data: ferie }, { data: pause }] = await Promise.all([
+          supabase.from('richieste_ferie').select('*')
+            .eq('dipendente_id', dipendente_id)
+            .order('created_at', { ascending: false }),
+          supabase.from('pausa_aziendale').select('*')
+            .eq('company_id', company_id)
+            .order('data_inizio', { ascending: false })
+        ])
 
-        if (error) {
-          console.log(error)
-          return reply.status(500).send({ error: 'SERVER_ERROR' })
-        }
+        if (!ferie) return reply.status(500).send({ error: 'SERVER_ERROR' })
 
-        return reply.send({ success: true, ferie: data || [] })
+        return reply.send({
+          success: true,
+          ferie:  ferie || [],
+          pause:  (pause || []).map(p => ({
+            id:          p.id,
+            data_inizio: p.data_inizio,
+            data_fine:   p.data_fine,
+            motivo:      p.motivo || 'Chiusura aziendale',
+            tipo:        'pausa_aziendale'
+          }))
+        })
 
       } catch (err) {
         console.log(err)
