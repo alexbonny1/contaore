@@ -332,23 +332,43 @@ export default async function dipendenteRoutes(fastify) {
     { preHandler: authenticateDipendente },
     async (request, reply) => {
       try {
-        const { dipendente_id, company_id } = request.user
+        const { dipendente_id } = request.user
+        let { company_id } = request.user
 
-        const [{ data: ferie }, { data: pause }] = await Promise.all([
+        if (!dipendente_id) {
+          return reply.status(400).send({ error: 'MISSING_DIPENDENTE_ID' })
+        }
+
+        // se company_id manca nel token, recuperalo dalla tabella dipendenti
+        if (!company_id) {
+          const { data: dip } = await supabase
+            .from('dipendenti')
+            .select('company_id')
+            .eq('id', dipendente_id)
+            .single()
+          company_id = dip?.company_id || null
+        }
+
+        const [ferieRes, pauseRes] = await Promise.all([
           supabase.from('richieste_ferie').select('*')
             .eq('dipendente_id', dipendente_id)
             .order('created_at', { ascending: false }),
-          supabase.from('pausa_aziendale').select('*')
-            .eq('company_id', company_id)
-            .order('data_inizio', { ascending: false })
+          company_id
+            ? supabase.from('pausa_aziendale').select('*')
+                .eq('company_id', company_id)
+                .order('data_inizio', { ascending: false })
+            : Promise.resolve({ data: [], error: null })
         ])
 
-        if (!ferie) return reply.status(500).send({ error: 'SERVER_ERROR' })
+        if (ferieRes.error) {
+          console.error('ferie query error:', ferieRes.error)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
 
         return reply.send({
           success: true,
-          ferie:  ferie || [],
-          pause:  (pause || []).map(p => ({
+          ferie:  ferieRes.data || [],
+          pause:  (pauseRes.data || []).map(p => ({
             id:          p.id,
             data_inizio: p.data_inizio,
             data_fine:   p.data_fine,
