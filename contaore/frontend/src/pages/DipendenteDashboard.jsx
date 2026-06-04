@@ -74,6 +74,7 @@ export default function DipendenteDashboard() {
   const [savingFerie, setSavingFerie]   = useState(false);
   const [showFerieForm, setShowFerieForm] = useState(false);
   const [ferie, setFerie]               = useState([]);
+  const [pause, setPause]               = useState([]);
 
   // form richiesta timbratura mancata
   const [missingScanData, setMissingScanData]     = useState("");
@@ -105,7 +106,7 @@ export default function DipendenteDashboard() {
     try {
       const res  = await fetch(API_URL + "/api/dipendente/ferie", { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
-      if (json.success) setFerie(json.ferie || []);
+      if (json.success) { setFerie(json.ferie || []); setPause(json.pause || []); }
     } catch (err) { console.log(err); }
   }
 
@@ -431,7 +432,68 @@ export default function DipendenteDashboard() {
         {/* ══════════ TAB: FERIE ══════════ */}
         {tab === "ferie" && (
           <div>
-            {/* bottone nuova richiesta */}
+
+            {/* ── FERIE AUTORIZZATE ───────────────────────────────────────── */}
+            {(() => {
+              const autorizzate = [
+                ...ferie
+                  .filter(f => f.stato === "approvata")
+                  .map(f => ({ ...f, tipo: "personale" })),
+                ...pause.map(p => ({ ...p, stato: "approvata" }))
+              ].sort((a, b) => a.data_inizio < b.data_inizio ? 1 : -1);
+
+              return (
+                <div className="mb-6 sm:mb-8">
+                  <h3 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+                    Ferie autorizzate
+                  </h3>
+                  {autorizzate.length === 0 ? (
+                    <div className="rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] px-4 py-4 text-sm text-zinc-400">
+                      Nessuna ferie autorizzata
+                    </div>
+                  ) : (
+                    <div className="space-y-2 sm:space-y-3">
+                      {autorizzate.map(f => {
+                        const isAziendale = f.tipo === "pausa_aziendale";
+                        const today = new Date().toISOString().split("T")[0];
+                        const isFuture = f.data_inizio >= today;
+                        const giorni = Math.round((new Date(f.data_fine) - new Date(f.data_inizio)) / 86400000) + 1;
+                        return (
+                          <div key={f.id}
+                            className={`rounded-xl sm:rounded-2xl border px-4 sm:px-5 py-3 sm:py-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 xs:gap-0 ${
+                              isFuture
+                                ? "border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10"
+                                : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618]"
+                            }`}>
+                            <div>
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <Umbrella size={13} className={isFuture ? "text-blue-500" : "text-zinc-400"} />
+                                <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                                  {fmt(f.data_inizio)} → {fmt(f.data_fine)}
+                                </span>
+                                <span className="text-xs text-zinc-400">({giorni} {giorni === 1 ? "giorno" : "giorni"})</span>
+                              </div>
+                              <p className="text-xs text-zinc-500 ml-5">
+                                {isAziendale ? `Chiusura aziendale — ${f.motivo}` : (f.note || "Ferie personali")}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-5 xs:ml-0">
+                              {isAziendale
+                                ? <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300">Aziendale</span>
+                                : <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300">Approvata</span>
+                              }
+                              {isFuture && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">Prossima</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── NUOVA RICHIESTA ─────────────────────────────────────────── */}
             {!showFerieForm && (
               <button onClick={() => setShowFerieForm(true)}
                 className="flex items-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium mb-5 sm:mb-6">
@@ -441,7 +503,6 @@ export default function DipendenteDashboard() {
               </button>
             )}
 
-            {/* form nuova richiesta */}
             {showFerieForm && (
               <form onSubmit={inviaRichiestaFerie} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
                 <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta ferie</h3>
@@ -474,38 +535,39 @@ export default function DipendenteDashboard() {
               </form>
             )}
 
-            {/* lista richieste */}
-            {ferie.length === 0 ? (
-              <div className="text-center py-12 sm:py-16 text-sm sm:text-base text-zinc-400">Nessuna richiesta ferie</div>
-            ) : (
-              <div className="space-y-2 sm:space-y-3">
-                {ferie.map(f => {
-                  const { label, color } = statoBadgeFerie(f.stato);
-                  return (
-                    <div key={f.id} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-4 sm:px-5 py-3 sm:py-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 xs:gap-0">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Umbrella size={14} className="text-zinc-400" />
-                          <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                            {fmt(f.data_inizio)} → {fmt(f.data_fine)}
-                          </span>
+            {/* ── TUTTE LE RICHIESTE (in attesa / rifiutate) ──────────────── */}
+            {ferie.filter(f => f.stato !== "approvata").length > 0 && (
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+                  Richieste in corso
+                </h3>
+                <div className="space-y-2 sm:space-y-3">
+                  {ferie.filter(f => f.stato !== "approvata").map(f => {
+                    const { label, color } = statoBadgeFerie(f.stato);
+                    return (
+                      <div key={f.id} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-4 sm:px-5 py-3 sm:py-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 xs:gap-0">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Umbrella size={14} className="text-zinc-400" />
+                            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                              {fmt(f.data_inizio)} → {fmt(f.data_fine)}
+                            </span>
+                          </div>
+                          {f.note && <p className="text-xs text-zinc-400">{f.note}</p>}
+                          <p className="text-xs text-zinc-400 mt-0.5">Richiesta il {fmt(f.created_at)}</p>
                         </div>
-                        {f.note && <p className="text-xs text-zinc-400">{f.note}</p>}
-                        <p className="text-xs text-zinc-400 mt-0.5">
-                          Richiesta il {fmt(f.created_at)}
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${color}`}>{label}</span>
+                          {f.stato === "in_attesa" && (
+                            <button onClick={() => cancellaFerie(f.id)} className="text-xs text-red-500 hover:text-red-700">
+                              Cancella
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${color}`}>{label}</span>
-                        {f.stato === "in_attesa" && (
-                          <button onClick={() => cancellaFerie(f.id)} className="text-xs text-red-500 hover:text-red-700">
-                            Cancella
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
