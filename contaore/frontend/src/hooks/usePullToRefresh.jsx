@@ -11,7 +11,7 @@ export function usePullToRefresh(onRefresh) {
 
   useEffect(() => {
     function onTouchStart(e) {
-      if (window.scrollY === 0) {
+      if (window.scrollY <= 0) {
         startY.current      = e.touches[0].clientY
         shouldRefresh.current = false
       }
@@ -20,10 +20,10 @@ export function usePullToRefresh(onRefresh) {
     function onTouchMove(e) {
       if (startY.current === null) return
       const dist = e.touches[0].clientY - startY.current
-      if (dist > 0 && window.scrollY === 0) {
+      if (dist > 0 && window.scrollY <= 0) {
         shouldRefresh.current = dist >= THRESHOLD
         setState(s => ({ ...s, distance: Math.min(dist, THRESHOLD * 1.5), pulling: dist >= THRESHOLD }))
-      } else {
+      } else if (dist <= 0 || window.scrollY > 0) {
         startY.current = null
         shouldRefresh.current = false
         setState({ pulling: false, refreshing: false, distance: 0 })
