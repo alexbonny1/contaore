@@ -288,20 +288,20 @@ export default function DipendenteDashboard() {
         {/* STATS */}
         {(() => {
           const todayStr = new Date().toISOString().split("T")[0];
-          const giorniFerieRimanenti = [
-            ...ferie.filter(f => f.stato === "approvata" && f.data_fine >= todayStr),
-            ...pause.filter(p => p.data_fine >= todayStr)
-          ].reduce((tot, f) => {
-            const start = f.data_inizio > todayStr ? f.data_inizio : todayStr;
-            return tot + Math.round((new Date(f.data_fine) - new Date(start)) / 86400000) + 1;
-          }, 0);
+          const ferieInCorso = [
+            ...ferie.filter(f => f.stato === "approvata" && f.data_inizio <= todayStr && f.data_fine >= todayStr),
+            ...pause.filter(p => p.data_inizio <= todayStr && p.data_fine >= todayStr)
+          ].reduce((tot, f) => tot + Math.round((new Date(f.data_fine) - new Date(todayStr)) / 86400000) + 1, 0);
+          const ferieProssime = [
+            ...ferie.filter(f => f.stato === "approvata" && f.data_inizio > todayStr),
+            ...pause.filter(p => p.data_inizio > todayStr)
+          ].reduce((tot, f) => tot + Math.round((new Date(f.data_fine) - new Date(f.data_inizio)) / 86400000) + 1, 0);
           return (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {[
-            { icon: Clock,     label: "Ore questo mese",   value: `${stats.ore_mese_corrente}h` },
-            { icon: UserCheck, label: "Giorni assenti",     value: stats.giorni_assenti },
-            { icon: TrendingUp,label: "Ore straordinario",  value: `${stats.ore_straordinario}h` },
-            { icon: Umbrella,  label: "Giorni ferie rimasti", value: giorniFerieRimanenti },
+            { icon: Clock,     label: "Ore questo mese",  value: `${stats.ore_mese_corrente}h` },
+            { icon: UserCheck, label: "Giorni assenti",    value: stats.giorni_assenti },
+            { icon: TrendingUp,label: "Ore straordinario", value: `${stats.ore_straordinario}h` },
           ].map((s) => {
             const Icon = s.icon;
             return (
@@ -312,6 +312,22 @@ export default function DipendenteDashboard() {
               </div>
             );
           })}
+          {/* Ferie tile: in corso + prossime separati */}
+          <div className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-3 sm:p-4">
+            <Umbrella size={14} className="sm:w-4 sm:h-4 text-zinc-400 mb-1.5 sm:mb-2" />
+            <div className="flex items-end gap-3">
+              <div>
+                <p className={`text-xl sm:text-2xl font-semibold ${ferieInCorso > 0 ? "text-orange-500" : "text-zinc-900 dark:text-zinc-100"}`}>{ferieInCorso}</p>
+                <p className="text-[10px] text-zinc-400 leading-tight">In corso</p>
+              </div>
+              <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-700" />
+              <div>
+                <p className={`text-xl sm:text-2xl font-semibold ${ferieProssime > 0 ? "text-blue-500" : "text-zinc-900 dark:text-zinc-100"}`}>{ferieProssime}</p>
+                <p className="text-[10px] text-zinc-400 leading-tight">Prossime</p>
+              </div>
+            </div>
+            <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 leading-tight">Giorni ferie</p>
+          </div>
         </div>
           );
         })()}
