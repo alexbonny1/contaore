@@ -1,13 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Background -->
-  <rect width="100" height="100" rx="22" fill="#111827"/>
-  <!-- Blue top accent -->
-  <rect width="100" height="6" rx="3" fill="#0099FF"/>
-  <!-- T: horizontal bar -->
-  <rect x="18" y="24" width="64" height="13" rx="6.5" fill="white"/>
-  <!-- T: vertical stem -->
-  <rect x="43.5" y="24" width="13" height="53" rx="6.5" fill="white"/>
-  <!-- NFC waves bottom right -->
-  <path d="M69 64 Q75 72 69 80" stroke="#0099FF" stroke-width="3.8" fill="none" stroke-linecap="round"/>
-  <path d="M75 57 Q84 72 75 87" stroke="#0099FF" stroke-width="3.2" fill="none" stroke-linecap="round" opacity="0.65"/>
+  <!-- Card outline -->
+  <rect x="20" y="14" width="42" height="58" rx="8" fill="none" stroke="#0099FF" stroke-width="4"/>
+  <!-- Chip top-left -->
+  <rect x="28" y="22" width="12" height="11" rx="2.5" fill="none" stroke="#0099FF" stroke-width="3.5"/>
+  <!-- Single NFC arc: from top-right corner to bottom-right corner of card -->
+  <path d="M62 22 Q82 43 62 64" fill="none" stroke="#0099FF" stroke-width="4" stroke-linecap="round"/>
 </svg>
