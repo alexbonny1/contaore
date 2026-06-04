@@ -6,74 +6,56 @@ import {
   LayoutDashboard, Users, CreditCard, Radio, Trash2, Bell
 } from 'lucide-react'
 import { API_URL } from '../api'
+import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh'
 
 function statoBadge(stato) {
   switch (stato) {
-    case 'in_attesa':  return { label: 'In attesa', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300' }
-    case 'approvata':  return { label: 'Approvata', color: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300' }
-    case 'rifiutata':  return { label: 'Rifiutata', color: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' }
-    default: return { label: stato, color: 'bg-zinc-100 text-zinc-700' }
+    case 'in_attesa': return { label: 'In attesa', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300' }
+    case 'approvata': return { label: 'Approvata', color: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300' }
+    case 'rifiutata': return { label: 'Rifiutata', color: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' }
+    default:          return { label: stato,       color: 'bg-zinc-100 text-zinc-700' }
   }
 }
 
-function formatDate(date) {
+function fmt(date) {
   return new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-} 
+}
 
 export default function Requests() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [dark, setDark] = useState(false)
-  const [activeTab, setActiveTab] = useState('all') // all, ferie, giustificazioni, timbratura
-  const [richieste, setRichieste] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const [dark, setDark]             = useState(false)
+  const [activeTab, setActiveTab]   = useState('all')
+  const [richieste, setRichieste]   = useState(null)
+  const [loading, setLoading]       = useState(true)
   const [expandedId, setExpandedId] = useState(null)
-  const [toast, setToast] = useState(null)
+  const [toast, setToast]           = useState(null)
   const [actionLoading, setActionLoading] = useState({})
 
-  // THEME
+  const { pulling, refreshing, distance } = usePullToRefresh(loadRichieste)
+
   useEffect(() => {
     const saved = localStorage.getItem('theme')
-    if (saved === 'dark') {
-      setDark(true)
-      document.documentElement.classList.add('dark')
-    }
+    if (saved === 'dark') { setDark(true); document.documentElement.classList.add('dark') }
   }, [])
-
   useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add('dark')
-      localStorage.setItem('theme', 'dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-      localStorage.setItem('theme', 'light')
-    }
+    if (dark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark') }
+    else      { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light') }
   }, [dark])
 
-  // LOAD RICHIESTE
   useEffect(() => {
     loadRichieste()
-    const interval = setInterval(loadRichieste, 10000)
+    const interval = setInterval(loadRichieste, 15000)
     return () => clearInterval(interval)
   }, [])
 
   async function loadRichieste() {
     try {
-      setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/api/requests/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.status === 401 || response.status === 403) {
-        navigate('/')
-        return
-      }
-      const data = await response.json()
-      if (data.success) {
-        setRichieste(data)
-      } else {
-        console.warn('loadRichieste error:', data.error)
-      }
+      const res   = await fetch(`${API_URL}/api/requests/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
+      if (res.status === 401 || res.status === 403) { navigate('/'); return }
+      const data  = await res.json()
+      if (data.success) setRichieste(data)
     } catch (err) {
       console.log(err)
     } finally {
@@ -83,92 +65,46 @@ export default function Requests() {
 
   async function approveRequest(type, id) {
     try {
-      setActionLoading(prev => ({ ...prev, [id]: true }))
+      setActionLoading(p => ({ ...p, [id]: true }))
       const token = localStorage.getItem('token')
-
-      let endpoint = ''
-      if (type === 'ferie') endpoint = `/api/ferie/${id}/approva`
-      else if (type === 'giustificazioni') endpoint = `/api/giustificazioni/${id}/approva`
-      else if (type === 'timbratura') endpoint = `/api/requests/missing-scans/${id}/approva`
-
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        showToast('Richiesta approvata ✓', 'success')
-        loadRichieste()
-      } else {
-        showToast('Errore approvazione', 'error')
-      }
-    } catch (err) {
-      console.log(err)
-      showToast('Errore', 'error')
-    } finally {
-      setActionLoading(prev => ({ ...prev, [id]: false }))
-    }
+      const ep = type === 'ferie' ? `/api/ferie/${id}/approva`
+               : type === 'giustificazioni' ? `/api/giustificazioni/${id}/approva`
+               : `/api/requests/missing-scans/${id}/approva`
+      const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (data.success) { showToast('Richiesta approvata ✓', 'success'); loadRichieste() }
+      else showToast('Errore approvazione', 'error')
+    } catch { showToast('Errore', 'error') }
+    finally { setActionLoading(p => ({ ...p, [id]: false })) }
   }
 
   async function rejectRequest(type, id) {
     try {
-      setActionLoading(prev => ({ ...prev, [id]: true }))
+      setActionLoading(p => ({ ...p, [id]: true }))
       const token = localStorage.getItem('token')
-
-      let endpoint = ''
-      if (type === 'ferie') endpoint = `/api/ferie/${id}/rifiuta`
-      else if (type === 'giustificazioni') endpoint = `/api/giustificazioni/${id}/rifiuta`
-      else if (type === 'timbratura') endpoint = `/api/requests/missing-scans/${id}/rifiuta`
-
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        showToast('Richiesta rifiutata', 'success')
-        loadRichieste()
-      } else {
-        showToast('Errore rifiuto', 'error')
-      }
-    } catch (err) {
-      console.log(err)
-      showToast('Errore', 'error')
-    } finally {
-      setActionLoading(prev => ({ ...prev, [id]: false }))
-    }
+      const ep = type === 'ferie' ? `/api/ferie/${id}/rifiuta`
+               : type === 'giustificazioni' ? `/api/giustificazioni/${id}/rifiuta`
+               : `/api/requests/missing-scans/${id}/rifiuta`
+      const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (data.success) { showToast('Richiesta rifiutata', 'success'); loadRichieste() }
+      else showToast('Errore rifiuto', 'error')
+    } catch { showToast('Errore', 'error') }
+    finally { setActionLoading(p => ({ ...p, [id]: false })) }
   }
 
   async function deleteRequest(type, id) {
-    if (!window.confirm('Sei sicuro di voler eliminare questa richiesta? L\'operazione non è reversibile.')) return
+    if (!window.confirm('Eliminare questa richiesta?')) return
     try {
-      setActionLoading(prev => ({ ...prev, [`del_${id}`]: true }))
+      setActionLoading(p => ({ ...p, [`del_${id}`]: true }))
       const token = localStorage.getItem('token')
-
-      let endpoint = ''
-      if (type === 'ferie')      endpoint = `/api/ferie/${id}/admin`
-      else if (type === 'timbratura') endpoint = `/api/requests/missing-scans/${id}/admin`
-
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        showToast('Richiesta eliminata', 'success')
-        loadRichieste()
-      } else {
-        showToast('Errore eliminazione', 'error')
-      }
-    } catch (err) {
-      console.log(err)
-      showToast('Errore', 'error')
-    } finally {
-      setActionLoading(prev => ({ ...prev, [`del_${id}`]: false }))
-    }
+      const ep = type === 'ferie' ? `/api/ferie/${id}/admin` : `/api/requests/missing-scans/${id}/admin`
+      const res  = await fetch(`${API_URL}${ep}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (data.success) { showToast('Richiesta eliminata', 'success'); loadRichieste() }
+      else showToast('Errore eliminazione', 'error')
+    } catch { showToast('Errore', 'error') }
+    finally { setActionLoading(p => ({ ...p, [`del_${id}`]: false })) }
   }
 
   function showToast(msg, type = 'success') {
@@ -176,114 +112,93 @@ export default function Requests() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  function logout() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    navigate('/login')
-  }
+  function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-full border-4 border-zinc-300 dark:border-zinc-700 border-t-zinc-900 dark:border-t-zinc-100 animate-spin mx-auto mb-4"></div>
-          <p className="text-zinc-600 dark:text-zinc-400">Caricamento richieste...</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
+      <div className="w-10 h-10 rounded-full border-4 border-zinc-300 dark:border-zinc-700 border-t-zinc-900 dark:border-t-zinc-100 animate-spin" />
+    </div>
+  )
 
-  if (!richieste) {
-    return (
-      <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10]">
-        <div className="max-w-7xl mx-auto px-6 py-8 text-center">
-          <p className="text-zinc-600 dark:text-zinc-400">Errore caricamento</p>
-        </div>
-      </div>
-    )
-  }
+  if (!richieste) return (
+    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
+      <p className="text-zinc-500 text-sm">Errore caricamento</p>
+    </div>
+  )
 
   const user          = JSON.parse(localStorage.getItem('user') || '{}')
   const portaleAttivo = user.portale_dipendenti !== false
-
   const { ferie, giustificazioni, richieste_timbratura } = richieste.richieste
 
-  // Filtra per tab attivo
   let richiesteFiltrate = []
-  if (activeTab === 'all') {
-    richiesteFiltrate = [
-      ...ferie.map(r => ({ ...r, type: 'ferie' })),
-      ...giustificazioni.map(r => ({ ...r, type: 'giustificazioni' })),
-      ...richieste_timbratura.map(r => ({ ...r, type: 'timbratura' }))
-    ]
-  } else if (activeTab === 'ferie') {
-    richiesteFiltrate = ferie.map(r => ({ ...r, type: 'ferie' }))
-  } else if (activeTab === 'giustificazioni') {
-    richiesteFiltrate = giustificazioni.map(r => ({ ...r, type: 'giustificazioni' }))
-  } else if (activeTab === 'timbratura') {
-    richiesteFiltrate = richieste_timbratura.map(r => ({ ...r, type: 'timbratura' }))
-  }
-
-  // Ordina per data creazione (più recenti prima)
+  if      (activeTab === 'all')            richiesteFiltrate = [...ferie.map(r => ({...r,type:'ferie'})), ...giustificazioni.map(r => ({...r,type:'giustificazioni'})), ...richieste_timbratura.map(r => ({...r,type:'timbratura'}))]
+  else if (activeTab === 'ferie')          richiesteFiltrate = ferie.map(r => ({...r,type:'ferie'}))
+  else if (activeTab === 'giustificazioni')richiesteFiltrate = giustificazioni.map(r => ({...r,type:'giustificazioni'}))
+  else if (activeTab === 'timbratura')     richiesteFiltrate = richieste_timbratura.map(r => ({...r,type:'timbratura'}))
   richiesteFiltrate.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+  const STATS = [
+    { label: 'In attesa',    value: richieste.counts.totali_in_attesa,      color: 'text-yellow-500' },
+    { label: 'Ferie',        value: richieste.counts.ferie_in_attesa,        color: 'text-blue-500'   },
+    { label: 'Giustifiche',  value: richieste.counts.giustificazioni_in_attesa, color: 'text-purple-500'},
+    { label: 'Timbrature',   value: richieste.counts.timbratura_in_attesa,   color: 'text-orange-500' },
+  ]
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
+
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              Richieste
-            </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Ferie, giustificazioni e timbrature
-            </p>
+            <h1 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">Richieste</h1>
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">Ferie, giustificazioni e timbrature</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setDark(prev => !prev)}
-              className="w-11 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center"
-            >
-              {dark ? <Sun size={18} className="text-zinc-200" /> : <Moon size={18} className="text-zinc-700" />}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button onClick={() => setDark(p => !p)}
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center">
+              {dark ? <Sun size={16} className="text-zinc-200" /> : <Moon size={16} className="text-zinc-700" />}
             </button>
-            <button
-              onClick={logout}
-              className="h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
-            >
-              Logout
+            <button onClick={logout}
+              className="h-9 sm:h-11 px-3 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium">
+              <span className="hidden sm:inline">Logout</span><span className="sm:hidden">Esci</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+
+        {/* PULL INDICATOR */}
+        <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
+
         {/* NAV */}
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
+        <div className="flex gap-2 sm:gap-3 mb-4 sm:mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
             { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
             { title: "Richieste",       icon: FileText,        path: "/requests",  notifica: richieste.counts.totali_in_attesa, nascondiSeSenzaPortale: true },
-            { title: "Pausa aziendale", icon: Calendar,        path: "/pause"     },
-            { title: "Dipendenti",      icon: Users,           path: "/employees" },
-            { title: "Badge",           icon: CreditCard,      path: "/badges"    },
-            { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
+            { title: "Pausa aziendale", icon: Calendar,        path: "/pause"      },
+            { title: "Dipendenti",      icon: Users,           path: "/employees"  },
+            { title: "Badge",           icon: CreditCard,      path: "/badges"     },
+            { title: "Lettori NFC",     icon: Radio,           path: "/readers"    },
             { title: "Notifiche",       icon: Bell,            path: "/notifications" }
           ]
             .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
-            .map((item) => {
+            .map(item => {
               const Icon     = item.icon
               const isActive = location.pathname === item.path
               return (
                 <Link key={item.title} to={item.path}
-                  className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                     isActive
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
-                      : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
+                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100'
+                      : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
                   }`}>
-                  <Icon size={16} />{item.title}
+                  <Icon size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden xs:inline">{item.title}</span>
                   {!isActive && item.notifica > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
-                      {item.notifica > 9 ? "9+" : item.notifica}
+                    <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                      {item.notifica > 9 ? '9+' : item.notifica}
                     </span>
                   )}
                 </Link>
@@ -292,211 +207,127 @@ export default function Requests() {
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-sm text-zinc-500">Totali in attesa</p>
-            <h3 className="text-4xl font-bold mt-3 text-yellow-500">{richieste.counts.totali_in_attesa}</h3>
-          </div>
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-sm text-zinc-500">Ferie</p>
-            <h3 className="text-4xl font-bold mt-3 text-blue-500">{richieste.counts.ferie_in_attesa}</h3>
-          </div>
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-sm text-zinc-500">Giustificazioni</p>
-            <h3 className="text-4xl font-bold mt-3 text-purple-500">{richieste.counts.giustificazioni_in_attesa}</h3>
-          </div>
-          <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-sm text-zinc-500">Timbrature</p>
-            <h3 className="text-4xl font-bold mt-3 text-orange-500">{richieste.counts.timbratura_in_attesa}</h3>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          {STATS.map(s => (
+            <div key={s.label} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-3 sm:p-5">
+              <p className="text-[10px] sm:text-sm text-zinc-500 dark:text-zinc-400">{s.label}</p>
+              <p className={`text-2xl sm:text-4xl font-bold mt-1 sm:mt-2 ${s.color}`}>{s.value}</p>
+            </div>
+          ))}
         </div>
 
-        {/* TABS */}
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
+        {/* FILTER TABS */}
+        <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
-            { id: 'all', label: 'Tutte', icon: FileText },
-            { id: 'ferie', label: 'Ferie', icon: Calendar },
-            { id: 'giustificazioni', label: 'Giustificazioni', icon: AlertCircle },
-            { id: 'timbratura', label: 'Timbrature', icon: Clock }
+            { id: 'all',            label: 'Tutte',         icon: FileText    },
+            { id: 'ferie',          label: 'Ferie',         icon: Calendar    },
+            { id: 'giustificazioni',label: 'Giustifiche',   icon: AlertCircle },
+            { id: 'timbratura',     label: 'Timbrature',    icon: Clock       }
           ].map(tab => {
             const Icon = tab.icon
             return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-sm font-medium whitespace-nowrap transition-all ${
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                   activeTab === tab.id
                     ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100'
                     : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
-                }`}
-              >
-                <Icon size={16} />
+                }`}>
+                <Icon size={13} className="sm:w-4 sm:h-4" />
                 {tab.label}
               </button>
             )
           })}
         </div>
 
-        {/* RICHIESTE LIST */}
-        <div className="space-y-4">
+        {/* LIST */}
+        <div className="space-y-2 sm:space-y-3">
           {richiesteFiltrate.length === 0 ? (
-            <div className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-8 text-center">
-              <p className="text-zinc-500 dark:text-zinc-400">Nessuna richiesta</p>
+            <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 text-center">
+              <p className="text-zinc-400 text-sm">Nessuna richiesta</p>
             </div>
           ) : (
             richiesteFiltrate.map(req => {
-              const badge = statoBadge(req.stato)
+              const badge    = statoBadge(req.stato)
               const isExpanded = expandedId === req.id
-              const dipName = req.dipendenti ? `${req.dipendenti.nome} ${req.dipendenti.cognome}` : 'N/A'
-              
-              let typeIcon, typeLabel, typeColor
-              if (req.type === 'ferie') {
-                typeIcon = Calendar
-                typeLabel = 'Ferie'
-                typeColor = 'bg-blue-500/20 text-blue-600 dark:text-blue-300'
-              } else if (req.type === 'giustificazioni') {
-                typeIcon = AlertCircle
-                typeLabel = 'Giustificazione'
-                typeColor = 'bg-purple-500/20 text-purple-600 dark:text-purple-300'
-              } else {
-                typeIcon = Clock
-                typeLabel = 'Timbratura'
-                typeColor = 'bg-orange-500/20 text-orange-600 dark:text-orange-300'
-              }
+              const dipName  = req.dipendenti ? `${req.dipendenti.nome} ${req.dipendenti.cognome}` : 'N/A'
 
-              const TypeIcon = typeIcon
+              const typeInfo = req.type === 'ferie'
+                ? { icon: Calendar,    label: 'Ferie',          color: 'bg-blue-500/15 text-blue-600 dark:text-blue-300' }
+                : req.type === 'giustificazioni'
+                ? { icon: AlertCircle, label: 'Giustificazione', color: 'bg-purple-500/15 text-purple-600 dark:text-purple-300' }
+                : { icon: Clock,       label: 'Timbratura',      color: 'bg-orange-500/15 text-orange-600 dark:text-orange-300' }
+              const TypeIcon = typeInfo.icon
 
               return (
-                <div
-                  key={req.id}
-                  className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 overflow-hidden"
-                >
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : req.id)}
-                    className="w-full p-6 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-4 flex-1 text-left">
-                      <div className={`p-3 rounded-2xl ${typeColor}`}>
-                        <TypeIcon size={20} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{dipName}</h3>
-                          <span className={`text-xs px-3 py-1 rounded-full font-medium ${badge.color}`}>
-                            {badge.label}
-                          </span>
-                        </div>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">{typeLabel}</p>
-                        
-                        {req.type === 'ferie' && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                            {formatDate(req.data_inizio)} → {formatDate(req.data_fine)}
-                          </p>
-                        )}
-                        {req.type === 'giustificazioni' && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-300">{formatDate(req.data)}</p>
-                        )}
-                        {req.type === 'timbratura' && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                            {formatDate(req.data)} — {req.tipo || 'USCITA'} alle {req.ora_uscita}
-                          </p>
-                        )}
-                      </div>
+                <div key={req.id} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+
+                  {/* ROW */}
+                  <button onClick={() => setExpandedId(isExpanded ? null : req.id)}
+                    className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors text-left">
+                    <div className={`p-2 sm:p-2.5 rounded-xl flex-shrink-0 ${typeInfo.color}`}>
+                      <TypeIcon size={14} className="sm:w-4 sm:h-4" />
                     </div>
-                    <div className="ml-4">
-                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{dipName}</span>
+                        <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${badge.color}`}>{badge.label}</span>
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">{typeInfo.label}</p>
+                      <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">
+                        {req.type === 'ferie'         && `${fmt(req.data_inizio)} → ${fmt(req.data_fine)}`}
+                        {req.type === 'giustificazioni'&& fmt(req.data)}
+                        {req.type === 'timbratura'    && `${fmt(req.data)} — ${req.tipo || 'USCITA'} ore ${req.ora_uscita}`}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 text-zinc-400">
+                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
                   </button>
 
+                  {/* EXPANDED: IN ATTESA */}
                   {isExpanded && req.stato === 'in_attesa' && (
-                    <div className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 p-6">
-                      <div className="mb-6">
-                        {req.type === 'ferie' && (
-                          <div>
-                            <p className="text-sm text-zinc-500 mb-2">Note:</p>
-                            <p className="text-zinc-900 dark:text-zinc-100">{req.note || 'Nessuna nota'}</p>
-                          </div>
-                        )}
-                        {req.type === 'giustificazioni' && (
-                          <div>
-                            <p className="text-sm text-zinc-500 mb-2">Motivo:</p>
-                            <p className="text-zinc-900 dark:text-zinc-100">{req.motivo}</p>
-                          </div>
-                        )}
-                        {req.type === 'timbratura' && (
-                          <div>
-                            <p className="text-sm text-zinc-500 mb-2">Motivo:</p>
-                            <p className="text-zinc-900 dark:text-zinc-100">{req.motivo}</p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => approveRequest(req.type, req.id)}
-                          disabled={actionLoading[req.id]}
-                          className="flex-1 py-3 rounded-2xl bg-green-500 text-white font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          {actionLoading[req.id] ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Approvando...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle size={18} />
-                              Approva
-                            </>
-                          )}
+                    <div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 px-4 sm:px-6 py-3 sm:py-4">
+                      {(req.note || req.motivo) && (
+                        <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mb-3">
+                          <span className="text-zinc-400">Note: </span>{req.note || req.motivo}
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <button onClick={() => approveRequest(req.type, req.id)} disabled={actionLoading[req.id]}
+                          className="flex-1 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-green-500 text-white text-xs sm:text-sm font-medium hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                          {actionLoading[req.id]
+                            ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />Approvando…</>
+                            : <><CheckCircle size={14} />Approva</>}
                         </button>
-                        <button
-                          onClick={() => rejectRequest(req.type, req.id)}
-                          disabled={actionLoading[req.id]}
-                          className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          {actionLoading[req.id] ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Rifiutando...
-                            </>
-                          ) : (
-                            <>
-                              <XCircle size={18} />
-                              Rifiuta
-                            </>
-                          )}
+                        <button onClick={() => rejectRequest(req.type, req.id)} disabled={actionLoading[req.id]}
+                          className="flex-1 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-red-500 text-white text-xs sm:text-sm font-medium hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                          {actionLoading[req.id]
+                            ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />Rifiutando…</>
+                            : <><XCircle size={14} />Rifiuta</>}
                         </button>
                         {(req.type === 'ferie' || req.type === 'timbratura') && (
-                          <button
-                            onClick={() => deleteRequest(req.type, req.id)}
-                            disabled={actionLoading[`del_${req.id}`]}
-                            className="px-4 py-3 rounded-2xl bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            title="Elimina richiesta"
-                          >
-                            <Trash2 size={18} />
+                          <button onClick={() => deleteRequest(req.type, req.id)} disabled={actionLoading[`del_${req.id}`]}
+                            className="px-3 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-50 flex items-center justify-center">
+                            <Trash2 size={14} />
                           </button>
                         )}
                       </div>
                     </div>
                   )}
 
+                  {/* EXPANDED: PROCESSED */}
                   {isExpanded && req.stato !== 'in_attesa' && (
-                    <div className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 p-6">
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="text-sm text-zinc-500">
-                          {req.stato === 'approvata' ? '✓ Approvata' : '✗ Rifiutata'} il {formatDate(req.approvato_il)}
-                        </p>
-                        {(req.type === 'ferie' || req.type === 'timbratura') && (
-                          <button
-                            onClick={() => deleteRequest(req.type, req.id)}
-                            disabled={actionLoading[`del_${req.id}`]}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-medium hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 disabled:opacity-50 transition-colors"
-                          >
-                            <Trash2 size={15} />
-                            Elimina
-                          </button>
-                        )}
-                      </div>
+                    <div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+                      <p className="text-xs sm:text-sm text-zinc-500">
+                        {req.stato === 'approvata' ? '✓ Approvata' : '✗ Rifiutata'}
+                        {req.approvato_il && ` il ${fmt(req.approvato_il)}`}
+                      </p>
+                      {(req.type === 'ferie' || req.type === 'timbratura') && (
+                        <button onClick={() => deleteRequest(req.type, req.id)} disabled={actionLoading[`del_${req.id}`]}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-300 text-xs font-medium hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 disabled:opacity-50 transition-colors">
+                          <Trash2 size={13} />Elimina
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
