@@ -189,7 +189,9 @@ function NotifCard({ config, setting, employees, readers, onSave, saving }) {
       return acc;
     }, {})
   );
-  const [localTargetIds, setLocalTargetIds] = useState(() => setting?.target_ids ?? null);
+  const [localTargetIds, setLocalTargetIds]       = useState(() => setting?.target_ids ?? null);
+  const [localEmail, setLocalEmail]               = useState(() => setting?.email_destinatario ?? '');
+  const [emailDirty, setEmailDirty]               = useState(false);
 
   useEffect(() => {
     setLocalParams(config.params.reduce((acc, p) => {
@@ -197,23 +199,29 @@ function NotifCard({ config, setting, employees, readers, onSave, saving }) {
       return acc;
     }, {}));
     setLocalTargetIds(setting?.target_ids ?? null);
+    if (!emailDirty) setLocalEmail(setting?.email_destinatario ?? '');
   }, [setting]);
 
   const items = config.targetType === "employee" ? employees : readers;
 
   function handleToggle(val) {
-    onSave(config.tipo, val, localParams, localTargetIds);
+    onSave(config.tipo, val, localParams, localTargetIds, localEmail || null);
   }
 
   function handleParamChange(key, val) {
     const next = { ...localParams, [key]: val };
     setLocalParams(next);
-    onSave(config.tipo, active, next, localTargetIds);
+    onSave(config.tipo, active, next, localTargetIds, localEmail || null);
   }
 
   function handleTargetChange(newIds) {
     setLocalTargetIds(newIds);
-    onSave(config.tipo, active, localParams, newIds);
+    onSave(config.tipo, active, localParams, newIds, localEmail || null);
+  }
+
+  function handleEmailBlur() {
+    setEmailDirty(false);
+    onSave(config.tipo, active, localParams, localTargetIds, localEmail.trim() || null);
   }
 
   const lastTriggered = setting?.last_triggered_at
@@ -271,6 +279,22 @@ function NotifCard({ config, setting, employees, readers, onSave, saving }) {
           selectedIds={localTargetIds}
           onChange={handleTargetChange}
         />
+      )}
+
+      {active && (
+        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-zinc-100 dark:border-zinc-800">
+          <label className="text-[10px] sm:text-xs font-medium text-zinc-500 block mb-1.5">
+            Invia a (email personalizzata)
+          </label>
+          <input
+            type="email"
+            placeholder="Lascia vuoto per usare l'email del tuo account"
+            value={localEmail}
+            onChange={e => { setLocalEmail(e.target.value); setEmailDirty(true); }}
+            onBlur={handleEmailBlur}
+            className="w-full h-8 sm:h-9 px-2 sm:px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none placeholder:text-zinc-400"
+          />
+        </div>
       )}
 
       {lastTriggered && (
@@ -338,7 +362,7 @@ export default function Notifications() {
 
   const saveDebounceRef = {};
 
-  const handleSave = useCallback((tipo, attiva, parametri, targetIds = null) => {
+  const handleSave = useCallback((tipo, attiva, parametri, targetIds = null, emailDestinatario = null) => {
     clearTimeout(saveDebounceRef[tipo]);
     saveDebounceRef[tipo] = setTimeout(async () => {
       setSaving(true);
@@ -346,14 +370,14 @@ export default function Notifications() {
         const res  = await fetch(`${API_URL}/api/notifications/settings/${tipo}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ attiva, parametri, target_ids: targetIds })
+          body: JSON.stringify({ attiva, parametri, target_ids: targetIds, email_destinatario: emailDestinatario })
         });
         const data = await res.json();
         if (data.success) {
           setSettings(prev => {
             const exists = prev.find(s => s.tipo === tipo);
-            if (exists) return prev.map(s => s.tipo === tipo ? { ...s, attiva, parametri, target_ids: targetIds } : s);
-            return [...prev, { tipo, attiva, parametri, target_ids: targetIds, last_triggered_at: null }];
+            if (exists) return prev.map(s => s.tipo === tipo ? { ...s, attiva, parametri, target_ids: targetIds, email_destinatario: emailDestinatario } : s);
+            return [...prev, { tipo, attiva, parametri, target_ids: targetIds, email_destinatario: emailDestinatario, last_triggered_at: null }];
           });
           setToast({ msg: attiva ? "Notifica attivata" : "Notifica disattivata", type: "ok" });
         } else {

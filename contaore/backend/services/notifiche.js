@@ -79,9 +79,9 @@ async function getActive(tipo) {
   return data || []
 }
 
-async function ctx(companyId) {
+async function ctx(companyId, emailOverride) {
   const [email, nome] = await Promise.all([ownerEmail(companyId), companyNome(companyId)])
-  return { email, nome }
+  return { email: emailOverride || email, nome }
 }
 
 // ─── event-based (called from scan route) ────────────────────────────────────
@@ -99,7 +99,7 @@ export async function onBadgeNonRiconosciuto({ uid, readerId, companyId }) {
         .select('id').eq('reader_id', readerId).eq('company_id', companyId).maybeSingle()
       if (!device || !targetIds.includes(device.id)) return
     }
-    const { email, nome } = await ctx(companyId)
+    const { email, nome } = await ctx(companyId, setting.email_destinatario)
     if (!email) return
     await sendNotificaBadgeNonRiconosciuto({ emailOwner: email, companyNome: nome, uid, readerId })
   } catch (e) { console.error('onBadgeNonRiconosciuto:', e) }
@@ -134,7 +134,7 @@ export async function onRitardo({ uid, companyId }) {
     const key = `${companyId}:ritardo:${emp.id}:${todayStr()}`
     if (!canSend(key)) return
 
-    const { email, nome } = await ctx(companyId)
+    const { email, nome } = await ctx(companyId, setting.email_destinatario)
     if (!email) return
 
     const h = String(now.getHours()).padStart(2, '0')
@@ -182,7 +182,7 @@ export async function checkAssenti() {
       if (!late) continue
       const key = `${cid}:assente:${emp.id}:${today}`
       if (!canSend(key)) continue
-      const { email, nome } = await ctx(cid)
+      const { email, nome } = await ctx(cid, setting.email_destinatario)
       if (!email) continue
       await sendNotificaAssente({
         emailOwner: email, nomeDipendente: emp.nome, companyNome: nome,
@@ -226,7 +226,7 @@ export async function checkTimbraturaMancante() {
       if (hoursSince < ore) continue
       const key = `${cid}:mancante:${emp.id}:${today}`
       if (!canSend(key)) continue
-      const { email, nome } = await ctx(cid)
+      const { email, nome } = await ctx(cid, setting.email_destinatario)
       if (!email) continue
       const dt = new Date(lastIn.created_at)
       const orario = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
@@ -264,7 +264,7 @@ export async function checkLettoriOffline() {
       if (minSince < mins) continue
       const key = `${cid}:reader_off:${reader.reader_id}:${today}`
       if (!canSend(key)) continue
-      const { email, nome } = await ctx(cid)
+      const { email, nome } = await ctx(cid, setting.email_destinatario)
       if (!email) continue
       await sendNotificaLettoreOffline({
         emailOwner: email, companyNome: nome,
@@ -411,7 +411,7 @@ export async function checkStraordinarioMensile() {
       const key = `${cid}:straord:${emp.id}:${thisMonth}`
       if (!canSend(key)) continue
 
-      const { email, nome } = await ctx(cid)
+      const { email, nome } = await ctx(cid, setting.email_destinatario)
       if (!email) continue
 
       await sendNotificaStraordinario({

@@ -34,10 +34,11 @@ export default async function notificheRoutes(fastify) {
 
       const settings = TIPI_VALIDI.map(tipo => ({
         tipo,
-        attiva:            map[tipo]?.attiva              ?? false,
-        parametri:         map[tipo]?.parametri           ?? DEFAULTS[tipo],
-        target_ids:        map[tipo]?.target_ids          ?? null,
-        last_triggered_at: map[tipo]?.last_triggered_at   ?? null
+        attiva:               map[tipo]?.attiva              ?? false,
+        parametri:            map[tipo]?.parametri           ?? DEFAULTS[tipo],
+        target_ids:           map[tipo]?.target_ids          ?? null,
+        email_destinatario:   map[tipo]?.email_destinatario  ?? null,
+        last_triggered_at:    map[tipo]?.last_triggered_at   ?? null
       }))
 
       return reply.send({ success: true, settings })
@@ -50,28 +51,33 @@ export default async function notificheRoutes(fastify) {
   /* PUT /api/notifications/settings/:tipo */
   fastify.put('/api/notifications/settings/:tipo', { preHandler: authenticateOwner }, async (req, reply) => {
     try {
-      const companyId                      = req.user.company_id
-      const { tipo }                       = req.params
-      const { attiva, parametri, target_ids } = req.body
+      const companyId = req.user.company_id
+      const { tipo }  = req.params
+      const { attiva, parametri, target_ids, email_destinatario } = req.body
 
       if (!TIPI_VALIDI.includes(tipo)) {
         return reply.status(400).send({ success: false, error: 'TIPO_NON_VALIDO' })
       }
 
-      // target_ids: null means all, [] also treated as all (normalise to null)
       const normalizedTargetIds = Array.isArray(target_ids) && target_ids.length > 0
         ? target_ids
+        : null
+
+      // basic email validation — empty string treated as null
+      const normalizedEmail = typeof email_destinatario === 'string' && email_destinatario.includes('@')
+        ? email_destinatario.trim()
         : null
 
       const { data, error } = await supabase
         .from('notifiche_settings')
         .upsert({
-          company_id: companyId,
+          company_id:         companyId,
           tipo,
-          attiva:     attiva    ?? false,
-          parametri:  parametri ?? DEFAULTS[tipo] ?? {},
-          target_ids: normalizedTargetIds,
-          updated_at: new Date().toISOString()
+          attiva:             attiva    ?? false,
+          parametri:          parametri ?? DEFAULTS[tipo] ?? {},
+          target_ids:         normalizedTargetIds,
+          email_destinatario: normalizedEmail,
+          updated_at:         new Date().toISOString()
         }, { onConflict: 'company_id,tipo' })
         .select()
         .single()
