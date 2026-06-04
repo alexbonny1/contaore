@@ -50,3 +50,13 @@ body {
 }
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant xs (@media (--xs));
+
+/* iOS PWA: push sticky headers below the status bar / notch */
+header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Disable iOS rubber-band scroll so pull-to-refresh feels intentional */
+body {
+  overscroll-behavior-y: none;
+}

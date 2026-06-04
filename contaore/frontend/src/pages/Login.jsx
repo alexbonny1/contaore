@@ -1,12 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { API_URL } from "../api";
 
 export default function Login() {
 
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user  = JSON.parse(localStorage.getItem("user") || "{}");
+    if (token) {
+      if (user.role === "superadmin")  navigate("/admin",     { replace: true });
+      else if (user.role === "dipendente") navigate("/portale",  { replace: true });
+      else                             navigate("/dashboard", { replace: true });
+    }
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
