@@ -286,12 +286,22 @@ export default function DipendenteDashboard() {
         )}
 
         {/* STATS */}
+        {(() => {
+          const todayStr = new Date().toISOString().split("T")[0];
+          const giorniFerieRimanenti = [
+            ...ferie.filter(f => f.stato === "approvata" && f.data_fine >= todayStr),
+            ...pause.filter(p => p.data_fine >= todayStr)
+          ].reduce((tot, f) => {
+            const start = f.data_inizio > todayStr ? f.data_inizio : todayStr;
+            return tot + Math.round((new Date(f.data_fine) - new Date(start)) / 86400000) + 1;
+          }, 0);
+          return (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {[
             { icon: Clock,     label: "Ore questo mese",   value: `${stats.ore_mese_corrente}h` },
             { icon: UserCheck, label: "Giorni assenti",     value: stats.giorni_assenti },
             { icon: TrendingUp,label: "Ore straordinario",  value: `${stats.ore_straordinario}h` },
-            { icon: Umbrella,  label: "Giorni ferie",       value: stats.giorni_ferie },
+            { icon: Umbrella,  label: "Giorni ferie rimasti", value: giorniFerieRimanenti },
           ].map((s) => {
             const Icon = s.icon;
             return (
@@ -303,6 +313,8 @@ export default function DipendenteDashboard() {
             );
           })}
         </div>
+          );
+        })()}
 
         {/* TABS */}
         <div className="flex gap-1.5 sm:gap-2 mb-5 sm:mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
