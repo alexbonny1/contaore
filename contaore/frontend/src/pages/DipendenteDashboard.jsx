@@ -468,18 +468,23 @@ export default function DipendenteDashboard() {
                       {autorizzate.map(f => {
                         const isAziendale = f.tipo === "pausa_aziendale";
                         const today = new Date().toISOString().split("T")[0];
-                        const isFuture = f.data_inizio >= today;
+                        const isOngoing = f.data_inizio <= today && f.data_fine >= today;
+                        const isFuture  = f.data_inizio > today;
                         const giorni = Math.round((new Date(f.data_fine) - new Date(f.data_inizio)) / 86400000) + 1;
+                        const daysLeft    = isOngoing ? Math.round((new Date(f.data_fine) - new Date(today)) / 86400000) + 1 : null;
+                        const daysToStart = isFuture  ? Math.round((new Date(f.data_inizio) - new Date(today)) / 86400000) : null;
                         return (
                           <div key={f.id}
                             className={`rounded-xl sm:rounded-2xl border px-4 sm:px-5 py-3 sm:py-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 xs:gap-0 ${
-                              isFuture
-                                ? "border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10"
-                                : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618]"
+                              isOngoing
+                                ? "border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/10"
+                                : isFuture
+                                  ? "border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10"
+                                  : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618]"
                             }`}>
                             <div>
                               <div className="flex items-center gap-2 mb-0.5">
-                                <Umbrella size={13} className={isFuture ? "text-blue-500" : "text-zinc-400"} />
+                                <Umbrella size={13} className={isOngoing ? "text-orange-500" : isFuture ? "text-blue-500" : "text-zinc-400"} />
                                 <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                                   {fmt(f.data_inizio)} → {fmt(f.data_fine)}
                                 </span>
@@ -488,13 +493,24 @@ export default function DipendenteDashboard() {
                               <p className="text-xs text-zinc-500 ml-5">
                                 {isAziendale ? `Chiusura aziendale — ${f.motivo}` : (f.note || "Ferie personali")}
                               </p>
+                              {isOngoing && (
+                                <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 ml-5 mt-1">
+                                  {daysLeft === 1 ? "Ultimo giorno oggi" : `Ancora ${daysLeft} giorni`}
+                                </p>
+                              )}
+                              {isFuture && (
+                                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 ml-5 mt-1">
+                                  {daysToStart === 1 ? "Inizia domani" : daysToStart === 0 ? "Inizia oggi" : `Inizia tra ${daysToStart} giorni`}
+                                </p>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 ml-5 xs:ml-0">
                               {isAziendale
                                 ? <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300">Aziendale</span>
                                 : <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300">Approvata</span>
                               }
-                              {isFuture && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">Prossima</span>}
+                              {isOngoing && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">In corso</span>}
+                              {isFuture  && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">Prossima</span>}
                             </div>
                           </div>
                         );
