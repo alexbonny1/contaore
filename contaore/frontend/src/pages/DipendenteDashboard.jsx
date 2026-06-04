@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
-import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh";
+import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 

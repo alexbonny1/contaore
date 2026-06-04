@@ -6,7 +6,7 @@ import {
   FileText, Calendar, Bell, Pencil, X
 } from "lucide-react";
 import { API_URL } from "../api";
-import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh";
+import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 const NAV_TABS = [
   { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },

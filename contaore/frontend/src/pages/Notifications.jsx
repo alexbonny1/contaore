@@ -6,7 +6,7 @@ import {
   WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle
 } from "lucide-react";
 import { API_URL } from "../api";
-import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh";
+import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 // ─── notification type definitions ───────────────────────────────────────────
 

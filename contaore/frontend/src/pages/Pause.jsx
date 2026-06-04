@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, CreditCard, Radio, FileText, Bell, Plus, UserCheck
 } from 'lucide-react'
 import { API_URL } from '../api'
-import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh'
+import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })

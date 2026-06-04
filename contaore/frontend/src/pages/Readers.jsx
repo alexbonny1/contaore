@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import { API_URL } from "../api";
-import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh";
+import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 export default function Readers() {
 
