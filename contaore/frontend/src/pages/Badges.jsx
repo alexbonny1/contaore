@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard,
   Radio, Sun, Moon, CheckCircle2, XCircle, Mail,
-  FileText, Calendar
+  FileText, Calendar, Bell, Pencil, X
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -14,6 +14,7 @@ const NAV_TABS = [
   { title: "Dipendenti",      icon: Users,           path: "/employees" },
   { title: "Badge",           icon: CreditCard,      path: "/badges"    },
   { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
+  { title: "Notifiche",       icon: Bell,            path: "/notifications" },
 ];
 
 function Toast({ message, type, onClose }) {
@@ -71,9 +72,12 @@ export default function Badges() {
   const [employeeEmail, setEmployeeEmail]   = useState("");
   const [waitingScan, setWaitingScan]       = useState(false);
   const [toast, setToast]                   = useState(null);
-  const [confirm, setConfirm]               = useState(null); // { message, onConfirm }
+  const [confirm, setConfirm]               = useState(null);
   const [portaleAttivo, setPortaleAttivo]   = useState(false);
   const [pendingCount, setPendingCount]     = useState(0);
+  const [editingId, setEditingId]           = useState(null);
+  const [editForm, setEditForm]             = useState({ nome: '', cognome: '', email: '' });
+  const [editSaving, setEditSaving]         = useState(false);
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -211,6 +215,33 @@ export default function Badges() {
       showToast("Badge eliminato");
       loadBadges();
     } catch (err) { console.log(err); showToast("Errore server", "error"); }
+  }
+
+  function startEdit(badge) {
+    setEditingId(badge.id);
+    setEditForm({ nome: badge.nome_raw || '', cognome: badge.cognome_raw || '', email: badge.email || '' });
+  }
+
+  async function saveEdit(badge) {
+    setEditSaving(true);
+    try {
+      const token = localStorage.getItem("token");
+      const body  = { nome: editForm.nome, cognome: editForm.cognome };
+      // include email only if changed or added
+      if (editForm.email && editForm.email !== badge.email) body.email = editForm.email;
+      const res  = await fetch(`${API_URL}/api/tags/${badge.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!data.success) { showToast(data.error || "Errore", "error"); return; }
+      const msg = data.account_creato ? `Account creato — credenziali inviate a ${editForm.email}` : "Salvato";
+      showToast(msg);
+      setEditingId(null);
+      loadBadges();
+    } catch (err) { showToast("Errore server", "error"); }
+    finally { setEditSaving(false); }
   }
 
   function logout() { localStorage.removeItem("token"); navigate("/"); }
@@ -351,24 +382,100 @@ export default function Badges() {
 
         {/* LISTA BADGE */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          {badges.map((badge) => (
-            <div key={badge.id} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
-              <div className="flex items-start justify-between mb-3 sm:mb-5">
-                <div className="w-9 sm:w-12 h-9 sm:h-12 rounded-lg sm:rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                  <CreditCard size={16} className="sm:w-5 sm:h-5 text-zinc-700 dark:text-zinc-200" />
+          {badges.map((badge) => {
+            const isEditing = editingId === badge.id;
+            return (
+              <div key={badge.id} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+
+                {/* header card */}
+                <div className="flex items-start justify-between mb-3 sm:mb-4">
+                  <div className="w-9 sm:w-12 h-9 sm:h-12 rounded-lg sm:rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    <CreditCard size={16} className="sm:w-5 sm:h-5 text-zinc-700 dark:text-zinc-200" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => isEditing ? setEditingId(null) : startEdit(badge)}
+                      className="text-[10px] sm:text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-medium flex items-center gap-1"
+                    >
+                      {isEditing ? <X size={12} /> : <Pencil size={12} />}
+                      {isEditing ? "Annulla" : "Modifica"}
+                    </button>
+                    <button onClick={() => askDeleteBadge(badge.id)}
+                      className="text-[10px] sm:text-xs text-red-500 hover:text-red-700 font-medium">
+                      Elimina
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => askDeleteBadge(badge.id)}
-                  className="text-[10px] sm:text-xs text-red-500 hover:text-red-700 font-medium whitespace-nowrap"
-                >
-                  Elimina
-                </button>
+
+                {/* UID */}
+                <p className="text-[10px] sm:text-xs text-zinc-400 mb-0.5">UID</p>
+                <p className="text-xs sm:text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100 truncate mb-3">{badge.uid}</p>
+
+                {isEditing ? (
+                  /* ── edit mode ── */
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        value={editForm.nome}
+                        onChange={e => setEditForm(p => ({ ...p, nome: e.target.value }))}
+                        placeholder="Nome"
+                        className="h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs outline-none"
+                      />
+                      <input
+                        value={editForm.cognome}
+                        onChange={e => setEditForm(p => ({ ...p, cognome: e.target.value }))}
+                        placeholder="Cognome"
+                        className="h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs outline-none"
+                      />
+                    </div>
+
+                    {portaleAttivo && (
+                      <div className="relative">
+                        <Mail size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                        <input
+                          type="email"
+                          value={editForm.email}
+                          onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
+                          placeholder={badge.ha_account ? "Email account" : "Email (crea account portale)"}
+                          className={`w-full h-9 pl-8 pr-3 rounded-xl border text-xs outline-none ${
+                            badge.ha_account
+                              ? "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+                              : "border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400"
+                          }`}
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => saveEdit(badge)}
+                      disabled={editSaving}
+                      className="w-full h-9 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium disabled:opacity-50"
+                    >
+                      {editSaving ? "Salvataggio..." : "Salva"}
+                    </button>
+                  </div>
+                ) : (
+                  /* ── view mode ── */
+                  <div>
+                    <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium truncate">{badge.nome}</p>
+                    {portaleAttivo && (
+                      badge.ha_account
+                        ? <p className="text-[10px] sm:text-xs text-green-500 mt-1 flex items-center gap-1">
+                            <CheckCircle2 size={11} /> Account attivo · {badge.email}
+                          </p>
+                        : <button
+                            onClick={() => startEdit(badge)}
+                            className="text-[10px] sm:text-xs text-blue-500 hover:text-blue-700 mt-1 flex items-center gap-1"
+                          >
+                            <Mail size={11} /> Aggiungi email e crea account
+                          </button>
+                    )}
+                  </div>
+                )}
+
               </div>
-              <p className="text-[10px] sm:text-xs text-zinc-400 mb-0.5 sm:mb-1">UID</p>
-              <h3 className="text-xs sm:text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100 truncate">{badge.uid}</h3>
-              <p className="text-xs sm:text-sm text-zinc-500 mt-2 sm:mt-3 truncate">{badge.nome}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>

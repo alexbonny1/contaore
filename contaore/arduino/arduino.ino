@@ -2,7 +2,8 @@
  * timbry NFC Reader Firmware
  * ESP32-WROOM + RC522 + ILI9488 TFT 480x320 + Buzzer
  * v2.2.0
- *
+ * 
+
  * PIN MAP:
  * ─────────────────────────────────────
  * TFT ILI9488 (SPI)
@@ -312,7 +313,14 @@ String getLocalTime() {
 // ── RFID INIT ────────────────────────
 void rfidInit() {
   SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
-  rfid.PCD_Init(); delay(100);
+  // RST basso → alto: forza hard reset garantendo stato noto dopo power cycle
+  pinMode(PIN_RC522_RST, OUTPUT);
+  digitalWrite(PIN_RC522_RST, LOW);
+  delay(10);
+  digitalWrite(PIN_RC522_RST, HIGH);
+  delay(50); // tempo di avvio oscillatore (datasheet: ~37μs + margine)
+  rfid.PCD_Init();
+  delay(50);
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
   Serial.printf("RC522 version: 0x%02X %s\n", v,
     (v == 0x91 || v == 0x92) ? "OK" : "WARN");

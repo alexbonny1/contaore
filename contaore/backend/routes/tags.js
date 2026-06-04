@@ -50,7 +50,7 @@ export default async function tagRoutes(fastify) {
         const companyId = request.user.company_id
         const { data, error } = await supabase
           .from('tag')
-          .select('*, dipendenti(nome, cognome)')
+          .select('*, dipendenti(id, nome, cognome, email, user_account(id))')
           .eq('company_id', companyId)
           .order('created_at', { ascending: false })
 
@@ -61,9 +61,11 @@ export default async function tagRoutes(fastify) {
 
         const tags = (data || []).map(tag => ({
           ...tag,
-          nome: tag.dipendenti
-            ? `${tag.dipendenti.nome} ${tag.dipendenti.cognome}`
-            : tag.uid
+          nome:         tag.dipendenti ? `${tag.dipendenti.nome} ${tag.dipendenti.cognome}` : tag.uid,
+          nome_raw:     tag.dipendenti?.nome     || '',
+          cognome_raw:  tag.dipendenti?.cognome  || '',
+          email:        tag.dipendenti?.email    || null,
+          ha_account:   !!(tag.dipendenti?.user_account?.length)
         }))
 
         return reply.send({ success: true, tags })
@@ -280,6 +282,81 @@ export default async function tagRoutes(fastify) {
           .eq('company_id', companyId)
 
         return reply.send({ success: true })
+      } catch (err) {
+        console.log(err)
+        return reply.send({ success: false })
+      }
+    }
+  )
+
+  // ─── PATCH TAG: update name / add email+account ─────────────────────────────
+  fastify.patch(
+    '/api/tags/:id',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      try {
+        const { id }               = request.params
+        const { nome, cognome, email } = request.body
+        const companyId            = request.user.company_id
+
+        const { data: tag } = await supabase
+          .from('tag')
+          .select('*, dipendenti(id, nome, cognome)')
+          .eq('id', id)
+          .eq('company_id', companyId)
+          .single()
+
+        if (!tag) return reply.send({ success: false, error: 'NOT_FOUND' })
+        const empId = tag.dipendente_id
+
+        // update name
+        if (nome !== undefined || cognome !== undefined) {
+          await supabase.from('dipendenti').update({
+            ...(nome    !== undefined && { nome }),
+            ...(cognome !== undefined && { cognome })
+          }).eq('id', empId).eq('company_id', companyId)
+        }
+
+        // add email / create account
+        let accountCreato = false
+        if (email) {
+          const { data: company } = await supabase
+            .from('company').select('id, nome, portale_dipendenti').eq('id', companyId).single()
+
+          await supabase.from('dipendenti').update({ email }).eq('id', empId)
+
+          if (company?.portale_dipendenti) {
+            const { data: existingAccount } = await supabase
+              .from('user_account').select('id').eq('dipendente_id', empId).maybeSingle()
+
+            if (!existingAccount) {
+              const empNome    = nome    ?? tag.dipendenti?.nome    ?? ''
+              const empCognome = cognome ?? tag.dipendenti?.cognome ?? ''
+              const usernameBase = buildUsername(empNome, empCognome)
+              const username     = await findAvailableUsername(usernameBase)
+              const plainPwd     = generatePassword(10)
+              const hashedPwd    = await bcrypt.hash(plainPwd, 10)
+
+              const { error: accErr } = await supabase.from('user_account').insert({
+                company_id:    companyId,
+                dipendente_id: empId,
+                username,
+                email,
+                password:      hashedPwd,
+                role:          'dipendente'
+              })
+
+              if (!accErr) {
+                accountCreato = true
+                await sendCredenziali({ email, nome: empNome, username, password: plainPwd, companyNome: company.nome })
+              }
+            } else {
+              await supabase.from('user_account').update({ email }).eq('dipendente_id', empId)
+            }
+          }
+        }
+
+        return reply.send({ success: true, account_creato: accountCreato })
       } catch (err) {
         console.log(err)
         return reply.send({ success: false })

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard, Radio, Sun, Moon,
-  CheckCircle, XCircle, Clock3, FileText, Calendar
+  CheckCircle, XCircle, Clock3, FileText, Calendar, Coffee, Bell
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -62,8 +62,9 @@ export default function Dashboard() {
   function logout() { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/"); }
 
   const presenti   = employees.filter(emp => emp.attivo);
+  const inPausa    = employees.filter(emp => emp.in_pausa);
   const assenti    = employees.filter(emp => emp.assente);
-  const fuoriTurno = employees.filter(emp => !emp.attivo && !emp.assente);
+  const fuoriTurno = employees.filter(emp => !emp.attivo && !emp.assente && !emp.in_pausa);
 
   const navItems = [
     { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
@@ -72,6 +73,7 @@ export default function Dashboard() {
     { title: "Dipendenti",      icon: Users,           path: "/employees" },
     { title: "Badge",           icon: CreditCard,      path: "/badges"    },
     { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
+    { title: "Notifiche",       icon: Bell,            path: "/notifications" },
   ].filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo));
 
   return (
@@ -143,7 +145,7 @@ export default function Dashboard() {
         </div>
 
         {/* STATS PRESENZE */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-5 mb-6 sm:mb-8">
           <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
             <p className="text-xs sm:text-sm text-zinc-500">Dipendenti</p>
             <h3 className="text-2xl sm:text-4xl font-bold mt-2 sm:mt-3 text-zinc-900 dark:text-zinc-100">{employees.length}</h3>
@@ -151,6 +153,10 @@ export default function Dashboard() {
           <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
             <p className="text-xs sm:text-sm text-zinc-500">Presenti ora</p>
             <h3 className="text-2xl sm:text-4xl font-bold mt-2 sm:mt-3 text-green-500">{presenti.length}</h3>
+          </div>
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm text-zinc-500">In pausa</p>
+            <h3 className="text-2xl sm:text-4xl font-bold mt-2 sm:mt-3 text-amber-500">{inPausa.length}</h3>
           </div>
           <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
             <p className="text-xs sm:text-sm text-zinc-500">Assenti</p>
@@ -163,10 +169,11 @@ export default function Dashboard() {
         </div>
 
         {/* PRESENZE LISTS */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-          <Section title="Presenti ora"  color="green" icon={<CheckCircle size={20} className="text-green-500" />} employees={presenti}   label="ENTRATO"      />
-          <Section title="Assenti"       color="red"   icon={<XCircle     size={20} className="text-red-500"   />} employees={assenti}    label="ASSENTE"      />
-          <Section title="Fuori turno"   color="zinc"  icon={<Clock3      size={20} className="text-zinc-500"  />} employees={fuoriTurno} label="FUORI ORARIO" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <Section title="Presenti ora"  color="green" icon={<CheckCircle size={20} className="text-green-500"  />} employees={presenti}   label="ENTRATO"      />
+          <Section title="In pausa"      color="amber" icon={<Coffee      size={20} className="text-amber-500"  />} employees={inPausa}    label="PAUSA"        />
+          <Section title="Assenti"       color="red"   icon={<XCircle     size={20} className="text-red-500"    />} employees={assenti}    label="ASSENTE"      />
+          <Section title="Fuori turno"   color="zinc"  icon={<Clock3      size={20} className="text-zinc-500"   />} employees={fuoriTurno} label="FUORI ORARIO" />
         </div>
 
       </div>
@@ -189,7 +196,7 @@ function Section({ title, icon, employees, label, color }) {
               <p className="text-xs sm:text-sm text-zinc-500 mt-0.5 sm:mt-1 truncate">{emp.badge_uid}</p>
             </div>
             <span className={`text-xs sm:text-sm font-medium whitespace-nowrap self-start xs:self-auto ${
-              color === "green" ? "text-green-500" : color === "red" ? "text-red-500" : "text-zinc-500"
+              color === "green" ? "text-green-500" : color === "red" ? "text-red-500" : color === "amber" ? "text-amber-500" : "text-zinc-500"
             }`}>
               {label}
             </span>

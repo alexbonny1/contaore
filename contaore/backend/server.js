@@ -14,7 +14,9 @@ import exportRoutes from './routes/export.js'
 import dipendenteRoutes from './routes/dipendente.js'   // ← nuovo
 import ferieRoutes      from './routes/ferie.js'
 import requestsRoutes   from './routes/requests.js'    // ← nuovo
-import pauseRoutes      from './routes/pause.js'       // ← nuovo 
+import pauseRoutes      from './routes/pause.js'       // ← nuovo
+import notificheRoutes  from './routes/notifiche.js'
+import { startScheduler } from './services/notifiche.js'
 
 dotenv.config()
 
@@ -42,7 +44,8 @@ await fastify.register(adminRoutes)
 await fastify.register(dipendenteRoutes)   // ← nuovo
 await fastify.register(ferieRoutes)
 await fastify.register(requestsRoutes)     // ← nuovo
-await fastify.register(pauseRoutes)        // ← nuovo  
+await fastify.register(pauseRoutes)        // ← nuovo
+await fastify.register(notificheRoutes)
 
 fastify.get('/', async () => {
   return {
@@ -60,6 +63,7 @@ const start = async () => {
     })
 
     console.log(`SERVER ONLINE PORT ${process.env.PORT || 3000}`)
+    startScheduler()
 
   } catch (err) {
 

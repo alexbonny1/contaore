@@ -51,15 +51,19 @@ function buildCoppie(sorted) {
       lastE = r
     } else if (r.tipo === 'USCITA') {
       coppie.push({
-        entrata: lastE ? new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—',
-        uscita:  new Date(r.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+        entrata:         lastE ? new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—',
+        uscita:          new Date(r.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+        entrata_manuale: lastE ? !!lastE.manuale : false,
+        uscita_manuale:  !!r.manuale
       })
       lastE = null
     }
   })
   if (lastE) coppie.push({
-    entrata: new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-    uscita: '—'
+    entrata:         new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+    uscita:          '—',
+    entrata_manuale: !!lastE.manuale,
+    uscita_manuale:  false
   })
   return coppie
 }
@@ -408,9 +412,11 @@ export default async function exportRoutes(fastify) {
               doc.fillColor(color).font('Helvetica-Bold').text(label, 455, y + 4)
             } else {
               day.coppie.forEach((c, i) => {
+                const entrataStr = c.entrata + (c.entrata_manuale ? ' (M)' : '')
+                const uscitaStr  = c.uscita  + (c.uscita_manuale  ? ' (M)' : '')
                 doc.fillColor('#111').font('Helvetica')
-                  .text(c.entrata, 155, y + 4 + i * 12)
-                  .text(c.uscita,  255, y + 4 + i * 12)
+                  .text(entrataStr, 155, y + 4 + i * 12)
+                  .text(uscitaStr,  255, y + 4 + i * 12)
               })
               doc.fillColor('#111').text(formatOre(day.oreLavorate), 350, y + 4)
               doc.fillColor('#6b7280').text(formatOre(day.orePreviste), 400, y + 4)
@@ -504,8 +510,8 @@ export default async function exportRoutes(fastify) {
         rows.push([mese.name.toUpperCase(), '', '', '', '', '', ''])
         for (const day of mese.giorni) {
           const dataStr = new Date(day.dateStr + 'T00:00:00').toLocaleDateString('it-IT')
-          const entrate = day.coppie.map(c => c.entrata).join('  ') || '—'
-          const uscite  = day.coppie.map(c => c.uscita).join('  ')  || '—'
+          const entrate = day.coppie.map(c => c.entrata + (c.entrata_manuale ? ' (M)' : '')).join('  ') || '—'
+          const uscite  = day.coppie.map(c => c.uscita  + (c.uscita_manuale  ? ' (M)' : '')).join('  ') || '—'
           let stato = 'Presente'
           if (day.stato === 'ferie')        stato = 'Ferie'
           else if (day.stato === 'giustificata') stato = 'Giustificata'

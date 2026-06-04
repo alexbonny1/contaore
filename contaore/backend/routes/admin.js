@@ -375,7 +375,7 @@ export default async function adminRoutes(fastify) {
     async (request, reply) => {
       try {
         const { id } = request.params
-        const { nome, ora_inizio, ora_fine, tipo, giorni } = request.body
+        const { nome, ora_inizio, ora_fine, tipo } = request.body
 
         if (!ora_inizio || !ora_fine || !tipo) {
           return reply.status(400).send({ success: false, error: 'MISSING_FIELDS' })
@@ -385,45 +385,24 @@ export default async function adminRoutes(fastify) {
           return reply.status(400).send({ success: false, error: 'TIPO_INVALIDO' })
         }
 
-        const GIORNI_VALIDI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica']
-        const giorniSelezionati = (giorni && Array.isArray(giorni)) ? giorni : ['lunedì']
+        const { data: fascia, error } = await supabase
+          .from('fasce_orarie')
+          .insert({
+            company_id: id,
+            nome:       nome || `${tipo} ${ora_inizio}-${ora_fine}`,
+            ora_inizio,
+            ora_fine,
+            tipo
+          })
+          .select()
+          .single()
 
-        for (const giorno of giorniSelezionati) {
-          if (!GIORNI_VALIDI.includes(giorno.toLowerCase())) {
-            return reply.status(400).send({ success: false, error: 'GIORNO_INVALIDO' })
-          }
+        if (error) {
+          console.log('Errore inserimento fascia:', error)
+          return reply.status(500).send({ success: false, error: 'INSERT_ERROR', detail: error.message })
         }
 
-        const fascePromises = giorniSelezionati.map(giorno =>
-          supabase
-            .from('fasce_orarie')
-            .insert({
-              company_id: id,
-              giorno_settimana: giorno.charAt(0).toUpperCase() + giorno.slice(1).toLowerCase(),
-              nome:       nome || `${tipo} ${ora_inizio}-${ora_fine}`,
-              ora_inizio,
-              ora_fine,
-              tipo
-            })
-            .select()
-            .single()
-        )
-
-        const results = await Promise.all(fascePromises)
-        const errors  = results.filter(r => r.error)
-
-        if (errors.length > 0) {
-          console.log('Errori inserimento fasce:', errors)
-          return reply.status(500).send({ success: false, error: 'INSERT_ERROR' })
-        }
-
-        const fasce = results.map(r => r.data)
-
-        return reply.send({
-          success: true,
-          fasce,
-          message: `${fasce.length} fascia/e oraria/e create`
-        })
+        return reply.send({ success: true, fasce: [fascia], message: '1 fascia oraria creata' })
 
       } catch (err) {
         console.log(err)

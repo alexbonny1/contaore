@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   Calendar, CheckCircle, XCircle, Sun, Moon, X,
-  LayoutDashboard, Users, CreditCard, Radio, FileText
+  LayoutDashboard, Users, CreditCard, Radio, FileText, Bell
 } from 'lucide-react'
 import { API_URL } from '../api'
 
@@ -24,6 +24,7 @@ export default function Pause() {
   const [toast, setToast] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const isFirstLoad = useRef(true)
 
   const user          = JSON.parse(localStorage.getItem('user') || '{}')
   const portaleAttivo = user.portale_dipendenti !== false
@@ -64,13 +65,12 @@ export default function Pause() {
 
   async function loadPausa() {
     try {
-      setLoading(true)
+      if (isFirstLoad.current) setLoading(true)
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_URL}/api/pausa-aziendale`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
-      // solo 401 → login, altri errori li gestiamo senza redirect
       if (response.status === 401 || response.status === 403) {
         navigate('/')
         return
@@ -80,7 +80,6 @@ export default function Pause() {
       if (data.success) {
         setPausa(data.pausa)
       } else {
-        // errore server (es. tabella non esistente) — mostra pagina vuota, non redirige
         console.warn('loadPausa error:', data.error)
         setPausa(null)
       }
@@ -88,7 +87,10 @@ export default function Pause() {
       console.log(err)
       setPausa(null)
     } finally {
-      setLoading(false)
+      if (isFirstLoad.current) {
+        setLoading(false)
+        isFirstLoad.current = false
+      }
     }
   }
 
@@ -127,7 +129,7 @@ export default function Pause() {
         setShowForm(false)
         loadPausa()
       } else {
-        showToast(data.message || 'Errore', 'error')
+        showToast(data.detail || data.message || data.error || 'Errore', 'error')
       }
     } catch (err) {
       console.log(err)
@@ -223,7 +225,8 @@ export default function Pause() {
             { title: "Pausa aziendale", icon: Calendar,        path: "/pause"     },
             { title: "Dipendenti",      icon: Users,           path: "/employees" },
             { title: "Badge",           icon: CreditCard,      path: "/badges"    },
-            { title: "Lettori NFC",     icon: Radio,           path: "/readers"   }
+            { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
+            { title: "Notifiche",       icon: Bell,            path: "/notifications" }
           ]
             .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
             .map((item) => {
