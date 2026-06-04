@@ -131,9 +131,8 @@ export default async function pauseRoutes(fastify) {
             company_id,
             data_inizio,
             data_fine,
-            motivo:    motivo.trim(),
-            attiva:    true,
-            creata_da: request.user.id
+            motivo: motivo.trim(),
+            attiva: true
           })
           .select()
           .single()

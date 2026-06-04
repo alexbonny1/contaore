@@ -150,7 +150,7 @@ export default function Pause() {
         setSelectedDips(new Set()); setTipoFerie('aziendale')
         setShowForm(false)
       } else {
-        showToast(data.message || data.error || 'Errore', 'error')
+        showToast(data.detail || data.message || data.error || 'Errore', 'error')
       }
     } catch (err) {
       console.log(err); showToast('Errore server', 'error')
