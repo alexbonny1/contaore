@@ -3,6 +3,6 @@
   <rect x="20" y="14" width="42" height="58" rx="8" fill="none" stroke="#0099FF" stroke-width="4"/>
   <!-- Chip top-left -->
   <rect x="28" y="22" width="12" height="11" rx="2.5" fill="none" stroke="#0099FF" stroke-width="3.5"/>
-  <!-- Single NFC arc: from top-right corner to bottom-right corner of card -->
-  <path d="M62 22 Q82 43 62 64" fill="none" stroke="#0099FF" stroke-width="4" stroke-linecap="round"/>
+  <!-- Semicircle: diameter = right edge of card, attached with no gap -->
+  <path d="M62 22 A21 21 0 0 1 62 64" fill="none" stroke="#0099FF" stroke-width="4"/>
 </svg>
