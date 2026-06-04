@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Users, CreditCard, Radio, FileText, Bell, Plus, UserCheck
 } from 'lucide-react'
 import { API_URL } from '../api'
+import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh'
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -49,6 +50,8 @@ export default function Pause() {
     if (dark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark') }
     else      { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light') }
   }, [dark])
+
+  const { pulling, refreshing, distance } = usePullToRefresh(loadPause)
 
   // LOAD PAUSE
   useEffect(() => {
@@ -210,6 +213,7 @@ export default function Pause() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* NAV */}
         <div className="flex gap-2 sm:gap-3 mb-6 sm:mb-8 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">

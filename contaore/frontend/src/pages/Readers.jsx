@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { API_URL } from "../api";
+import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh";
 
 export default function Readers() {
 
@@ -120,6 +121,8 @@ export default function Readers() {
 
   }
 
+  const { pulling, refreshing, distance } = usePullToRefresh(loadReaders)
+
   /*
     AUTO REFRESH
   */
@@ -210,6 +213,7 @@ export default function Readers() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* NAV */}
 

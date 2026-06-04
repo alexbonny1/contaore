@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -117,6 +118,8 @@ export default function DipendenteDashboard() {
       if (json.success) setMissingScans(json.richieste || []);
     } catch (err) { console.log(err); }
   }
+
+  const { pulling, refreshing, distance } = usePullToRefresh(() => Promise.all([loadMe(), loadFerie(), loadMissingScans()]))
 
   useEffect(() => {
     if (user.role !== "dipendente") { navigate("/"); return; }
@@ -273,6 +276,7 @@ export default function DipendenteDashboard() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-5 py-5 sm:py-7">
+        <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* PAUSA BANNER */}
         {inPausa && (

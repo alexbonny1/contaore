@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh";
 
 export default function Dashboard() {
   const navigate  = useNavigate();
@@ -29,6 +30,8 @@ export default function Dashboard() {
     if (dark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
     else       { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
   }, [dark]);
+
+  const { pulling, refreshing, distance } = usePullToRefresh(loadDashboard)
 
   /* LOAD */
   useEffect(() => {
@@ -116,6 +119,7 @@ export default function Dashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* NAV */}
         <div className="flex gap-2 sm:gap-3 mb-6 sm:mb-8 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
