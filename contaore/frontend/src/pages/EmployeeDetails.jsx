@@ -746,8 +746,13 @@ export default function EmployeeDetails() {
                 <div key={t.id} className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 flex-wrap">
                         {t.turno_nome || "Turno"} — {t.giorno_settimana}
+                        {t.uscita_1 && t.ingresso_1 && t.uscita_1 < t.ingresso_1 && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                            Notturno
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-zinc-500 mt-1">
                         {t.ingresso_1} - {t.uscita_1}
@@ -947,6 +952,9 @@ export default function EmployeeDetails() {
                                           <span className={coppia.uscita_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-red-500 dark:text-red-400 font-medium"}>
                                             {coppia.uscita || "—"}
                                           </span>
+                                          {coppia.uscita && coppia.uscita_giorno_dopo && (
+                                            <span className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
+                                          )}
                                           {coppia.uscita_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
                                           {!portaleAttivo && coppia.uscita_manuale && coppia.uscita_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.uscita_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
