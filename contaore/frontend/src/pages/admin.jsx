@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Building2, Plus, Trash2, KeyRound,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
-  Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio
+  Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio, Download
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -82,6 +82,13 @@ export default function Admin() {
   const [companyDevices, setCompanyDevices] = useState({}); // companyId → devices[]
 
   const [togglingPortale, setTogglingPortale] = useState(null);
+
+  const [otaRelease, setOtaRelease]       = useState(null);
+  const [showOtaForm, setShowOtaForm]     = useState(false);
+  const [otaVersion, setOtaVersion]       = useState("");
+  const [otaUrl, setOtaUrl]               = useState("");
+  const [otaAttivo, setOtaAttivo]         = useState(true);
+  const [savingOta, setSavingOta]         = useState(false);
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -223,6 +230,39 @@ export default function Admin() {
     } finally {
       setTogglingPortale(null);
     }
+  }
+
+  useEffect(() => { loadOta(); }, []);
+
+  async function loadOta() {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/admin/ota", { headers: { Authorization: "Bearer " + token } });
+      const d = await res.json();
+      if (d.success) {
+        setOtaRelease(d.release);
+        if (d.release) { setOtaVersion(d.release.version); setOtaUrl(d.release.url); setOtaAttivo(d.release.attivo); }
+      }
+    } catch (_) {}
+  }
+
+  async function saveOta(e) {
+    e.preventDefault();
+    setSavingOta(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/admin/ota", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ version: otaVersion, url: otaUrl, attivo: otaAttivo })
+      });
+      const d = await res.json();
+      if (!d.success) { showToast("Errore salvataggio OTA", "error"); return; }
+      setOtaRelease(d.release);
+      setShowOtaForm(false);
+      showToast(otaAttivo ? `OTA attivo: v${otaVersion} — i dispositivi si aggiorneranno al prossimo ping` : "OTA disattivato");
+    } catch (_) { showToast("Errore di connessione", "error"); }
+    finally { setSavingOta(false); }
   }
 
   async function openFasciaForm(companyId) {
@@ -399,6 +439,72 @@ export default function Admin() {
             </form>
           </div>
         )}
+
+        {/* SEZIONE OTA */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Download size={18} /> Aggiornamento Firmware OTA
+              </h3>
+              <p className="text-xs text-zinc-500 mt-1">I dispositivi si aggiornano automaticamente al prossimo ping (max 1 minuto)</p>
+            </div>
+            <button onClick={() => setShowOtaForm(!showOtaForm)} className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+              <Plus size={14} /> {showOtaForm ? "Chiudi" : "Configura"}
+            </button>
+          </div>
+
+          {/* Stato attuale */}
+          {otaRelease ? (
+            <div className={`flex items-center justify-between rounded-2xl px-4 py-3 border ${otaRelease.attivo ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30" : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"}`}>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">v{otaRelease.version}</p>
+                <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-xs">{otaRelease.url}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${otaRelease.attivo ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                {otaRelease.attivo ? "ATTIVO" : "DISATTIVATO"}
+              </span>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-4 text-center">
+              <p className="text-xs text-zinc-400">Nessun aggiornamento configurato — i dispositivi rimangono sulla versione attuale</p>
+            </div>
+          )}
+
+          {/* Form configurazione */}
+          {showOtaForm && (
+            <form onSubmit={saveOta} className="mt-4 grid gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-zinc-400 mb-1">Versione target (es. 2.4.0)</p>
+                  <input type="text" value={otaVersion} onChange={e => setOtaVersion(e.target.value)} required placeholder="2.4.0"
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                </div>
+                <div className="flex items-end gap-2">
+                  <button type="button" onClick={() => setOtaAttivo(!otaAttivo)}
+                    className={`h-10 px-4 rounded-xl text-sm font-medium transition-all ${otaAttivo ? "bg-blue-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
+                    {otaAttivo ? "Attivo" : "Disattivato"}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-zinc-400 mb-1">URL del file .bin (deve essere pubblicamente accessibile)</p>
+                <input type="url" value={otaUrl} onChange={e => setOtaUrl(e.target.value)} required placeholder="https://esempio.com/firmware-v2.4.0.bin"
+                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+              </div>
+              <div className="flex gap-2">
+                <button type="submit" disabled={savingOta}
+                  className="flex-1 h-10 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
+                  {savingOta ? "Salvataggio..." : "Salva e attiva OTA"}
+                </button>
+                <button type="button" onClick={() => setShowOtaForm(false)}
+                  className="h-10 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm">
+                  Annulla
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
 
         {/* LISTA AZIENDE */}
         {loading ? (

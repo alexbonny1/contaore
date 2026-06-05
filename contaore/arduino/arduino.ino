@@ -59,6 +59,7 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <HTTPClient.h>
+#include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 #include <Preferences.h>
 #include <ArduinoJson.h>
@@ -708,6 +709,47 @@ void queueFlush() {
   Serial.printf("FLUSH: sent=%d failed=%d\n", sent, failed);
 }
 
+// ── OTA UPDATE ───────────────────────
+void doOTA(String url, String newVersion) {
+  Serial.printf("OTA: aggiornamento v%s → v%s\n", FW_VERSION, newVersion.c_str());
+
+  tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, C_BG);
+  uint16_t bodyTxt = g_themeLight ? C_BLACK : C_WHITE;
+  tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(3);
+  tft.setCursor(50, HDR_H + 25);
+  tft.print("Aggiornamento FW");
+  tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(2);
+  tft.setCursor(60, HDR_H + 90);
+  tft.print("v"); tft.print(FW_VERSION);
+  tft.print(" -> v"); tft.print(newVersion);
+  tft.setTextColor(C_YELLOW, C_BG); tft.setTextSize(1);
+  tft.setCursor(70, HDR_H + 140);
+  tft.print("Non spegnere il dispositivo...");
+  drawHeader(); drawFooter();
+
+  httpUpdate.rebootOnUpdate(true);
+
+  bool isHttps = url.startsWith("https");
+  t_httpUpdate_return ret;
+  if (isHttps) {
+    WiFiClientSecure client; client.setInsecure();
+    ret = httpUpdate.update(client, url);
+  } else {
+    WiFiClient client;
+    ret = httpUpdate.update(client, url);
+  }
+
+  // Arriva qui solo se OTA non è andata a buon fine (altrimenti si riavvia)
+  Serial.printf("OTA FALLITO (%d): %s\n", httpUpdate.getLastError(),
+    httpUpdate.getLastErrorString().c_str());
+  tft.fillRect(0, HDR_H + 155, 480, 50, C_BG);
+  tft.setTextColor(C_RED, C_BG); tft.setTextSize(2);
+  tft.setCursor(80, HDR_H + 165);
+  tft.print("Errore aggiornamento");
+  delay(4000);
+  showIdle();
+}
+
 // ── HEARTBEAT ────────────────────────
 void sendHeartbeat() {
   if (millis() - g_lastHeartbeat < HEARTBEAT_MS) return;
@@ -717,18 +759,45 @@ void sendHeartbeat() {
     ",\"sede\":\"%s\",\"nfc_ok\":%s,\"display_ok\":%s}",
     cfg.readerId, cfg.companyId, FW_VERSION, g_queueSize,
     cfg.sede, g_rfidOk ? "true" : "false", g_displayOk ? "true" : "false");
+
   snprintf(g_url, sizeof(g_url), "%s/api/hardware/ping", cfg.backend);
   bool isHttps = strncmp(cfg.backend, "https", 5) == 0;
+
+  String otaUrl     = "";
+  String otaVersion = "";
+
+  auto handlePingResponse = [&](HTTPClient& h, int code) {
+    Serial.printf("PING: %d\n", code);
+    if (code == 200) {
+      String body = h.getString();
+      StaticJsonDocument<256> doc;
+      if (!deserializeJson(doc, body)) {
+        otaUrl     = doc["ota_url"]     | "";
+        otaVersion = doc["ota_version"] | "";
+      }
+    }
+  };
+
   if (isHttps) {
     WiFiClientSecure c; c.setInsecure(); HTTPClient h;
-    if (h.begin(c, g_url)) { h.setTimeout(6000); h.setReuse(false);
-      h.addHeader("Content-Type","application/json");
-      Serial.printf("PING: %d\n", h.POST(g_payload)); h.end(); }
+    if (h.begin(c, g_url)) {
+      h.setTimeout(6000); h.setReuse(false);
+      h.addHeader("Content-Type", "application/json");
+      handlePingResponse(h, h.POST(g_payload));
+      h.end();
+    }
   } else {
     WiFiClient c; HTTPClient h;
-    if (h.begin(c, g_url)) { h.setTimeout(6000); h.setReuse(false);
-      h.addHeader("Content-Type","application/json");
-      Serial.printf("PING: %d\n", h.POST(g_payload)); h.end(); }
+    if (h.begin(c, g_url)) {
+      h.setTimeout(6000); h.setReuse(false);
+      h.addHeader("Content-Type", "application/json");
+      handlePingResponse(h, h.POST(g_payload));
+      h.end();
+    }
+  }
+
+  if (otaUrl.length() > 0 && otaVersion.length() > 0 && otaVersion != FW_VERSION) {
+    doOTA(otaUrl, otaVersion);
   }
 }
 
