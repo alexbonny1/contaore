@@ -1,7 +1,7 @@
 /*
  * timbry NFC Reader Firmware
  * ESP32-WROOM + RC522 + ILI9488 TFT 480x320 + Buzzer
- * v2.3.0
+ * v2.4.0
  * 
  
  * PIN MAP:  
@@ -77,7 +77,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "2.3.0"
+#define FW_VERSION          "2.4.0"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -161,6 +161,7 @@ struct Config {
   char     backend[128];
   char     readerId[64];
   char     companyId[64];
+  char     sede[64];
   uint8_t  theme;
   uint32_t debounce;
   bool     valid;
@@ -180,6 +181,10 @@ struct QueueEntry {
   char timestamp[32];
 };
 QueueEntry g_queue[QUEUE_MAX];
+
+// ── COMPONENT HEALTH ─────────────────
+bool g_rfidOk    = false;
+bool g_displayOk = false;
 
 // ── GLOBALS ──────────────────────────
 char          g_uid[64];
@@ -323,8 +328,8 @@ void rfidInit() {
   rfid.PCD_Init();
   delay(50);
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  Serial.printf("RC522 version: 0x%02X %s\n", v,
-    (v == 0x91 || v == 0x92) ? "OK" : "WARN");
+  g_rfidOk = (v == 0x91 || v == 0x92);
+  Serial.printf("RC522 version: 0x%02X %s\n", v, g_rfidOk ? "OK" : "WARN");
 }
 
 // ── DISPLAY ──────────────────────────
@@ -467,7 +472,18 @@ void drawAdmin() {
   tft.setCursor(10, y); tft.print("Queue:   "); tft.print(g_queueSize);        y += 18;
   tft.setCursor(10, y); tft.print("NTP:     "); tft.print(g_ntpSynced ? "OK" : "NO SYNC"); y += 18;
   tft.setCursor(10, y); tft.print("Time:    "); tft.print(getISOTimestamp());  y += 18;
-  tft.setCursor(10, y); tft.print("FW:      "); tft.print(FW_VERSION);         y += 28;
+  tft.setCursor(10, y); tft.print("FW:      "); tft.print(FW_VERSION);         y += 18;
+  tft.setCursor(10, y); tft.print("Sede:    "); tft.print(cfg.sede[0] ? cfg.sede : "(non impostata)"); y += 18;
+
+  tft.setCursor(10, y); tft.print("NFC:     ");
+  tft.setTextColor(g_rfidOk ? C_GREEN : C_RED, C_BG);
+  tft.print(g_rfidOk ? "OK" : "ERRORE");
+  tft.setTextColor(bodyTxt, C_BG); y += 18;
+
+  tft.setCursor(10, y); tft.print("Display: ");
+  tft.setTextColor(g_displayOk ? C_GREEN : C_RED, C_BG);
+  tft.print(g_displayOk ? "OK" : "ERRORE");
+  tft.setTextColor(bodyTxt, C_BG); y += 28;
 
   // Istruzione 2a lettura → provisioning (non reset!)
   tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(2);
@@ -553,6 +569,7 @@ bool loadConfig() {
   String backend   = prefs.getString("backend",   "");
   String readerId  = prefs.getString("readerId",  "");
   String companyId = prefs.getString("companyId", "");
+  String sede      = prefs.getString("sede",      "");
   uint8_t  theme    = (uint8_t)prefs.getUInt("theme", 0);
   uint32_t debounce = prefs.getUInt("debounce", (uint32_t)DEBOUNCE_DEFAULT);
   prefs.end();
@@ -560,6 +577,7 @@ bool loadConfig() {
   strlcpy(cfg.backend,   backend.c_str(),   sizeof(cfg.backend));
   strlcpy(cfg.readerId,  readerId.c_str(),  sizeof(cfg.readerId));
   strlcpy(cfg.companyId, companyId.c_str(), sizeof(cfg.companyId));
+  strlcpy(cfg.sede,      sede.c_str(),      sizeof(cfg.sede));
   cfg.theme     = (theme < THEME_COUNT) ? theme : 0;
   cfg.debounce  = (debounce >= 500 && debounce <= 30000) ? debounce : (uint32_t)DEBOUNCE_DEFAULT;
   cfg.valid     = true;
@@ -573,6 +591,7 @@ void saveConfig() {
   prefs.putString("backend",   cfg.backend);
   prefs.putString("readerId",  cfg.readerId);
   prefs.putString("companyId", cfg.companyId);
+  prefs.putString("sede",      cfg.sede);
   prefs.putUInt("theme",       cfg.theme);
   prefs.putUInt("debounce",    cfg.debounce);
   prefs.end();
@@ -694,8 +713,10 @@ void sendHeartbeat() {
   if (millis() - g_lastHeartbeat < HEARTBEAT_MS) return;
   g_lastHeartbeat = millis();
   snprintf(g_payload, sizeof(g_payload),
-    "{\"reader_id\":\"%s\",\"company_id\":\"%s\",\"firmware\":\"%s\",\"queue\":%d}",
-    cfg.readerId, cfg.companyId, FW_VERSION, g_queueSize);
+    "{\"reader_id\":\"%s\",\"company_id\":\"%s\",\"firmware\":\"%s\",\"queue\":%d"
+    ",\"sede\":\"%s\",\"nfc_ok\":%s,\"display_ok\":%s}",
+    cfg.readerId, cfg.companyId, FW_VERSION, g_queueSize,
+    cfg.sede, g_rfidOk ? "true" : "false", g_displayOk ? "true" : "false");
   snprintf(g_url, sizeof(g_url), "%s/api/hardware/ping", cfg.backend);
   bool isHttps = strncmp(cfg.backend, "https", 5) == 0;
   if (isHttps) {
@@ -894,9 +915,10 @@ void startProvisioning() {
   WiFiManager wm;
   wm.setConfigPortalTimeout(300);
 
-  WiFiManagerParameter p_b("backend", "Backend URL",  cfg.backend,   127);
-  WiFiManagerParameter p_r("reader",  "Reader ID",    cfg.readerId,   63);
-  WiFiManagerParameter p_c("company", "Company ID",   cfg.companyId,  63);
+  WiFiManagerParameter p_b("backend", "Backend URL",     cfg.backend,   127);
+  WiFiManagerParameter p_r("reader",  "Reader ID",       cfg.readerId,   63);
+  WiFiManagerParameter p_c("company", "Company ID",      cfg.companyId,  63);
+  WiFiManagerParameter p_s("sede",    "Sede / Ubicazione", cfg.sede,     63);
 
   char themeStr[4];
   snprintf(themeStr, sizeof(themeStr), "%d", cfg.theme);
@@ -911,6 +933,7 @@ void startProvisioning() {
   wm.addParameter(&p_b);
   wm.addParameter(&p_r);
   wm.addParameter(&p_c);
+  wm.addParameter(&p_s);
   wm.addParameter(&p_t);
   wm.addParameter(&p_d);
 
@@ -935,6 +958,7 @@ void startProvisioning() {
   strlcpy(cfg.backend,   newBackend,         sizeof(cfg.backend));
   strlcpy(cfg.readerId,  p_r.getValue(),     sizeof(cfg.readerId));
   strlcpy(cfg.companyId, p_c.getValue(),     sizeof(cfg.companyId));
+  strlcpy(cfg.sede,      p_s.getValue(),     sizeof(cfg.sede));
 
   int themeVal = atoi(p_t.getValue());
   cfg.theme = (themeVal >= 0 && themeVal < THEME_COUNT) ? (uint8_t)themeVal : 0;
@@ -975,10 +999,13 @@ void taskSerial() {
     Serial.printf("IP:       %s\n", WiFi.localIP().toString().c_str());
     Serial.printf("NTP:      %s\n", g_ntpSynced?"OK":"NO SYNC");
     Serial.printf("Time:     %s\n", getISOTimestamp().c_str());
+    Serial.printf("Sede:     %s\n", cfg.sede);
     Serial.printf("DEBOUNCE: %lu ms\n", g_debouncMs);
     Serial.printf("DISPLAY:  %lu ms\n", g_resultTimeout);
     byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
     Serial.printf("RC522:    0x%02X\n", v);
+    Serial.printf("NFC OK:   %s\n", g_rfidOk    ? "SI" : "NO");
+    Serial.printf("DISP OK:  %s\n", g_displayOk ? "SI" : "NO");
   } else if (cmdU == "FLUSH") {
     queueFlush();
   } else if (cmdU == "PROV") {
@@ -1017,6 +1044,7 @@ void setup() {
 
   tft.init();
   tft.setRotation(1);
+  g_displayOk = true;  // se siamo qui il display ha risposto correttamente
 
   // Carica config (e tema) prima della splash
   bool hasConfig = loadConfig();
@@ -1088,7 +1116,8 @@ void taskResult() {
 
 void taskRfidHealth() {
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  if (v == 0x00 || v == 0xFF) { Serial.println("RFID drift, reinit..."); rfidInit(); }
+  g_rfidOk = (v == 0x91 || v == 0x92);
+  if (!g_rfidOk) { Serial.println("RFID drift, reinit..."); rfidInit(); }
 }
 
 void taskAdmin() {
