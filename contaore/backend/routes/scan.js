@@ -96,46 +96,7 @@ export default async function scanRoutes(fastify) {
           return reply.send({ success: true, ignored: true })
         }
 
-        // Fasce orarie: reader-specific or company-wide forced tipo
-        {
-          const nowObj  = new Date()
-          const nowMins = nowObj.getHours() * 60 + nowObj.getMinutes()
-          const { data: fasce } = await supabase
-            .from('fasce_orarie')
-            .select('tipo, reader_id, ora_inizio, ora_fine')
-            .eq('company_id', readerCompanyId)
-
-          if (fasce?.length > 0) {
-            const mins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
-            const inFascia = (f) => {
-              const s = mins(f.ora_inizio), e = mins(f.ora_fine)
-              return e < s
-                ? nowMins >= s || nowMins <= e   // cross-midnight
-                : nowMins >= s && nowMins <= e
-            }
-            const readerMatch  = fasce.find(f => f.reader_id === reader_id && inFascia(f))
-            const companyMatch = !readerMatch && fasce.find(f => !f.reader_id && inFascia(f))
-            const fascia = readerMatch || companyMatch
-
-            if (fascia) {
-              const { error: insertErr } = await supabase.from('presenza').insert({
-                company_id: readerCompanyId,
-                tag_uid:    uid,
-                reader_id:  reader_id || null,
-                tipo:       fascia.tipo
-              })
-              if (insertErr) {
-                console.log(insertErr)
-                return reply.send({ success: false })
-              }
-              if (fascia.tipo === 'ENTRATA') onRitardo({ uid, companyId: readerCompanyId })
-              return reply.send({ success: true, tipo: fascia.tipo })
-            }
-          }
-        }
-
-        // SECURITY FIX: Add company_id filter to lastPresence query
-        // Fetch recent scans to determine session state (session-aware, not just last scan tipo)
+        // Fetch recent scans to determine session state (needed for fascia + tipo logic)
         const twoDaysAgo = new Date(Date.now() - 2 * 24 * 3600000).toISOString()
         const { data: recentScans } = await supabase
           .from('presenza')
@@ -145,8 +106,7 @@ export default async function scanRoutes(fastify) {
           .gte('created_at', twoDaysAgo)
           .order('created_at', { ascending: true })
 
-        // Determine session state: track open/closed sessions with 18h stale limit
-        // This prevents "forgot USCITA yesterday → today's entry becomes USCITA" bug
+        // Build session state — track open/closed with 18h stale limit
         let sessionOpen = false
         let lastEntrataTime = null
         for (const s of (recentScans || [])) {
@@ -158,9 +118,51 @@ export default async function scanRoutes(fastify) {
             lastEntrataTime = null
           }
         }
-        // Stale session (>18h since ENTRATA with no USCITA) → treat as outside
         if (sessionOpen && lastEntrataTime && Date.now() - lastEntrataTime > 18 * 3600000) {
           sessionOpen = false
+        }
+
+        // Fasce orarie — smart: reader-specific takes priority; yields to genuine open sessions today
+        {
+          const nowObj  = new Date()
+          const nowMins = nowObj.getHours() * 60 + nowObj.getMinutes()
+          const todayStr = nowObj.toISOString().split('T')[0]
+          const { data: fasce } = await supabase
+            .from('fasce_orarie')
+            .select('tipo, reader_id, ora_inizio, ora_fine')
+            .eq('company_id', readerCompanyId)
+
+          if (fasce?.length > 0) {
+            const mins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+            const inFascia = (f) => {
+              const s = mins(f.ora_inizio), e = mins(f.ora_fine)
+              return e < s
+                ? nowMins >= s || nowMins <= e
+                : nowMins >= s && nowMins <= e
+            }
+            const readerMatch  = fasce.find(f => f.reader_id === reader_id && inFascia(f))
+            const companyMatch = !readerMatch && fasce.find(f => !f.reader_id && inFascia(f))
+            const fascia = readerMatch || companyMatch
+
+            if (fascia) {
+              // If employee entered today and session is still open → let them exit normally
+              const hasEntrataToday = lastEntrataTime && lastEntrataTime.toISOString().startsWith(todayStr)
+              const effectiveTipo = (sessionOpen && hasEntrataToday) ? 'USCITA' : fascia.tipo
+
+              const { error: insertErr } = await supabase.from('presenza').insert({
+                company_id: readerCompanyId,
+                tag_uid:    uid,
+                reader_id:  reader_id || null,
+                tipo:       effectiveTipo
+              })
+              if (insertErr) {
+                console.log(insertErr)
+                return reply.send({ success: false })
+              }
+              if (effectiveTipo === 'ENTRATA') onRitardo({ uid, companyId: readerCompanyId })
+              return reply.send({ success: true, tipo: effectiveTipo })
+            }
+          }
         }
 
         // Shift-aware: if session is closed but employee is in their shift window

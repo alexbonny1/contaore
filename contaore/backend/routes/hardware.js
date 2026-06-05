@@ -49,7 +49,7 @@ export default async function hardwareRoutes(fastify) {
 
       try {
 
-        const { reader_id, company_id, firmware } = request.body
+        const { reader_id, company_id, firmware, sede, nfc_ok, display_ok } = request.body
 
         if (!reader_id) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
@@ -75,9 +75,12 @@ export default async function hardwareRoutes(fastify) {
             .insert({
               company_id,
               reader_id,
-              firmware:    firmware || null,
-              ultimo_ping: new Date(),
-              stato:       'online'
+              firmware_version: firmware || null,
+              sede:             sede     || null,
+              nfc_ok:           nfc_ok   ?? null,
+              display_ok:       display_ok ?? null,
+              ultimo_ping:      new Date(),
+              stato:            'online'
             })
 
           if (error) console.log('insert dispositivo error:', error)
@@ -89,13 +92,18 @@ export default async function hardwareRoutes(fastify) {
             return reply.send({ success: false, error: 'COMPANY_MISMATCH' })
           }
 
+          const updateFields = {
+            firmware_version: firmware || null,
+            ultimo_ping:      new Date(),
+            stato:            'online'
+          }
+          if (sede        !== undefined) updateFields.sede        = sede
+          if (nfc_ok      !== undefined) updateFields.nfc_ok      = nfc_ok
+          if (display_ok  !== undefined) updateFields.display_ok  = display_ok
+
           const { error } = await supabase
             .from('dispositivo')
-            .update({
-              firmware:    firmware || null,
-              ultimo_ping: new Date(),
-              stato:       'online'
-            })
+            .update(updateFields)
             .eq('reader_id', reader_id)
 
           if (error) console.log('update dispositivo error:', error)

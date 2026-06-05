@@ -49,12 +49,19 @@ export default async function adminRoutes(fastify) {
               .eq('company_id', company.id)
               .order('ora_inizio', { ascending: true })
 
+            const { data: devices } = await supabase
+              .from('dispositivo')
+              .select('reader_id, nome, sede, firmware_version, ultimo_ping, nfc_ok, display_ok')
+              .eq('company_id', company.id)
+              .order('reader_id', { ascending: true })
+
             const accountDipendenti = (users || []).filter(u => u.role === 'dipendente').length
 
             return {
               ...company,
               users:              (users || []).filter(u => u.role !== 'dipendente'),
               fasce:              fasce || [],
+              devices:            devices || [],
               account_dipendenti: accountDipendenti
             }
           })
@@ -347,7 +354,7 @@ export default async function adminRoutes(fastify) {
         const { id } = request.params
         const { data, error } = await supabase
           .from('dispositivo')
-          .select('reader_id, nome, sede')
+          .select('reader_id, nome, sede, firmware_version, ultimo_ping, nfc_ok, display_ok')
           .eq('company_id', id)
           .order('reader_id', { ascending: true })
         if (error) {
