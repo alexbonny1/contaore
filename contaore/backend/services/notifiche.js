@@ -466,10 +466,12 @@ export async function checkAlertSuperadmin() {
   const OFFLINE_MINS = settings.offline_minuti ?? 5
   const now = new Date()
 
-  const { data: allDevices } = await supabase
+  // select('*') — resiliente a colonne mancanti (nome, alert_inviato_at)
+  const { data: allDevices, error: devErr } = await supabase
     .from('dispositivo')
-    .select('id, reader_id, nome, company_id, ultimo_ping, alert_inviato_at')
+    .select('*')
 
+  if (devErr) { console.error('checkAlertSuperadmin select error:', devErr.message); return }
   if (!allDevices?.length) return
 
   // Filtra per aziende abilitate (alert_companies vuoto → tutte)
@@ -499,20 +501,25 @@ export async function checkAlertSuperadmin() {
       emailOwner: alertEmail, companyNome: companyNomeStr, nomeReader,
       minutiAssenza: minsSincePing === Infinity ? 999 : Math.round(minsSincePing)
     })
-    await supabase.from('dispositivo')
+    const { error: updErr } = await supabase.from('dispositivo')
       .update({ alert_inviato_at: now.toISOString() })
       .eq('id', device.id)
+    if (updErr) console.error('alert_inviato_at update fallito (migrazione mancante?):', updErr.message)
   }
 }
 
 // ─── scheduler ───────────────────────────────────────────────────────────────
 
 export function startScheduler() {
-  // Every 5 min: assenze + lettori offline + alert superadmin
+  // Every 1 min: alert superadmin lettori offline (reattivo)
+  setInterval(() => {
+    checkAlertSuperadmin().catch(e => console.error('checkAlertSuperadmin:', e))
+  }, 60 * 1000)
+
+  // Every 5 min: assenze + lettori offline (notifiche aziendali)
   setInterval(() => {
     checkAssenti().catch(e => console.error('checkAssenti:', e))
     checkLettoriOffline().catch(e => console.error('checkLettoriOffline:', e))
-    checkAlertSuperadmin().catch(e => console.error('checkAlertSuperadmin:', e))
   }, 5 * 60 * 1000)
 
   // Every 30 min: timbrature mancanti + straordinari + riepiloghi
