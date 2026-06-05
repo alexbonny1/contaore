@@ -54,23 +54,27 @@ function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
 }
 
 function calculateHoursWithBreaks(reads, empShifts) {
-  const byDay = {}
-  reads.forEach(r => {
-    const day = getLocalDateStr(r.created_at)
-    if (!byDay[day]) byDay[day] = []
-    byDay[day].push(r)
+  const sessions = buildSessions(reads)
+  const byDate = {}
+  sessions.forEach(sess => {
+    if (!byDate[sess.date]) byDate[sess.date] = []
+    byDate[sess.date].push(sess)
   })
   let totalMins = 0
-  for (const [day, dayReads] of Object.entries(byDay)) {
-    const sorted    = [...dayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    let dayMins     = calculateHours(sorted) * 60
+  for (const [day, daySessions] of Object.entries(byDate)) {
+    let dayMins     = daySessions.reduce((sum, s) => sum + s.hours, 0) * 60
     const dayName   = GIORNI[new Date(day).getDay()]
     const dayShifts = empShifts.filter(s => s.giorno_settimana === dayName)
     for (const s of dayShifts) {
       if (s.uscita_1 && s.ingresso_2) {
         const bStart = timeToMinutes(s.uscita_1)
         const bEnd   = timeToMinutes(s.ingresso_2)
-        if (bEnd > bStart) dayMins -= computeBreakDeductionMins(sorted, bStart, bEnd)
+        if (bEnd > bStart) {
+          const sorted = daySessions
+            .flatMap(sess => [sess.entrata, sess.uscita].filter(Boolean))
+            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+          dayMins -= computeBreakDeductionMins(sorted, bStart, bEnd)
+        }
       }
     }
     totalMins += Math.max(0, dayMins)
@@ -78,37 +82,70 @@ function calculateHoursWithBreaks(reads, empShifts) {
   return Number((totalMins / 60).toFixed(2))
 }
 
+function shiftDurationMins(ingresso, uscita) {
+  const start = timeToMinutes(ingresso)
+  const end   = timeToMinutes(uscita)
+  return end > start ? end - start : (1440 - start) + end
+}
+
 function shiftExpectedHours(shift) {
   let mins = 0
-  if (shift.ingresso_1 && shift.uscita_1)
-    mins += timeToMinutes(shift.uscita_1) - timeToMinutes(shift.ingresso_1)
-  if (shift.ingresso_2 && shift.uscita_2)
-    mins += timeToMinutes(shift.uscita_2) - timeToMinutes(shift.ingresso_2)
-  return Number((Math.max(0, mins) / 60).toFixed(2))
+  if (shift.ingresso_1 && shift.uscita_1) mins += shiftDurationMins(shift.ingresso_1, shift.uscita_1)
+  if (shift.ingresso_2 && shift.uscita_2) mins += shiftDurationMins(shift.ingresso_2, shift.uscita_2)
+  return Number((mins / 60).toFixed(2))
 }
 
 function getLocalDateStr(dateStr) {
   return new Date(dateStr).toISOString().split('T')[0]
 }
 
-function buildCoppie(sorted) {
-  const coppie = []
-  let i = 0
-  while (i < sorted.length) {
-    if (sorted[i].tipo === 'ENTRATA') {
-      const entrata = sorted[i]
-      const uscita  = sorted[i + 1]?.tipo === 'USCITA' ? sorted[i + 1] : null
-      coppie.push({
-        entrata: new Date(entrata.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-        uscita:  uscita ? new Date(uscita.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null
+function buildSessions(scans) {
+  const sorted = [...scans].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const sessions = []
+  let openEntrata = null
+  for (const scan of sorted) {
+    if (scan.tipo === 'ENTRATA') {
+      if (openEntrata) {
+        sessions.push({
+          entrata: openEntrata, uscita: null,
+          date: getLocalDateStr(openEntrata.created_at),
+          uscita_giorno_dopo: false, hours: 0, incomplete: true
+        })
+      }
+      openEntrata = scan
+    } else if (scan.tipo === 'USCITA' && openEntrata) {
+      const ms = new Date(scan.created_at) - new Date(openEntrata.created_at)
+      sessions.push({
+        entrata: openEntrata, uscita: scan,
+        date: getLocalDateStr(openEntrata.created_at),
+        uscita_giorno_dopo: getLocalDateStr(scan.created_at) !== getLocalDateStr(openEntrata.created_at),
+        hours: ms > 0 ? ms / 3600000 : 0,
+        incomplete: false
       })
-      i += uscita ? 2 : 1
-    } else {
-      coppie.push({ entrata: null, uscita: new Date(sorted[i].created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) })
-      i++
+      openEntrata = null
     }
   }
-  return coppie
+  if (openEntrata) {
+    sessions.push({
+      entrata: openEntrata, uscita: null,
+      date: getLocalDateStr(openEntrata.created_at),
+      uscita_giorno_dopo: false, hours: 0, incomplete: false
+    })
+  }
+  return sessions
+}
+
+function buildCoppie(sessions) {
+  return sessions.map(s => ({
+    entrata:            s.entrata ? new Date(s.entrata.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null,
+    uscita:             s.uscita  ? new Date(s.uscita.created_at).toLocaleTimeString('it-IT',  { hour: '2-digit', minute: '2-digit' }) : null,
+    entrata_id:         s.entrata?.id || null,
+    uscita_id:          s.uscita?.id  || null,
+    entrata_manuale:    s.entrata ? !!s.entrata.manuale : false,
+    uscita_manuale:     s.uscita  ? !!s.uscita.manuale  : false,
+    uscita_giorno_dopo: !!s.uscita_giorno_dopo,
+    incomplete:         !!s.incomplete
+  }))
 }
 
 // ─── controlla se una data cade in un periodo di ferie approvate ──────────────
@@ -117,23 +154,21 @@ function isInFerie(dateStr, ferie = []) {
 }
 
 function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null) {
-  const grouped = {}
-  reads.forEach(r => {
-    const day = getLocalDateStr(r.created_at)
-    if (!grouped[day]) grouped[day] = []
-    grouped[day].push(r)
+
+  const sessions = buildSessions(reads)
+
+  const byDate = {}
+  sessions.forEach(sess => {
+    if (!byDate[sess.date]) byDate[sess.date] = []
+    byDate[sess.date].push(sess)
   })
 
-  // set di date giustificate approvate
   const giustSet = new Set(
-    giustificazioni
-      .filter(g => g.stato === 'approvata')
-      .map(g => g.data)
+    giustificazioni.filter(g => g.stato === 'approvata').map(g => g.data)
   )
 
-  const presentDays = Object.entries(grouped).map(([giorno, items]) => {
-    const sorted    = [...items].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    let oreLavorate = calculateHours(sorted)
+  const presentDays = Object.entries(byDate).map(([giorno, daySessions]) => {
+    let oreLavorate = Number(daySessions.reduce((sum, s) => sum + s.hours, 0).toFixed(2))
     let ore_previste = 0, ore_straordinario = 0, stato = 'presente'
 
     if (turniAttivi && shifts.length > 0) {
@@ -146,19 +181,25 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
         if (s.uscita_1 && s.ingresso_2) {
           const bStart = timeToMinutes(s.uscita_1)
           const bEnd   = timeToMinutes(s.ingresso_2)
-          if (bEnd > bStart) breakDeductMins += computeBreakDeductionMins(sorted, bStart, bEnd)
+          if (bEnd > bStart) {
+            const sorted = daySessions
+              .flatMap(sess => [sess.entrata, sess.uscita].filter(Boolean))
+              .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+            breakDeductMins += computeBreakDeductionMins(sorted, bStart, bEnd)
+          }
         }
       }
       if (breakDeductMins > 0) {
         oreLavorate = Number(Math.max(0, oreLavorate - breakDeductMins / 60).toFixed(2))
       }
 
-      ore_straordinario = Number(Math.max(0, oreLavorate - (ore_previste > 0 ? ore_previste : 0)).toFixed(2))
-      if (ore_previste === 0) ore_straordinario = Number(oreLavorate.toFixed(2))
+      ore_straordinario = ore_previste > 0
+        ? Number(Math.max(0, oreLavorate - ore_previste).toFixed(2))
+        : Number(oreLavorate.toFixed(2))
       if (ore_straordinario > 0) stato = 'straordinario'
     }
 
-    return { giorno, coppie: buildCoppie(sorted), ore_totali: oreLavorate, ore_previste, ore_straordinario, stato, assente: false }
+    return { giorno, coppie: buildCoppie(daySessions), ore_totali: oreLavorate, ore_previste, ore_straordinario, stato, assente: false }
   })
 
   const absentDays = []
@@ -169,7 +210,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
     const start   = dataInizio ? new Date(dataInizio) : new Date()
     const endDate = new Date()
     endDate.setHours(23, 59, 59, 999)
-    const presentSet = new Set(Object.keys(grouped))
+    const presentSet = new Set(sessions.filter(s => s.entrata).map(s => s.date))
     const shiftDays  = new Set(shifts.map(s => s.giorno_settimana))
     const cursor     = new Date(start)
     cursor.setHours(0, 0, 0, 0)
@@ -189,21 +230,19 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
 
         if (isToday) {
           const turnoFinito = dayShifts.some(s => {
+            if (!s.uscita_1) return false
+            if (s.ingresso_1 && timeToMinutes(s.uscita_1) < timeToMinutes(s.ingresso_1)) return false
             const fine = timeToMinutes(s.uscita_1)
             return fine !== null && nowMins > fine
           })
           if (!turnoFinito) { cursor.setDate(cursor.getDate() + 1); continue }
         }
 
-        // ── pausa aziendale: stato = 'ferie' (priorità massima) ──────────
         if (pausaAziendale && pausaAziendale.attiva && dateStr >= pausaAziendale.data_inizio && dateStr <= pausaAziendale.data_fine) {
           absentDays.push({ giorno: dateStr, coppie: [], ore_totali: 0, ore_previste, ore_straordinario: 0, stato: 'ferie', assente: false })
-        }
-        // ── ferie approvate: stato = 'ferie', non conta come assenza ──────
-        else if (isInFerie(dateStr, ferieApprovate)) {
+        } else if (isInFerie(dateStr, ferieApprovate)) {
           absentDays.push({ giorno: dateStr, coppie: [], ore_totali: 0, ore_previste, ore_straordinario: 0, stato: 'ferie', assente: false })
         } else if (giustSet.has(dateStr)) {
-          // ── giustificazione approvata: stato = 'giustificata' ────────────
           absentDays.push({ giorno: dateStr, coppie: [], ore_totali: 0, ore_previste, ore_straordinario: 0, stato: 'giustificata', assente: true })
         } else {
           absentDays.push({ giorno: dateStr, coppie: [], ore_totali: 0, ore_previste, ore_straordinario: 0, stato: 'assente', assente: true })
@@ -300,8 +339,9 @@ export default async function dipendenteRoutes(fastify) {
         const thisMonth = now.toISOString().slice(0, 7)
         const monthReads = (reads || []).filter(r => getLocalDateStr(r.created_at).slice(0, 7) === thisMonth)
 
-        const todayReads = (reads || []).filter(r => getLocalDateStr(r.created_at) === today)
-        const presente   = todayReads.length > 0 && todayReads[todayReads.length - 1].tipo === 'ENTRATA'
+        const empSessions = buildSessions(reads || [])
+        const lastSession = empSessions.length > 0 ? empSessions[empSessions.length - 1] : null
+        const presente    = !!(lastSession && !lastSession.uscita && Date.now() - new Date(lastSession.entrata.created_at) < 18 * 3600000)
         let inPausa = false
         if (presente && employee.turni_attivi) {
           inPausa = (shifts || []).some(s => {

@@ -413,6 +413,9 @@ export default function DipendenteDashboard() {
                                         <span className="text-green-600 font-medium">↑ {c.entrata || "—"}</span>
                                         <span className="text-zinc-300">|</span>
                                         <span className="text-red-500 font-medium">↓ {c.uscita || "ancora dentro"}</span>
+                                        {c.uscita && c.uscita_giorno_dopo && (
+                                          <span className="text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -754,12 +757,15 @@ export default function DipendenteDashboard() {
                     <div key={giorno} className="rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-5 py-4">
                       <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">{giorno}</p>
                       {dayShifts.map(s => (
-                        <div key={s.id} className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300">
-                          <Sun size={14} className="text-zinc-400" />
+                        <div key={s.id} className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300 flex-wrap">
+                          <Sun size={14} className="text-zinc-400 flex-shrink-0" />
                           <span>
                             {s.ingresso_1?.slice(0,5)} – {s.uscita_1?.slice(0,5)}
                             {s.ingresso_2 && ` / ${s.ingresso_2.slice(0,5)} – ${s.uscita_2?.slice(0,5)}`}
                           </span>
+                          {s.uscita_1 && s.ingresso_1 && s.uscita_1 < s.ingresso_1 && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">Notturno</span>
+                          )}
                           {s.turno_nome && <span className="text-xs text-zinc-400">({s.turno_nome})</span>}
                         </div>
                       ))}

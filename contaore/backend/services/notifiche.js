@@ -38,11 +38,17 @@ function calcHours(reads = []) {
   return mins / 60
 }
 
+function shiftDurMins(ingresso, uscita) {
+  const start = timeToMins(ingresso)
+  const end   = timeToMins(uscita)
+  return end > start ? end - start : (1440 - start) + end
+}
+
 function shiftExpHours(s) {
   let m = 0
-  if (s.ingresso_1 && s.uscita_1) m += timeToMins(s.uscita_1) - timeToMins(s.ingresso_1)
-  if (s.ingresso_2 && s.uscita_2) m += timeToMins(s.uscita_2) - timeToMins(s.ingresso_2)
-  return Math.max(0, m) / 60
+  if (s.ingresso_1 && s.uscita_1) m += shiftDurMins(s.ingresso_1, s.uscita_1)
+  if (s.ingresso_2 && s.uscita_2) m += shiftDurMins(s.ingresso_2, s.uscita_2)
+  return m / 60
 }
 
 // ─── dedup — prevent duplicate emails in the same day ────────────────────────
