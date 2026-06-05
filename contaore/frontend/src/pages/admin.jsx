@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Building2, Plus, Trash2, KeyRound,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
-  Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle
+  Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -679,6 +679,58 @@ export default function Admin() {
                         </div>
                       )}
                     </div>
+
+                    {/* LETTORI NFC */}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Lettori NFC</h4>
+                        <span className="text-xs text-zinc-400">{company.devices?.length || 0} dispositivi</span>
+                      </div>
+                      {company.devices && company.devices.length > 0 ? (
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {company.devices.map((device) => {
+                            const lastPing = device.ultimo_ping ? new Date(device.ultimo_ping).getTime() : 0;
+                            const online = Date.now() - lastPing < 120000;
+                            return (
+                              <div key={device.reader_id} className="flex items-start gap-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3">
+                                <div className="mt-0.5 shrink-0">
+                                  <Radio size={14} className={online ? "text-green-500" : "text-zinc-400"} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                                      {device.nome || device.reader_id}
+                                    </p>
+                                    <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${online ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                                      {online ? "ONLINE" : "OFFLINE"}
+                                    </span>
+                                  </div>
+                                  {device.nome && (
+                                    <p className="text-xs text-zinc-400 mt-0.5 font-mono">{device.reader_id}</p>
+                                  )}
+                                  {device.sede && (
+                                    <p className="text-xs text-zinc-400 mt-0.5">Sede: {device.sede}</p>
+                                  )}
+                                  {device.firmware_version && (
+                                    <p className="text-xs text-zinc-400 mt-0.5">FW: {device.firmware_version}</p>
+                                  )}
+                                  {device.ultimo_ping && (
+                                    <p className="text-xs text-zinc-400 mt-0.5">
+                                      Ping: {new Date(device.ultimo_ping).toLocaleString("it-IT")}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-6 text-center">
+                          <p className="text-xs text-zinc-400">Nessun lettore registrato</p>
+                        </div>
+                      )}
+                    </div>
+
                   </div>
                 )}
               </div>
