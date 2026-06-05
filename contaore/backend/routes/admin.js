@@ -475,6 +475,47 @@ export default async function adminRoutes(fastify) {
   )
 
   /*
+    GET / SET IMPOSTAZIONI SUPERADMIN (alert email, ecc.)
+  */
+  fastify.get(
+    '/api/admin/settings',
+    { preHandler: authenticateSuperadmin },
+    async (request, reply) => {
+      try {
+        const { data, error } = await supabase
+          .from('admin_settings').select('*').eq('id', 1).maybeSingle()
+        if (error) return reply.status(500).send({ success: false, error: 'DB_ERROR' })
+        return reply.send({ success: true, settings: data || {} })
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  fastify.put(
+    '/api/admin/settings',
+    { preHandler: authenticateSuperadmin },
+    async (request, reply) => {
+      try {
+        const { alert_email } = request.body
+        const { data, error } = await supabase
+          .from('admin_settings')
+          .upsert({ id: 1, alert_email: alert_email || null, updated_at: new Date() })
+          .select().single()
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ success: false, error: 'DB_ERROR' })
+        }
+        return reply.send({ success: true, settings: data })
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
     SET OTA PENDING PER SINGOLO DISPOSITIVO
   */
   fastify.put(

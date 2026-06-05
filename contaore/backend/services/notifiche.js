@@ -4,6 +4,7 @@ import {
   sendNotificaRitardo,
   sendNotificaStraordinario,
   sendNotificaLettoreOffline,
+  sendNotificaComponenteErrore,
   sendRiepilogoGiornaliero,
   sendRiepilogoSettimanale,
   sendNotificaBadgeNonRiconosciuto,
@@ -428,13 +429,78 @@ export async function checkStraordinarioMensile() {
   }
 }
 
+// ─── superadmin alert: tutti i lettori offline o con componenti in errore ────
+
+async function getAdminAlertEmail() {
+  const { data } = await supabase
+    .from('admin_settings').select('alert_email').eq('id', 1).maybeSingle()
+  return data?.alert_email || null
+}
+
+export async function checkAlertSuperadmin() {
+  const alertEmail = await getAdminAlertEmail()
+  if (!alertEmail) return
+
+  const OFFLINE_MINS = 5
+  const now = new Date()
+
+  const { data: devices } = await supabase
+    .from('dispositivo')
+    .select('id, reader_id, nome, company_id, ultimo_ping, nfc_ok, display_ok, alert_inviato_at')
+
+  if (!devices?.length) return
+
+  const companyIds = [...new Set(devices.map(d => d.company_id))]
+  const { data: companies } = await supabase
+    .from('company').select('id, nome').in('id', companyIds)
+  const companyMap = Object.fromEntries((companies || []).map(c => [c.id, c.nome]))
+
+  for (const device of devices) {
+    const lastPing      = device.ultimo_ping ? new Date(device.ultimo_ping) : null
+    const minsSincePing = lastPing ? (now - lastPing) / 60000 : Infinity
+    const isOffline     = minsSincePing > OFFLINE_MINS
+    const companyNome   = companyMap[device.company_id] || device.company_id
+    const nomeReader    = device.nome || device.reader_id
+
+    if (isOffline) {
+      const alertInviato = device.alert_inviato_at ? new Date(device.alert_inviato_at) : null
+      // Segnala solo se non abbiamo ancora inviato un alert per questo evento offline
+      // (alert_inviato_at < ultimo_ping → il reader è tornato online dopo l'ultimo alert → possiamo rialertare)
+      const shouldAlert = !alertInviato || (lastPing && alertInviato < lastPing)
+      if (shouldAlert) {
+        await sendNotificaLettoreOffline({
+          emailOwner: alertEmail, companyNome, nomeReader,
+          minutiAssenza: minsSincePing === Infinity ? 999 : Math.round(minsSincePing)
+        })
+        await supabase.from('dispositivo')
+          .update({ alert_inviato_at: now.toISOString() })
+          .eq('id', device.id)
+      }
+    } else {
+      // Reader online — controlla componenti
+      const issues = [
+        device.nfc_ok     === false ? 'NFC ERRORE'     : null,
+        device.display_ok === false ? 'Display ERRORE' : null,
+      ].filter(Boolean).join(', ')
+
+      if (issues) {
+        const key = `superadmin:comp:${device.reader_id}:${todayStr()}`
+        if (canSend(key)) {
+          await sendNotificaComponenteErrore({ emailAdmin: alertEmail, companyNome, nomeReader, issues })
+        }
+      }
+    }
+  }
+}
+
 // ─── scheduler ───────────────────────────────────────────────────────────────
 
 export function startScheduler() {
-  // Every 5 min: assenze + lettori offline
+  // Every 5 min: assenze + lettori offline + alert superadmin
   setInterval(() => {
     checkAssenti().catch(e => console.error('checkAssenti:', e))
     checkLettoriOffline().catch(e => console.error('checkLettoriOffline:', e))
+    checkAlertSuperadmin().catch(e => console.error('checkAlertSuperadmin:', e))
   }, 5 * 60 * 1000)
 
   // Every 30 min: timbrature mancanti + straordinari + riepiloghi
