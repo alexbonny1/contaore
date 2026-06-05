@@ -77,7 +77,9 @@ export default function Admin() {
   const [fasciaOraFine, setFasciaOraFine]   = useState("10:00");
   const [fasciaTipo, setFasciaTipo]         = useState("ENTRATA");
   const [fasciaNome, setFasciaNome]         = useState("");
+  const [fasciaReaderId, setFasciaReaderId] = useState("");
   const [savingFascia, setSavingFascia]     = useState(false);
+  const [companyDevices, setCompanyDevices] = useState({}); // companyId → devices[]
 
   const [togglingPortale, setTogglingPortale] = useState(null);
 
@@ -223,6 +225,21 @@ export default function Admin() {
     }
   }
 
+  async function openFasciaForm(companyId) {
+    setShowFasciaForm(showFasciaForm === companyId ? null : companyId);
+    setFasciaReaderId("");
+    if (!companyDevices[companyId]) {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(API_URL + "/api/admin/companies/" + companyId + "/devices", {
+          headers: { Authorization: "Bearer " + token }
+        });
+        const d = await res.json();
+        if (d.success) setCompanyDevices(prev => ({ ...prev, [companyId]: d.devices || [] }));
+      } catch (_) {}
+    }
+  }
+
   async function addFascia(companyId) {
     setSavingFascia(true);
     try {
@@ -230,11 +247,19 @@ export default function Admin() {
       const response = await fetch(API_URL + "/api/admin/companies/" + companyId + "/fasce", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ nome: fasciaNome || null, ora_inizio: fasciaOraInizio, ora_fine: fasciaOraFine, tipo: fasciaTipo })
+        body: JSON.stringify({
+          nome:       fasciaNome || null,
+          ora_inizio: fasciaOraInizio,
+          ora_fine:   fasciaOraFine,
+          tipo:       fasciaTipo,
+          reader_id:  fasciaReaderId || null
+        })
       });
       const data = await response.json();
       if (!data.success) { showToast("Errore salvataggio fascia", "error"); return; }
-      setShowFasciaForm(null); setFasciaNome(""); setFasciaOraInizio("07:00"); setFasciaOraFine("10:00"); setFasciaTipo("ENTRATA");
+      setShowFasciaForm(null);
+      setFasciaNome(""); setFasciaOraInizio("07:00"); setFasciaOraFine("10:00");
+      setFasciaTipo("ENTRATA"); setFasciaReaderId("");
       showToast("Fascia oraria aggiunta");
       loadCompanies();
     } catch (err) {
@@ -552,7 +577,7 @@ export default function Admin() {
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Fasce orarie</h4>
                         <button
-                          onClick={() => setShowFasciaForm(showFasciaForm === company.id ? null : company.id)}
+                          onClick={() => openFasciaForm(company.id)}
                           className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                         >
                           <Plus size={13} /> Aggiungi
@@ -587,6 +612,21 @@ export default function Admin() {
                             </div>
                           </div>
                           <div className="mb-3">
+                            <p className="text-xs text-zinc-400 mb-1">Lettore (opzionale — lascia vuoto per tutti)</p>
+                            <select
+                              value={fasciaReaderId}
+                              onChange={(e) => setFasciaReaderId(e.target.value)}
+                              className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                            >
+                              <option value="">Tutti i lettori</option>
+                              {(companyDevices[company.id] || []).map(d => (
+                                <option key={d.reader_id} value={d.reader_id}>
+                                  {d.nome || d.reader_id}{d.sede ? ` — ${d.sede}` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="mb-3">
                             <p className="text-xs text-zinc-400 mb-1">Nome fascia (opzionale)</p>
                             <input type="text" placeholder={`es. ${fasciaTipo === "ENTRATA" ? "Entrata mattina" : "Uscita pomeriggio"}`}
                               value={fasciaNome} onChange={(e) => setFasciaNome(e.target.value)}
@@ -614,6 +654,11 @@ export default function Admin() {
                                 <div>
                                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{fascia.nome}</p>
                                   <p className="text-xs text-zinc-400 mt-0.5">{fascia.ora_inizio.slice(0, 5)} — {fascia.ora_fine.slice(0, 5)}</p>
+                                  {fascia.reader_id && (
+                                    <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5">
+                                      Lettore: {fascia.reader_id}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">

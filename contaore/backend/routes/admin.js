@@ -337,6 +337,32 @@ export default async function adminRoutes(fastify) {
   )
 
   /*
+    GET DEVICES PER COMPANY (superadmin)
+  */
+  fastify.get(
+    '/api/admin/companies/:id/devices',
+    { preHandler: authenticateSuperadmin },
+    async (request, reply) => {
+      try {
+        const { id } = request.params
+        const { data, error } = await supabase
+          .from('dispositivo')
+          .select('reader_id, nome, sede')
+          .eq('company_id', id)
+          .order('reader_id', { ascending: true })
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ success: false, error: 'DB_ERROR' })
+        }
+        return reply.send({ success: true, devices: data || [] })
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
     GET FASCE ORARIE
   */
   fastify.get(
@@ -375,7 +401,7 @@ export default async function adminRoutes(fastify) {
     async (request, reply) => {
       try {
         const { id } = request.params
-        const { nome, ora_inizio, ora_fine, tipo } = request.body
+        const { nome, ora_inizio, ora_fine, tipo, reader_id } = request.body
 
         if (!ora_inizio || !ora_fine || !tipo) {
           return reply.status(400).send({ success: false, error: 'MISSING_FIELDS' })
@@ -392,7 +418,8 @@ export default async function adminRoutes(fastify) {
             nome:       nome || `${tipo} ${ora_inizio}-${ora_fine}`,
             ora_inizio,
             ora_fine,
-            tipo
+            tipo,
+            reader_id:  reader_id || null
           })
           .select()
           .single()
