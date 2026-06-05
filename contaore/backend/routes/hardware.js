@@ -92,21 +92,28 @@ export default async function hardwareRoutes(fastify) {
             return reply.send({ success: false, error: 'COMPANY_MISMATCH' })
           }
 
-          const updateFields = {
-            firmware_version: firmware || null,
-            ultimo_ping:      new Date(),
-            stato:            'online'
-          }
-          if (sede        !== undefined) updateFields.sede        = sede
-          if (nfc_ok      !== undefined) updateFields.nfc_ok      = nfc_ok
-          if (display_ok  !== undefined) updateFields.display_ok  = display_ok
-
+          // Minimal guaranteed update — ultimo_ping always refreshed
           const { error } = await supabase
             .from('dispositivo')
-            .update(updateFields)
+            .update({ ultimo_ping: new Date(), stato: 'online' })
             .eq('reader_id', reader_id)
 
           if (error) console.log('update dispositivo error:', error)
+
+          // Extended fields — silently ignored if columns don't exist yet (run migration)
+          const extFields = {}
+          if (firmware   !== undefined) extFields.firmware_version = firmware
+          if (sede       !== undefined) extFields.sede              = sede
+          if (nfc_ok     !== undefined) extFields.nfc_ok            = nfc_ok
+          if (display_ok !== undefined) extFields.display_ok        = display_ok
+
+          if (Object.keys(extFields).length > 0) {
+            const { error: extErr } = await supabase
+              .from('dispositivo')
+              .update(extFields)
+              .eq('reader_id', reader_id)
+            if (extErr) console.log('extended fields update skipped (migration pending):', extErr.message)
+          }
 
         }
 
