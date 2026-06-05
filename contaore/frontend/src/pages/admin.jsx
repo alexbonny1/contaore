@@ -82,6 +82,7 @@ export default function Admin() {
   const [companyDevices, setCompanyDevices] = useState({}); // companyId → devices[]
 
   const [togglingPortale, setTogglingPortale] = useState(null);
+  const [now, setNow] = useState(Date.now());
 
   const [otaRelease, setOtaRelease]       = useState(null);
   const [showOtaForm, setShowOtaForm]     = useState(false);
@@ -99,7 +100,30 @@ export default function Admin() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.role !== "superadmin") { navigate("/dashboard"); return; }
     loadCompanies();
+    // Aggiorna i dispositivi silenziosamente ogni 30s
+    const interval = setInterval(() => {
+      refreshDevices();
+      setNow(Date.now());
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  async function refreshDevices() {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(API_URL + "/api/admin/companies", {
+        headers: { Authorization: "Bearer " + token }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCompanies(prev => prev.map(c => {
+          const updated = (data.companies || []).find(u => u.id === c.id);
+          return updated ? { ...c, devices: updated.devices } : c;
+        }));
+        setNow(Date.now());
+      }
+    } catch (_) {}
+  }
 
   async function loadCompanies() {
     try {
@@ -820,7 +844,7 @@ export default function Admin() {
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
                           {company.devices.map((device) => {
                             const lastPing = device.ultimo_ping ? new Date(device.ultimo_ping).getTime() : 0;
-                            const online = Date.now() - lastPing < 120000;
+                            const online = now - lastPing < 120000;
                             return (
                               <div key={device.reader_id} className={`rounded-2xl border px-4 py-3 ${online ? "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" : "bg-red-50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20"}`}>
                                 {/* Riga titolo */}
