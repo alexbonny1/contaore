@@ -86,6 +86,8 @@ export default function Admin() {
 
   const [alertEmail, setAlertEmail]       = useState("");
   const [alertEmailSaved, setAlertEmailSaved] = useState("");
+  const [alertAttivo, setAlertAttivo]     = useState(true);
+  const [offlineMinuti, setOfflineMinuti] = useState(5);
   const [savingAlert, setSavingAlert]     = useState(false);
 
   const [otaRelease, setOtaRelease]       = useState(null);
@@ -280,9 +282,13 @@ export default function Admin() {
       const token = localStorage.getItem("token");
       const res = await fetch(API_URL + "/api/admin/settings", { headers: { Authorization: "Bearer " + token } });
       const d = await res.json();
-      if (d.success && d.settings?.alert_email) {
-        setAlertEmail(d.settings.alert_email);
-        setAlertEmailSaved(d.settings.alert_email);
+      if (d.success && d.settings) {
+        if (d.settings.alert_email) {
+          setAlertEmail(d.settings.alert_email);
+          setAlertEmailSaved(d.settings.alert_email);
+        }
+        if (d.settings.alert_attivo !== undefined && d.settings.alert_attivo !== null) setAlertAttivo(d.settings.alert_attivo);
+        if (d.settings.offline_minuti) setOfflineMinuti(d.settings.offline_minuti);
       }
     } catch (_) {}
   }
@@ -295,12 +301,16 @@ export default function Admin() {
       const res = await fetch(API_URL + "/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ alert_email: alertEmail })
+        body: JSON.stringify({
+          alert_email:    alertEmail,
+          alert_attivo:   alertAttivo,
+          offline_minuti: Number(offlineMinuti) || 5
+        })
       });
       const d = await res.json();
       if (!d.success) { showToast("Errore salvataggio", "error"); return; }
       setAlertEmailSaved(alertEmail);
-      showToast(alertEmail ? `Alert configurati → ${alertEmail}` : "Alert disattivati");
+      showToast(alertEmail && alertAttivo ? `Alert configurati → ${alertEmail}` : "Alert disattivati");
     } catch (_) { showToast("Errore di connessione", "error"); }
     finally { setSavingAlert(false); }
   }
@@ -524,15 +534,27 @@ export default function Admin() {
 
         {/* SEZIONE ALERT EMAIL */}
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Mail size={18} className="text-zinc-500 shrink-0" />
-            <div>
-              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Alert lettori</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Email a cui inviare notifiche se un lettore va offline o ha un componente in errore (qualsiasi azienda)</p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Mail size={18} className="text-zinc-500 shrink-0" />
+              <div>
+                <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Alert lettori</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">Notifiche via email se un lettore di qualsiasi azienda va offline o ha un componente guasto</p>
+              </div>
             </div>
+            {/* Toggle attivo/disattivo */}
+            <button type="button" onClick={() => setAlertAttivo(!alertAttivo)}
+              className="shrink-0" title={alertAttivo ? "Avvisi attivi" : "Avvisi disattivati"}>
+              {alertAttivo
+                ? <ToggleRight size={30} className="text-green-500" />
+                : <ToggleLeft size={30} className="text-zinc-400" />}
+            </button>
           </div>
-          <form onSubmit={saveAlertEmail} className="flex gap-3 items-end">
-            <div className="flex-1">
+
+          <form onSubmit={saveAlertEmail} className="grid gap-3">
+            {/* Email */}
+            <div>
+              <p className="text-xs text-zinc-400 mb-1">Email destinatario avvisi</p>
               <input
                 type="email"
                 value={alertEmail}
@@ -541,23 +563,42 @@ export default function Admin() {
                 className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500"
               />
             </div>
-            <button type="submit" disabled={savingAlert || alertEmail === alertEmailSaved}
-              className="h-10 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-40 shrink-0">
-              {savingAlert ? "..." : "Salva"}
-            </button>
-            {alertEmail && (
-              <button type="button" onClick={() => { setAlertEmail(""); }}
-                className="h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 text-sm shrink-0">
-                <X size={14} />
+
+            {/* Soglia offline */}
+            <div>
+              <p className="text-xs text-zinc-400 mb-1">Avvisa se offline da più di (minuti)</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min="1" max="1440"
+                  value={offlineMinuti}
+                  onChange={e => setOfflineMinuti(e.target.value)}
+                  className="w-28 h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500"
+                />
+                <span className="text-xs text-zinc-400">minuti senza ping → avviso lettore offline</span>
+              </div>
+            </div>
+
+            {/* Nota componenti */}
+            <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-2">
+              <XCircle size={14} className="text-amber-500 shrink-0" />
+              <p className="text-xs text-amber-700 dark:text-amber-400">Guasto componente (NFC / Display) → avviso immediato al primo ping</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              {alertEmailSaved && alertAttivo ? (
+                <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                  Avvisi attivi → {alertEmailSaved}
+                </p>
+              ) : (
+                <p className="text-xs text-zinc-400">{alertAttivo ? "Imposta un'email per ricevere gli avvisi" : "Avvisi disattivati"}</p>
+              )}
+              <button type="submit" disabled={savingAlert}
+                className="h-10 px-5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-40 shrink-0">
+                {savingAlert ? "..." : "Salva"}
               </button>
-            )}
+            </div>
           </form>
-          {alertEmailSaved && (
-            <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-              Alert attivi → {alertEmailSaved}
-            </p>
-          )}
         </div>
 
         {/* SEZIONE OTA */}

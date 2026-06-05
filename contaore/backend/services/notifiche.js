@@ -429,24 +429,37 @@ export async function checkStraordinarioMensile() {
   }
 }
 
-// ─── superadmin alert: tutti i lettori offline o con componenti in errore ────
+// ─── superadmin alert: lettori offline (periodico) + componenti (evento) ─────
 
-async function getAdminAlertEmail() {
+async function getAdminSettings() {
   const { data } = await supabase
-    .from('admin_settings').select('alert_email').eq('id', 1).maybeSingle()
-  return data?.alert_email || null
+    .from('admin_settings').select('*').eq('id', 1).maybeSingle()
+  return data || null
+}
+
+// EVENTO: chiamato dal ping appena un componente passa a errore → avviso SUBITO
+export async function onComponenteErrore({ companyId, nomeReader, issues }) {
+  try {
+    const settings = await getAdminSettings()
+    if (!settings?.alert_email || settings.alert_attivo === false) return
+    const nome = await companyNome(companyId)
+    await sendNotificaComponenteErrore({
+      emailAdmin: settings.alert_email, companyNome: nome, nomeReader, issues
+    })
+  } catch (e) { console.error('onComponenteErrore:', e) }
 }
 
 export async function checkAlertSuperadmin() {
-  const alertEmail = await getAdminAlertEmail()
-  if (!alertEmail) return
+  const settings = await getAdminSettings()
+  if (!settings?.alert_email || settings.alert_attivo === false) return
 
-  const OFFLINE_MINS = 5
+  const alertEmail   = settings.alert_email
+  const OFFLINE_MINS = settings.offline_minuti ?? 5
   const now = new Date()
 
   const { data: devices } = await supabase
     .from('dispositivo')
-    .select('id, reader_id, nome, company_id, ultimo_ping, nfc_ok, display_ok, alert_inviato_at')
+    .select('id, reader_id, nome, company_id, ultimo_ping, alert_inviato_at')
 
   if (!devices?.length) return
 
@@ -459,37 +472,23 @@ export async function checkAlertSuperadmin() {
     const lastPing      = device.ultimo_ping ? new Date(device.ultimo_ping) : null
     const minsSincePing = lastPing ? (now - lastPing) / 60000 : Infinity
     const isOffline     = minsSincePing > OFFLINE_MINS
-    const companyNome   = companyMap[device.company_id] || device.company_id
-    const nomeReader    = device.nome || device.reader_id
+    if (!isOffline) continue
 
-    if (isOffline) {
-      const alertInviato = device.alert_inviato_at ? new Date(device.alert_inviato_at) : null
-      // Segnala solo se non abbiamo ancora inviato un alert per questo evento offline
-      // (alert_inviato_at < ultimo_ping → il reader è tornato online dopo l'ultimo alert → possiamo rialertare)
-      const shouldAlert = !alertInviato || (lastPing && alertInviato < lastPing)
-      if (shouldAlert) {
-        await sendNotificaLettoreOffline({
-          emailOwner: alertEmail, companyNome, nomeReader,
-          minutiAssenza: minsSincePing === Infinity ? 999 : Math.round(minsSincePing)
-        })
-        await supabase.from('dispositivo')
-          .update({ alert_inviato_at: now.toISOString() })
-          .eq('id', device.id)
-      }
-    } else {
-      // Reader online — controlla componenti
-      const issues = [
-        device.nfc_ok     === false ? 'NFC ERRORE'     : null,
-        device.display_ok === false ? 'Display ERRORE' : null,
-      ].filter(Boolean).join(', ')
+    const companyNomeStr = companyMap[device.company_id] || device.company_id
+    const nomeReader     = device.nome || device.reader_id
+    const alertInviato   = device.alert_inviato_at ? new Date(device.alert_inviato_at) : null
+    // Segnala solo se non abbiamo ancora inviato un alert per questo evento offline
+    // (alert_inviato_at < ultimo_ping → il reader è tornato online dopo l'ultimo alert → possiamo rialertare)
+    const shouldAlert = !alertInviato || (lastPing && alertInviato < lastPing)
+    if (!shouldAlert) continue
 
-      if (issues) {
-        const key = `superadmin:comp:${device.reader_id}:${todayStr()}`
-        if (canSend(key)) {
-          await sendNotificaComponenteErrore({ emailAdmin: alertEmail, companyNome, nomeReader, issues })
-        }
-      }
-    }
+    await sendNotificaLettoreOffline({
+      emailOwner: alertEmail, companyNome: companyNomeStr, nomeReader,
+      minutiAssenza: minsSincePing === Infinity ? 999 : Math.round(minsSincePing)
+    })
+    await supabase.from('dispositivo')
+      .update({ alert_inviato_at: now.toISOString() })
+      .eq('id', device.id)
   }
 }
 
