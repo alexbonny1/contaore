@@ -58,7 +58,7 @@ export default async function hardwareRoutes(fastify) {
         // SECURITY FIX: Check if reader exists
         const { data: existingReader, error: readerError } = await supabase
           .from('dispositivo')
-          .select('company_id')
+          .select('company_id, ota_pending')
           .eq('reader_id', reader_id)
           .maybeSingle()
 
@@ -117,18 +117,28 @@ export default async function hardwareRoutes(fastify) {
 
         }
 
-        // Controlla se c'è una release OTA disponibile
-        const { data: otaRelease } = await supabase
-          .from('ota_release')
-          .select('version, url')
-          .eq('attivo', true)
-          .eq('id', 1)
-          .maybeSingle()
+        // OTA solo se il dispositivo ha ota_pending = true
+        let otaPayload = {}
+        if (existingReader?.ota_pending) {
+          const { data: otaRelease } = await supabase
+            .from('ota_release')
+            .select('version, url')
+            .eq('attivo', true)
+            .eq('id', 1)
+            .maybeSingle()
 
-        return reply.send({
-          success: true,
-          ...(otaRelease ? { ota_version: otaRelease.version, ota_url: otaRelease.url } : {})
-        })
+          if (otaRelease) {
+            // Resetta il flag prima di rispondere — evita loop infiniti
+            await supabase
+              .from('dispositivo')
+              .update({ ota_pending: false })
+              .eq('reader_id', reader_id)
+
+            otaPayload = { ota_version: otaRelease.version, ota_url: otaRelease.url }
+          }
+        }
+
+        return reply.send({ success: true, ...otaPayload })
 
       } catch (err) {
 

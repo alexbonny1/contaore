@@ -89,6 +89,7 @@ export default function Admin() {
   const [otaUrl, setOtaUrl]               = useState("");
   const [otaAttivo, setOtaAttivo]         = useState(true);
   const [savingOta, setSavingOta]         = useState(false);
+  const [otaPendingReaders, setOtaPendingReaders] = useState(new Set()); // reader_ids in loading
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -244,6 +245,29 @@ export default function Admin() {
         if (d.release) { setOtaVersion(d.release.version); setOtaUrl(d.release.url); setOtaAttivo(d.release.attivo); }
       }
     } catch (_) {}
+  }
+
+  async function triggerDeviceOta(readerId) {
+    setOtaPendingReaders(prev => new Set([...prev, readerId]));
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/admin/devices/" + encodeURIComponent(readerId) + "/ota-pending", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ pending: true })
+      });
+      const d = await res.json();
+      if (!d.success) { showToast("Errore invio comando OTA", "error"); return; }
+      // Update local state so badge "In attesa" appare subito
+      setCompanies(prev => prev.map(c => ({
+        ...c,
+        devices: (c.devices || []).map(dev =>
+          dev.reader_id === readerId ? { ...dev, ota_pending: true } : dev
+        )
+      })));
+      showToast(`Aggiornamento OTA pianificato per ${readerId} — si aggiornerà al prossimo ping`);
+    } catch (_) { showToast("Errore di connessione", "error"); }
+    finally { setOtaPendingReaders(prev => { const s = new Set(prev); s.delete(readerId); return s; }); }
   }
 
   async function saveOta(e) {
@@ -447,7 +471,7 @@ export default function Admin() {
               <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <Download size={18} /> Aggiornamento Firmware OTA
               </h3>
-              <p className="text-xs text-zinc-500 mt-1">I dispositivi si aggiornano automaticamente al prossimo ping (max 1 minuto)</p>
+              <p className="text-xs text-zinc-500 mt-1">Configura la release, poi usa il bottone "Aggiorna" su ogni lettore per aggiornarlo singolarmente</p>
             </div>
             <button onClick={() => setShowOtaForm(!showOtaForm)} className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
               <Plus size={14} /> {showOtaForm ? "Chiudi" : "Configura"}
@@ -846,6 +870,24 @@ export default function Admin() {
                                   <p className="text-xs text-zinc-400 mt-1.5">
                                     Ultimo ping: {new Date(device.ultimo_ping).toLocaleString("it-IT")}
                                   </p>
+                                )}
+                                {/* OTA pending badge */}
+                                {device.ota_pending && (
+                                  <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+                                    <Download size={11} className="text-amber-500 shrink-0" />
+                                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">OTA in attesa — prossimo ping</span>
+                                  </div>
+                                )}
+                                {/* Bottone Aggiorna — visibile solo se c'è release attiva */}
+                                {otaRelease?.attivo && !device.ota_pending && (
+                                  <button
+                                    onClick={() => triggerDeviceOta(device.reader_id)}
+                                    disabled={otaPendingReaders.has(device.reader_id)}
+                                    className="mt-2 w-full flex items-center justify-center gap-1.5 h-8 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-medium transition-colors disabled:opacity-50"
+                                  >
+                                    <Download size={11} />
+                                    {otaPendingReaders.has(device.reader_id) ? "..." : `Aggiorna → v${otaRelease.version}`}
+                                  </button>
                                 )}
                               </div>
                             );
