@@ -1,5 +1,6 @@
 import { supabase } from '../services/supabase.js'
 import latestReads from '../state/LatestReads.js'
+import { onComponenteErrore } from '../services/notifiche.js'
 
 /*
 ────────────────────────────────────
@@ -58,7 +59,7 @@ export default async function hardwareRoutes(fastify) {
         // SECURITY FIX: Check if reader exists
         const { data: existingReader, error: readerError } = await supabase
           .from('dispositivo')
-          .select('company_id, ota_pending')
+          .select('company_id, ota_pending, nome, nfc_ok, display_ok')
           .eq('reader_id', reader_id)
           .maybeSingle()
 
@@ -113,6 +114,23 @@ export default async function hardwareRoutes(fastify) {
               .update(extFields)
               .eq('reader_id', reader_id)
             if (extErr) console.log('extended fields update skipped (migration pending):', extErr.message)
+          }
+
+          // Rilevamento componente guasto — avviso SUBITO solo sulla transizione ok→errore
+          // (evita spam: scatta una volta quando il componente smette di funzionare)
+          const nfcJustFailed     = nfc_ok     === false && existingReader.nfc_ok     !== false
+          const displayJustFailed = display_ok === false && existingReader.display_ok !== false
+          if (nfcJustFailed || displayJustFailed) {
+            const issues = [
+              nfc_ok     === false ? 'NFC ERRORE'     : null,
+              display_ok === false ? 'Display ERRORE' : null,
+            ].filter(Boolean).join(', ')
+            // fire-and-forget — non blocca la risposta al lettore
+            onComponenteErrore({
+              companyId:  existingReader.company_id,
+              nomeReader: existingReader.nome || reader_id,
+              issues
+            })
           }
 
         }
