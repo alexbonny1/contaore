@@ -117,7 +117,18 @@ export default async function hardwareRoutes(fastify) {
 
         }
 
-        return reply.send({ success: true })
+        // Controlla se c'è una release OTA disponibile
+        const { data: otaRelease } = await supabase
+          .from('ota_release')
+          .select('version, url')
+          .eq('attivo', true)
+          .eq('id', 1)
+          .maybeSingle()
+
+        return reply.send({
+          success: true,
+          ...(otaRelease ? { ota_version: otaRelease.version, ota_url: otaRelease.url } : {})
+        })
 
       } catch (err) {
 

@@ -473,4 +473,61 @@ export default async function adminRoutes(fastify) {
       }
     }
   )
+
+  /*
+    GET OTA RELEASE CORRENTE
+  */
+  fastify.get(
+    '/api/admin/ota',
+    { preHandler: authenticateSuperadmin },
+    async (request, reply) => {
+      try {
+        const { data, error } = await supabase
+          .from('ota_release')
+          .select('*')
+          .eq('id', 1)
+          .maybeSingle()
+        if (error) return reply.status(500).send({ success: false, error: 'DB_ERROR' })
+        return reply.send({ success: true, release: data || null })
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
+    SET OTA RELEASE
+  */
+  fastify.put(
+    '/api/admin/ota',
+    { preHandler: authenticateSuperadmin },
+    async (request, reply) => {
+      try {
+        const { version, url, attivo } = request.body
+        if (!version || !url) {
+          return reply.status(400).send({ success: false, error: 'MISSING_FIELDS' })
+        }
+        const { data, error } = await supabase
+          .from('ota_release')
+          .upsert({
+            id:         1,
+            version,
+            url,
+            attivo:     attivo !== false,
+            updated_at: new Date()
+          })
+          .select()
+          .single()
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ success: false, error: 'DB_ERROR' })
+        }
+        return reply.send({ success: true, release: data })
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+      }
+    }
+  )
 }
