@@ -89,6 +89,13 @@ export default function EmployeeDetails() {
   const [addTime, setAddTime]                   = useState("09:00");
   const [addPresenceSaving, setAddPresenceSaving] = useState(false);
 
+  const [showEditPresence, setShowEditPresence]     = useState(false);
+  const [editPresenceId, setEditPresenceId]         = useState(null);
+  const [editPresenceTipo, setEditPresenceTipo]     = useState("ENTRATA");
+  const [editPresenceDate, setEditPresenceDate]     = useState("");
+  const [editPresenceTime, setEditPresenceTime]     = useState("09:00");
+  const [editPresenceSaving, setEditPresenceSaving] = useState(false);
+
   function showToast(message, type = "success") {
     setToast({ message, type });
   }
@@ -121,6 +128,38 @@ export default function EmployeeDetails() {
       showToast("Errore server", "error");
     } finally {
       setAddPresenceSaving(false);
+    }
+  }
+
+  function startEditPresence(id, tipo, dateStr, timeStr) {
+    setEditPresenceId(id);
+    setEditPresenceTipo(tipo);
+    setEditPresenceDate(dateStr);
+    setEditPresenceTime(timeStr || "09:00");
+    setShowEditPresence(true);
+  }
+
+  async function saveEditPresence() {
+    if (!editPresenceDate || !editPresenceTime) return;
+    setEditPresenceSaving(true);
+    try {
+      const token    = localStorage.getItem("token");
+      const datetime = `${editPresenceDate}T${editPresenceTime}:00`;
+      const res      = await fetch(`${API_URL}/api/presenze/${editPresenceId}`, {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ tipo: editPresenceTipo, datetime })
+      });
+      const data = await res.json();
+      if (!data.success) { showToast(data.error || "Errore", "error"); return; }
+      showToast("Timbratura modificata");
+      setShowEditPresence(false);
+      loadData();
+    } catch (err) {
+      console.log(err);
+      showToast("Errore server", "error");
+    } finally {
+      setEditPresenceSaving(false);
     }
   }
 
@@ -934,7 +973,12 @@ export default function EmployeeDetails() {
                                           <span className={coppia.entrata_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-green-600 dark:text-green-400 font-medium"}>
                                             {coppia.entrata || "—"}
                                           </span>
-                                          {coppia.entrata_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
+                                          {canManagePresence && coppia.entrata_id && (
+                                            <button onClick={(e) => { e.stopPropagation(); startEditPresence(coppia.entrata_id, "ENTRATA", day.giorno, coppia.entrata); }}
+                                              className={`transition-colors flex-shrink-0 ${coppia.entrata_manuale ? "text-amber-400 hover:text-blue-500" : "text-zinc-300 hover:text-blue-500"}`}>
+                                              <Pencil size={10} />
+                                            </button>
+                                          )}
                                           {canManagePresence && coppia.entrata_manuale && coppia.entrata_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.entrata_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
@@ -958,7 +1002,12 @@ export default function EmployeeDetails() {
                                           {coppia.uscita && coppia.uscita_giorno_dopo && (
                                             <span className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
                                           )}
-                                          {coppia.uscita_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
+                                          {canManagePresence && coppia.uscita_id && (
+                                            <button onClick={(e) => { e.stopPropagation(); startEditPresence(coppia.uscita_id, "USCITA", day.giorno, coppia.uscita_giorno_dopo ? null : coppia.uscita); }}
+                                              className={`transition-colors flex-shrink-0 ${coppia.uscita_manuale ? "text-amber-400 hover:text-blue-500" : "text-zinc-300 hover:text-blue-500"}`}>
+                                              <Pencil size={10} />
+                                            </button>
+                                          )}
                                           {canManagePresence && coppia.uscita_manuale && coppia.uscita_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.uscita_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
@@ -1124,6 +1173,90 @@ export default function EmployeeDetails() {
               </button>
               <button
                 onClick={() => setShowAddPresence(false)}
+                className="flex-1 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300"
+              >
+                Annulla
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* MODALE MODIFICA TIMBRATURA — solo se canManagePresence */}
+
+      {showEditPresence && canManagePresence && (
+
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+
+          <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
+
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Modifica timbratura</h3>
+            <p className="text-xs text-zinc-400 mb-5">
+              {editPresenceTipo === "ENTRATA" ? "Entrata" : "Uscita"} — modifica data e orario
+            </p>
+
+            <div className="space-y-4">
+
+              {/* TIPO */}
+              <div>
+                <p className="text-xs text-zinc-400 mb-2">Tipo</p>
+                <div className="flex gap-2">
+                  {["ENTRATA", "USCITA"].map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setEditPresenceTipo(t)}
+                      className={`flex-1 h-10 rounded-2xl text-sm font-medium border transition-all ${
+                        editPresenceTipo === t
+                          ? t === "ENTRATA"
+                            ? "bg-green-500 text-white border-transparent"
+                            : "bg-red-500 text-white border-transparent"
+                          : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                      }`}
+                    >
+                      {t === "ENTRATA" ? "Entrata" : "Uscita"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* DATA + ORA */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-zinc-400 mb-2">Data</p>
+                  <input
+                    type="date"
+                    value={editPresenceDate}
+                    onChange={(e) => setEditPresenceDate(e.target.value)}
+                    className="w-full min-w-0 h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-zinc-400 mb-2">Ora</p>
+                  <input
+                    type="time"
+                    value={editPresenceTime}
+                    onChange={(e) => setEditPresenceTime(e.target.value)}
+                    className="w-full min-w-0 h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={saveEditPresence}
+                disabled={editPresenceSaving || !editPresenceDate || !editPresenceTime}
+                className="flex-1 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
+              >
+                {editPresenceSaving ? "Salvataggio..." : "Salva"}
+              </button>
+              <button
+                onClick={() => setShowEditPresence(false)}
                 className="flex-1 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300"
               >
                 Annulla

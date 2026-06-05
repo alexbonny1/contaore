@@ -173,6 +173,78 @@ export default async function requestsRoutes(fastify) {
     }
   )
 
+  /*
+    POST /api/requests/modify-scan
+    Il dipendente richiede la modifica di una timbratura esistente
+    body: { presenza_id, nuovo_datetime, motivo }
+  */
+  fastify.post(
+    '/api/requests/modify-scan',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const { dipendente_id, company_id } = request.user
+        const { presenza_id, nuovo_datetime, motivo } = request.body
+
+        if (!presenza_id || !nuovo_datetime || !motivo?.trim()) {
+          return reply.status(400).send({ error: 'MISSING_FIELDS' })
+        }
+
+        if (motivo.trim().length < 3) {
+          return reply.status(400).send({ error: 'MOTIVO_TOO_SHORT' })
+        }
+
+        // verifica che la presenza appartenga all'azienda e al dipendente
+        const { data: presenza } = await supabase
+          .from('presenza')
+          .select('id, tipo, created_at, tag_uid')
+          .eq('id', presenza_id)
+          .eq('company_id', company_id)
+          .maybeSingle()
+
+        if (!presenza) return reply.status(404).send({ error: 'PRESENCE_NOT_FOUND' })
+
+        const { data: emp } = await supabase
+          .from('dipendenti').select('badge_uid').eq('id', dipendente_id).maybeSingle()
+
+        if (!emp || emp.badge_uid !== presenza.tag_uid) {
+          return reply.status(403).send({ error: 'NOT_YOUR_SCAN' })
+        }
+
+        const dt   = new Date(nuovo_datetime)
+        const data = dt.toISOString().split('T')[0]
+        const ora  = dt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+
+        const { data: result, error } = await supabase
+          .from('richieste_timbratura')
+          .insert({
+            company_id,
+            dipendente_id,
+            data,
+            tipo:           presenza.tipo,
+            ora_uscita:     ora,
+            motivo:         motivo.trim(),
+            stato:          'in_attesa',
+            presenza_id,
+            nuovo_datetime: dt.toISOString()
+          })
+          .select()
+          .single()
+
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        return reply.send({ success: true, richiesta: result })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
   // ══════════════════════════════════════════════════════════════════════════
   //  TITOLARE - GESTIONE RICHIESTE DI TIMBRATURA
   // ══════════════════════════════════════════════════════════════════════════
@@ -245,25 +317,38 @@ export default async function requestsRoutes(fastify) {
           })
         }
 
-        // Crea la timbratura (ENTRATA o USCITA in base al tipo della richiesta)
-        const tipoTimbratura = richiesta.tipo || 'USCITA'
-        const [ora, minuti] = richiesta.ora_uscita.split(':')
-        const dataCompleta = new Date(`${richiesta.data}T${ora}:${minuti}:00`)
+        // Modifica timbratura esistente (richiesta di modifica) o aggiunge nuova (timbratura mancata)
+        if (richiesta.presenza_id) {
+          const { error: updateError } = await supabase
+            .from('presenza')
+            .update({ created_at: richiesta.nuovo_datetime })
+            .eq('id', richiesta.presenza_id)
+            .eq('company_id', company_id)
 
-        const { data: newPresenza, error: presenzaError } = await supabase
-          .from('presenza')
-          .insert({
-            company_id,
-            tag_uid: richiesta.dipendenti.badge_uid,
-            tipo: tipoTimbratura,
-            created_at: dataCompleta.toISOString()
-          })
-          .select()
-          .single()
+          if (updateError) {
+            console.log(updateError)
+            return reply.status(500).send({ error: 'PRESENCE_UPDATE_ERROR' })
+          }
+        } else {
+          const tipoTimbratura = richiesta.tipo || 'USCITA'
+          const [ora, minuti] = richiesta.ora_uscita.split(':')
+          const dataCompleta = new Date(`${richiesta.data}T${ora}:${minuti}:00`)
 
-        if (presenzaError) {
-          console.log(presenzaError)
-          return reply.status(500).send({ error: 'PRESENCE_INSERT_ERROR' })
+          const { error: presenzaError } = await supabase
+            .from('presenza')
+            .insert({
+              company_id,
+              tag_uid: richiesta.dipendenti.badge_uid,
+              tipo: tipoTimbratura,
+              created_at: dataCompleta.toISOString()
+            })
+            .select()
+            .single()
+
+          if (presenzaError) {
+            console.log(presenzaError)
+            return reply.status(500).send({ error: 'PRESENCE_INSERT_ERROR' })
+          }
         }
 
         // Aggiorna lo stato della richiesta

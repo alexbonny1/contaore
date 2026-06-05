@@ -952,6 +952,54 @@ export default async function employeeRoutes(fastify) {
     }
   )
 
+  // ─── EDIT SINGLE PRESENCE (direct, owner only, no-email employees) ──────────
+  fastify.put(
+    '/api/presenze/:id',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      try {
+        const { id }    = request.params
+        const companyId = request.user.company_id
+        const { tipo, datetime } = request.body
+
+        if (!datetime || (tipo && !['ENTRATA', 'USCITA'].includes(tipo))) {
+          return reply.send({ success: false, error: 'INVALID_PARAMS' })
+        }
+
+        const { data: company } = await supabase
+          .from('company').select('portale_dipendenti').eq('id', companyId).single()
+
+        const { data: presenza } = await supabase
+          .from('presenza').select('id, tag_uid').eq('id', id).eq('company_id', companyId).single()
+
+        if (!presenza) return reply.send({ success: false, error: 'NOT_FOUND' })
+
+        if (company?.portale_dipendenti) {
+          const { data: emp } = await supabase
+            .from('dipendenti').select('email')
+            .eq('badge_uid', presenza.tag_uid).eq('company_id', companyId).maybeSingle()
+          if (emp?.email) return reply.send({ success: false, error: 'PORTAL_ACTIVE' })
+        }
+
+        const updates = { created_at: new Date(datetime).toISOString() }
+        if (tipo) updates.tipo = tipo
+
+        const { data, error } = await supabase
+          .from('presenza').update(updates).eq('id', id).select().single()
+
+        if (error) {
+          console.log(error)
+          return reply.send({ success: false, error: error.message })
+        }
+
+        return reply.send({ success: true, presenza: data })
+      } catch (err) {
+        console.log(err)
+        return reply.send({ success: false })
+      }
+    }
+  )
+
   fastify.get(
     '/api/company/info',
     { preHandler: authenticate },

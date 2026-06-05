@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   Clock, CheckCircle, XCircle, ChevronDown, ChevronUp,
   Calendar, AlertCircle, FileText, Sun, Moon,
-  LayoutDashboard, Users, CreditCard, Radio, Trash2, Bell
+  LayoutDashboard, Users, CreditCard, Radio, Trash2, Bell, Pencil
 } from 'lucide-react'
 import { API_URL } from '../api'
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
@@ -252,10 +252,12 @@ export default function Requests() {
               const dipName  = req.dipendenti ? `${req.dipendenti.nome} ${req.dipendenti.cognome}` : 'N/A'
 
               const typeInfo = req.type === 'ferie'
-                ? { icon: Calendar,    label: 'Ferie',          color: 'bg-blue-500/15 text-blue-600 dark:text-blue-300' }
+                ? { icon: Calendar,    label: 'Ferie',             color: 'bg-blue-500/15 text-blue-600 dark:text-blue-300' }
                 : req.type === 'giustificazioni'
-                ? { icon: AlertCircle, label: 'Giustificazione', color: 'bg-purple-500/15 text-purple-600 dark:text-purple-300' }
-                : { icon: Clock,       label: 'Timbratura',      color: 'bg-orange-500/15 text-orange-600 dark:text-orange-300' }
+                ? { icon: AlertCircle, label: 'Giustificazione',   color: 'bg-purple-500/15 text-purple-600 dark:text-purple-300' }
+                : req.presenza_id
+                ? { icon: Pencil,      label: 'Modifica timbratura', color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300' }
+                : { icon: Clock,       label: 'Timbratura mancante', color: 'bg-orange-500/15 text-orange-600 dark:text-orange-300' }
               const TypeIcon = typeInfo.icon
 
               return (
@@ -274,9 +276,10 @@ export default function Requests() {
                       </div>
                       <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">{typeInfo.label}</p>
                       <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">
-                        {req.type === 'ferie'         && `${fmt(req.data_inizio)} → ${fmt(req.data_fine)}`}
-                        {req.type === 'giustificazioni'&& fmt(req.data)}
-                        {req.type === 'timbratura'    && `${fmt(req.data)} — ${req.tipo || 'USCITA'} ore ${req.ora_uscita}`}
+                        {req.type === 'ferie'          && `${fmt(req.data_inizio)} → ${fmt(req.data_fine)}`}
+                        {req.type === 'giustificazioni' && fmt(req.data)}
+                        {req.type === 'timbratura' && req.presenza_id  && `${fmt(req.data)} — ${req.tipo} → ${req.ora_uscita}`}
+                        {req.type === 'timbratura' && !req.presenza_id && `${fmt(req.data)} — ${req.tipo || 'USCITA'} ore ${req.ora_uscita}`}
                       </p>
                     </div>
                     <div className="flex-shrink-0 text-zinc-400">

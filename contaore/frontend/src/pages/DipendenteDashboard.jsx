@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Clock, Calendar, AlertCircle, CheckCircle2,
   XCircle, ChevronDown, ChevronUp, Send, LogOut, Lock,
-  Sun, TrendingUp, UserCheck, Umbrella
+  Sun, TrendingUp, UserCheck, Umbrella, Pencil
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -85,6 +85,13 @@ export default function DipendenteDashboard() {
   const [savingMissingScan, setSavingMissingScan] = useState(false);
   const [showMissingScanForm, setShowMissingScanForm] = useState(false);
   const [missingScans, setMissingScans]           = useState([]);
+
+  // form richiesta modifica timbratura
+  const [showModifyModal, setShowModifyModal]         = useState(false);
+  const [modifyPresenzaId, setModifyPresenzaId]       = useState(null);
+  const [modifyDatetime, setModifyDatetime]           = useState("");
+  const [modifyMotivo, setModifyMotivo]               = useState("");
+  const [savingModify, setSavingModify]               = useState(false);
 
   function showToast(msg, type = "success") { setToast({ message: msg, type }); }
 
@@ -206,6 +213,43 @@ export default function DipendenteDashboard() {
       loadMissingScans();
     } catch (err) { console.log(err); showToast("Errore server", "error"); }
     finally { setSavingMissingScan(false); }
+  }
+
+  // ── apri modal modifica timbratura ───────────────────────────────────────
+  function openModifyModal(presenzaId, dateStr, timeStr) {
+    setModifyPresenzaId(presenzaId);
+    setModifyDatetime(timeStr && dateStr ? `${dateStr}T${timeStr}` : (dateStr ? `${dateStr}T09:00` : ""));
+    setModifyMotivo("");
+    setShowModifyModal(true);
+  }
+
+  // ── invia richiesta modifica timbratura ───────────────────────────────────
+  async function inviaModificaScan(e) {
+    e.preventDefault();
+    if (!modifyPresenzaId || !modifyDatetime) { showToast("Compila tutti i campi", "error"); return; }
+    if (!modifyMotivo.trim() || modifyMotivo.trim().length < 3) { showToast("Motivo troppo breve", "error"); return; }
+    setSavingModify(true);
+    try {
+      const res  = await fetch(API_URL + "/api/requests/modify-scan", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({
+          presenza_id:    modifyPresenzaId,
+          nuovo_datetime: new Date(modifyDatetime).toISOString(),
+          motivo:         modifyMotivo.trim()
+        })
+      });
+      const json = await res.json();
+      if (!json.success) { showToast(json.error || "Errore", "error"); return; }
+      showToast("Richiesta inviata");
+      setShowModifyModal(false);
+      loadMissingScans();
+    } catch (err) {
+      console.log(err);
+      showToast("Errore server", "error");
+    } finally {
+      setSavingModify(false);
+    }
   }
 
   // ── cancella richiesta timbratura mancata ────────────────────────────────
@@ -411,10 +455,22 @@ export default function DipendenteDashboard() {
                                     {g.coppie.map((c, i) => (
                                       <div key={i} className="flex items-center gap-2 text-xs text-zinc-500">
                                         <span className="text-green-600 font-medium">↑ {c.entrata || "—"}</span>
+                                        {c.entrata_id && (
+                                          <button onClick={() => openModifyModal(c.entrata_id, g.giorno, c.entrata)}
+                                            className="text-zinc-300 hover:text-blue-500 transition-colors flex-shrink-0">
+                                            <Pencil size={10} />
+                                          </button>
+                                        )}
                                         <span className="text-zinc-300">|</span>
                                         <span className="text-red-500 font-medium">↓ {c.uscita || "ancora dentro"}</span>
                                         {c.uscita && c.uscita_giorno_dopo && (
                                           <span className="text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
+                                        )}
+                                        {c.uscita_id && (
+                                          <button onClick={() => openModifyModal(c.uscita_id, g.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
+                                            className="text-zinc-300 hover:text-blue-500 transition-colors flex-shrink-0">
+                                            <Pencil size={10} />
+                                          </button>
                                         )}
                                       </div>
                                     ))}
@@ -782,6 +838,49 @@ export default function DipendenteDashboard() {
 
     {showChangePassword && (
       <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+    )}
+
+    {/* MODAL MODIFICA TIMBRATURA */}
+    {showModifyModal && (
+      <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Richiesta modifica</h3>
+          <p className="text-xs text-zinc-400 mb-5">Indica il nuovo orario corretto e il motivo della modifica</p>
+          <form onSubmit={inviaModificaScan} className="space-y-4">
+            <div>
+              <p className="text-xs text-zinc-400 mb-2">Nuovo orario</p>
+              <input
+                type="datetime-local"
+                value={modifyDatetime}
+                onChange={e => setModifyDatetime(e.target.value)}
+                required
+                className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-zinc-400 mb-2">Motivo</p>
+              <textarea
+                rows={2}
+                placeholder="Es: Ho timbrato l'orario sbagliato"
+                value={modifyMotivo}
+                onChange={e => setModifyMotivo(e.target.value)}
+                required
+                className="w-full px-3 py-2 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none resize-none"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="submit" disabled={savingModify}
+                className="flex-1 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                <Send size={14} /> {savingModify ? "Invio..." : "Invia richiesta"}
+              </button>
+              <button type="button" onClick={() => setShowModifyModal(false)}
+                className="flex-1 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300">
+                Annulla
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     )}
   </>
   );
