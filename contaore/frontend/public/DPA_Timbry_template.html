@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Accordo sul Trattamento dei Dati — Timbry</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #000; background: #fff; line-height: 1.6; padding: 40px; max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 16pt; text-align: center; margin: 20px 0 8px; }
+    h2 { font-size: 12pt; font-weight: bold; margin: 24px 0 8px; }
+    h3 { font-size: 11pt; font-weight: bold; margin: 16px 0 6px; }
+    p { margin-bottom: 10px; text-align: justify; }
+    ul, ol { padding-left: 20px; margin-bottom: 10px; }
+    li { margin-bottom: 4px; }
+    .centro { text-align: center; }
+    .firma { margin-top: 40px; display: flex; gap: 60px; justify-content: space-between; }
+    .firma-box { flex: 1; border-top: 1px solid #000; padding-top: 8px; font-size: 10pt; }
+    .placeholder { font-style: italic; color: #555; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+
+<h1>ACCORDO SUL TRATTAMENTO DEI DATI PERSONALI</h1>
+<h1 style="font-size:13pt;">(Data Processing Agreement — art. 28 Reg. UE 2016/679)</h1>
+
+<p class="centro" style="margin-top:16px;">Il presente accordo («DPA») è stipulato tra:</p>
+
+<p style="margin-top:12px;">
+  <strong>TITOLARE DEL TRATTAMENTO:</strong><br>
+  Ragione sociale: <span class="placeholder">[RAGIONE SOCIALE AZIENDA CLIENTE]</span><br>
+  Sede legale: <span class="placeholder">[INDIRIZZO]</span><br>
+  P.IVA / C.F.: <span class="placeholder">[PARTITA IVA]</span><br>
+  Rappresentante legale: <span class="placeholder">[NOME COGNOME]</span><br>
+  di seguito «Titolare» o «Azienda Cliente»;
+</p>
+
+<p style="margin-top:12px;">
+  <strong>RESPONSABILE DEL TRATTAMENTO:</strong><br>
+  Ragione sociale: <span class="placeholder">[RAGIONE SOCIALE TIMBRY]</span><br>
+  Sede legale: <span class="placeholder">[INDIRIZZO TIMBRY]</span><br>
+  P.IVA / C.F.: <span class="placeholder">[PARTITA IVA TIMBRY]</span><br>
+  Rappresentante legale: <span class="placeholder">[NOME COGNOME]</span><br>
+  di seguito «Responsabile» o «Timbry».
+</p>
+
+<h2>PREMESSE</h2>
+<p>Il Titolare utilizza il servizio SaaS Timbry per la rilevazione automatica delle presenze dei propri dipendenti tramite badge NFC. Nell’ambito di tale servizio, il Responsabile tratterà dati personali per conto del Titolare. Le Parti intendono regolare tale trattamento in conformità al Regolamento UE 2016/679 (di seguito «GDPR») e al D.Lgs. 196/2003, come modificato dal D.Lgs. 101/2018.</p>
+
+<h2>Art. 1 — Oggetto e durata del trattamento</h2>
+<p>Il presente DPA regola il trattamento di dati personali effettuato dal Responsabile per conto del Titolare nell’ambito dell’erogazione del Servizio Timbry. Il DPA ha la stessa durata del contratto di servizio e cessa automaticamente alla sua risoluzione.</p>
+
+<h2>Art. 2 — Natura, finalità e tipologia del trattamento</h2>
+<p><strong>Natura:</strong> raccolta, registrazione, organizzazione, conservazione, consultazione, elaborazione, trasmissione e cancellazione di dati personali.</p>
+<p><strong>Finalità:</strong> rilevazione automatica delle presenze dei dipendenti del Titolare tramite badge NFC; gestione turni e ferie; generazione di report per adempimenti giuslavoristici.</p>
+<p><strong>Tipologia di dati personali trattati:</strong></p>
+<ul>
+  <li>Dati anagrafici: nome, cognome;</li>
+  <li>Dati di contatto: indirizzo e-mail (se fornito);</li>
+  <li>Identificativo badge NFC (UID);</li>
+  <li>Dati di presenza: timestamp di entrata/uscita, ore lavorate, straordinari, giorni di assenza;</li>
+  <li>Credenziali di accesso al portale dipendenti (se attivo): username, password cifrata (hash bcrypt).</li>
+</ul>
+<p><strong>Categorie di interessati:</strong> dipendenti e collaboratori del Titolare.</p>
+
+<h2>Art. 3 — Obblighi del Responsabile del trattamento</h2>
+<p>Il Responsabile si impegna a:</p>
+<ol>
+  <li>Trattare i dati personali esclusivamente su istruzione documentata del Titolare, salvo obblighi di legge;</li>
+  <li>Garantire che le persone autorizzate al trattamento si siano impegnate alla riservatezza;</li>
+  <li>Adottare tutte le misure di sicurezza tecnica e organizzativa appropriate ai sensi dell’art. 32 GDPR, tra cui: cifratura delle comunicazioni (HTTPS/TLS), hashing delle password (bcrypt), accesso limitato ai dati, autenticazione JWT;</li>
+  <li>Non ricorrere a un ulteriore responsabile (sub-responsabile) senza previa autorizzazione scritta del Titolare, salvo i sub-responsabili già autorizzati elencati all’art. 5;</li>
+  <li>Assistere il Titolare, con misure tecniche e organizzative adeguate, nel rispondere alle richieste di esercizio dei diritti degli interessati (artt. 15–22 GDPR);</li>
+  <li>Assistere il Titolare nel garantire il rispetto degli obblighi di cui agli artt. 32–36 GDPR (sicurezza, notifica violazioni, DPIA);</li>
+  <li>Cancellare o restituire al Titolare tutti i dati personali al termine della prestazione dei servizi, a scelta del Titolare, e cancellare le copie esistenti, salvo che il diritto dell’Unione o degli Stati membri preveda la conservazione dei dati;</li>
+  <li>Mettere a disposizione del Titolare tutte le informazioni necessarie per dimostrare il rispetto degli obblighi del presente articolo, consentire le attività di revisione, comprese le ispezioni, realizzate dal Titolare o da un altro soggetto da questi incaricato.</li>
+</ol>
+
+<h2>Art. 4 — Istruzioni del Titolare</h2>
+<p>Le istruzioni per il trattamento sono quelle definite dalle funzionalità del Servizio Timbry come descritto nei Termini e Condizioni di Servizio, nella documentazione tecnica e nel presente DPA. Il Titolare può impartire ulteriori istruzioni scritte, che il Responsabile applicherà nei limiti del possibile tecnico.</p>
+
+<h2>Art. 5 — Sub-responsabili autorizzati</h2>
+<p>Il Titolare autorizza il Responsabile ad avvalersi dei seguenti sub-responsabili:</p>
+<ul>
+  <li><strong>Supabase Inc.</strong> (USA) — hosting del database PostgreSQL e autenticazione; infrastruttura in data center UE (Francoforte, Germania); trasferimento extra-UE su base SCCs (Clausole Contrattuali Standard);</li>
+  <li><strong>Provider e-mail transazionale</strong> (da indicare) — invio credenziali di accesso.</li>
+</ul>
+<p>Il Responsabile informerà il Titolare di qualsiasi modifica prevista riguardante l’aggiunta o la sostituzione di sub-responsabili, dando al Titolare la possibilità di opporsi a tali modifiche.</p>
+
+<h2>Art. 6 — Misure di sicurezza</h2>
+<p>Il Responsabile adotta le seguenti misure di sicurezza:</p>
+<ul>
+  <li>Cifratura delle comunicazioni client-server (HTTPS / TLS 1.2+);</li>
+  <li>Hashing delle password con bcrypt (work factor ≥ 10);</li>
+  <li>Autenticazione tramite JWT con scadenza;</li>
+  <li>Isolamento dei dati per azienda (company_id su ogni query);</li>
+  <li>Accesso al database ristretto tramite Row Level Security (Supabase RLS);</li>
+  <li>Backup automatici del database gestiti da Supabase.</li>
+</ul>
+
+<h2>Art. 7 — Notifica delle violazioni dei dati</h2>
+<p>In caso di violazione dei dati personali (data breach) ai sensi dell’art. 4 n. 12 GDPR, il Responsabile ne dà notifica al Titolare senza ingiustificato ritardo e comunque entro 36 ore dalla scoperta, con le informazioni di cui all’art. 33, par. 3, GDPR.</p>
+
+<h2>Art. 8 — Cancellazione e restituzione dei dati</h2>
+<p>Alla cessazione del contratto di servizio, il Titolare ha 30 giorni di tempo per esportare i propri dati tramite le funzioni di esportazione PDF/Excel disponibili in piattaforma. Decorso tale termine, il Responsabile provvederà alla cancellazione definitiva di tutti i dati del Titolare dai propri server e da quelli dei sub-responsabili, salvo obblighi di conservazione previsti dalla legge.</p>
+
+<h2>Art. 9 — Legge applicabile e foro</h2>
+<p>Il presente DPA è regolato dalla legge italiana. Per qualsiasi controversia derivante dal presente accordo, le Parti concordano la competenza esclusiva del foro di <span class="placeholder">[CITTÀ SEDE LEGALE TIMBRY]</span>.</p>
+
+<h2>Art. 10 — Disposizioni finali</h2>
+<p>Il presente DPA sostituisce qualsiasi precedente accordo sul trattamento dei dati tra le Parti relativo al Servizio Timbry. Eventuali modifiche devono essere concordate per iscritto.</p>
+
+<div class="firma">
+  <div class="firma-box">
+    <p><strong>Il Titolare del trattamento</strong></p>
+    <p class="placeholder">[Luogo e data]</p>
+    <p style="margin-top:30px;">____________________________</p>
+    <p class="placeholder">[Firma e timbro]</p>
+  </div>
+  <div class="firma-box">
+    <p><strong>Il Responsabile del trattamento (Timbry)</strong></p>
+    <p class="placeholder">[Luogo e data]</p>
+    <p style="margin-top:30px;">____________________________</p>
+    <p class="placeholder">[Firma e timbro]</p>
+  </div>
+</div>
+
+</body>
+</html>
