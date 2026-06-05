@@ -43,7 +43,6 @@ export default function Login() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // ── redirect in base al ruolo ──────────────────────────────────────
       if (data.user.role === "superadmin") {
         window.location.href = "/admin";
       } else if (data.user.role === "dipendente") {

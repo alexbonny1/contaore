@@ -13,7 +13,7 @@ import EmployeeDetails     from "./pages/EmployeeDetails";
 import Badges              from "./pages/Badges";
 import Readers             from "./pages/Readers";
 import Admin               from "./pages/admin";
-import DipendenteDashboard from "./pages/DipendenteDashboard";   // ← nuovo
+import DipendenteDashboard from "./pages/DipendenteDashboard";
 import ResetPassword       from "./pages/ResetPassword";
 import Notifications       from "./pages/Notifications";
 import PrivacyPolicy       from "./pages/PrivacyPolicy";
