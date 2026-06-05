@@ -133,16 +133,25 @@ function buildSessions(scans) {
         })
       }
       openEntrata = scan
-    } else if (scan.tipo === 'USCITA' && openEntrata) {
-      const ms = new Date(scan.created_at) - new Date(openEntrata.created_at)
-      sessions.push({
-        entrata: openEntrata, uscita: scan,
-        date: getLocalDateStr(openEntrata.created_at),
-        uscita_giorno_dopo: getLocalDateStr(scan.created_at) !== getLocalDateStr(openEntrata.created_at),
-        hours: ms > 0 ? ms / 3600000 : 0,
-        incomplete: false
-      })
-      openEntrata = null
+    } else if (scan.tipo === 'USCITA') {
+      if (openEntrata) {
+        const ms = new Date(scan.created_at) - new Date(openEntrata.created_at)
+        sessions.push({
+          entrata: openEntrata, uscita: scan,
+          date: getLocalDateStr(openEntrata.created_at),
+          uscita_giorno_dopo: getLocalDateStr(scan.created_at) !== getLocalDateStr(openEntrata.created_at),
+          hours: ms > 0 ? ms / 3600000 : 0,
+          incomplete: false
+        })
+        openEntrata = null
+      } else {
+        // Lone USCITA: entrata dimenticata — resa visibile invece di essere ignorata
+        sessions.push({
+          entrata: null, uscita: scan,
+          date: getLocalDateStr(scan.created_at),
+          uscita_giorno_dopo: false, hours: 0, incomplete: true
+        })
+      }
     }
   }
   if (openEntrata) {
@@ -272,8 +281,8 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
     const endDate = new Date()
     endDate.setHours(23, 59, 59, 999)
 
-    // Days with at least one ENTRATA (session attributed to ENTRATA date)
-    const presentSet = new Set(sessions.filter(s => s.entrata).map(s => s.date))
+    // Days with at least one scan (ENTRATA or lone USCITA)
+    const presentSet = new Set(sessions.filter(s => s.entrata || s.uscita).map(s => s.date))
     const shiftDays  = new Set(shifts.map(s => s.giorno_settimana))
 
     const cursor = new Date(start)

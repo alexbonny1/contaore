@@ -3,6 +3,9 @@ import { authenticate } from '../middleware/auth.js'
 import latestReads      from '../state/LatestReads.js'
 import { onBadgeNonRiconosciuto, onRitardo } from '../services/notifiche.js'
 
+const GIORNI_IT = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
+function timeMins(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+
 export default async function scanRoutes(fastify) {
 
   /*
@@ -120,6 +123,46 @@ export default async function scanRoutes(fastify) {
         // Stale session (>18h since ENTRATA with no USCITA) → treat as outside
         if (sessionOpen && lastEntrataTime && Date.now() - lastEntrataTime > 18 * 3600000) {
           sessionOpen = false
+        }
+
+        // Shift-aware: if session is closed but employee is in their shift window
+        // and has NO ENTRATA today → they probably forgot to enter → force USCITA
+        if (!sessionOpen) {
+          try {
+            const { data: emp } = await supabase
+              .from('dipendenti').select('id, turni_attivi')
+              .eq('badge_uid', uid).eq('company_id', readerCompanyId).maybeSingle()
+
+            if (emp?.turni_attivi) {
+              const now     = new Date()
+              const dayName = GIORNI_IT[now.getDay()]
+              const nowMins = now.getHours() * 60 + now.getMinutes()
+              const todayStr = now.toISOString().split('T')[0]
+
+              const { data: turni } = await supabase
+                .from('turni').select('ingresso_1, uscita_1, ingresso_2, uscita_2')
+                .eq('dipendente_id', emp.id).eq('giorno_settimana', dayName)
+
+              if (turni?.length > 0) {
+                const hasEntrataToday = (recentScans || []).some(s =>
+                  s.tipo === 'ENTRATA' && s.created_at.startsWith(todayStr)
+                )
+
+                if (!hasEntrataToday) {
+                  const inShiftWindow = turni.some(t => {
+                    if (!t.ingresso_1 || !t.uscita_1) return false
+                    const ingr  = timeMins(t.ingresso_1)
+                    const usc1  = timeMins(t.uscita_1)
+                    const usc2  = t.uscita_2 ? timeMins(t.uscita_2) : null
+                    const inF1  = nowMins >= ingr  && nowMins <= usc1 + 120
+                    const inF2  = usc2 && t.ingresso_2 && nowMins >= timeMins(t.ingresso_2) && nowMins <= usc2 + 120
+                    return inF1 || inF2
+                  })
+                  if (inShiftWindow) sessionOpen = true // no ENTRATA today + in shift window → USCITA
+                }
+              }
+            }
+          } catch (_) { /* shift lookup failed, use session-based tipo */ }
         }
 
         const tipo = sessionOpen ? 'USCITA' : 'ENTRATA'
