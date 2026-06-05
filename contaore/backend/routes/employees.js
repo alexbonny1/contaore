@@ -188,6 +188,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
     let ore_previste      = 0
     let ore_straordinario = 0
     let stato             = 'presente'
+    let ritardo_minuti    = 0
 
     if (turniAttivi && shifts.length > 0) {
       const dayName   = getDayName(giorno)
@@ -216,7 +217,34 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       } else {
         ore_straordinario = Number(oreLavorate.toFixed(2))
       }
-      if (ore_straordinario > 0) stato = 'straordinario'
+
+      // stato hierarchy
+      if (ore_straordinario > 0) {
+        stato = 'straordinario'
+      } else if (ore_previste > 0 && oreLavorate > 0 && oreLavorate < ore_previste) {
+        stato = 'parziale'
+      }
+
+      // ritardo: first ENTRATA vs ingresso_1 of earliest shift
+      if (ore_previste > 0) {
+        const firstEntrata = daySessions
+          .filter(s => s.entrata)
+          .map(s => s.entrata)
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0]
+        const firstShift = dayShifts
+          .filter(s => s.ingresso_1)
+          .sort((a, b) => timeToMinutes(a.ingresso_1) - timeToMinutes(b.ingresso_1))[0]
+        if (firstEntrata && firstShift) {
+          const expectedMins = timeToMinutes(firstShift.ingresso_1)
+          const dt           = new Date(firstEntrata.created_at)
+          const actualMins   = dt.getHours() * 60 + dt.getMinutes()
+          const delay        = actualMins - expectedMins
+          if (delay > 5) {
+            ritardo_minuti = delay
+            if (stato === 'presente' || stato === 'parziale') stato = 'ritardo'
+          }
+        }
+      }
     }
 
     return {
@@ -226,6 +254,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       ore_previste,
       ore_straordinario,
       stato,
+      ritardo_minuti,
       assente:          false
     }
   })

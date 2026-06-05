@@ -11,14 +11,16 @@ import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function statoBadge(stato) {
+function statoBadge(stato, ritardoMinuti = 0) {
   switch (stato) {
-    case "presente":     return { label: "Presente",    color: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" };
-    case "assente":      return { label: "Assente",     color: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300" };
-    case "straordinario":return { label: "Straordinario",color: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300" };
-    case "ferie":        return { label: "Ferie",       color: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" };
-    case "giustificata": return { label: "Giustificata",color: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300" };
-    default:             return { label: stato,         color: "bg-zinc-100 text-zinc-600" };
+    case "presente":      return { label: "Presente",      color: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" };
+    case "assente":       return { label: "Assente",       color: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300" };
+    case "straordinario": return { label: "Straordinario", color: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300" };
+    case "parziale":      return { label: "Parziale",      color: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300" };
+    case "ritardo":       return { label: ritardoMinuti > 0 ? `Ritardo ${ritardoMinuti}m` : "Ritardo", color: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300" };
+    case "ferie":         return { label: "Ferie",         color: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" };
+    case "giustificata":  return { label: "Giustificata",  color: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300" };
+    default:              return { label: stato,           color: "bg-zinc-100 text-zinc-600" };
   }
 }
 
@@ -426,7 +428,7 @@ export default function DipendenteDashboard() {
                   {isOpen && (
                     <div className="border-t border-zinc-100 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800">
                       {giorni.map(g => {
-                        const { label, color } = statoBadge(g.stato);
+                        const { label, color } = statoBadge(g.stato, g.ritardo_minuti);
                         const isDayOpen = openDay === g.giorno;
                         // controlla se esiste già una giustificazione per questo giorno
                         const giust = giustificazioni.find(j => j.data === g.giorno);

@@ -94,20 +94,35 @@ export default async function scanRoutes(fastify) {
         }
 
         // SECURITY FIX: Add company_id filter to lastPresence query
-        const { data: lastPresence } = await supabase
+        // Fetch recent scans to determine session state (session-aware, not just last scan tipo)
+        const twoDaysAgo = new Date(Date.now() - 2 * 24 * 3600000).toISOString()
+        const { data: recentScans } = await supabase
           .from('presenza')
-          .select('*')
+          .select('tipo, created_at')
           .eq('tag_uid', uid)
           .eq('company_id', readerCompanyId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+          .gte('created_at', twoDaysAgo)
+          .order('created_at', { ascending: true })
 
-        let tipo = 'USCITA'
-
-        if (lastPresence && lastPresence.tipo === 'USCITA') {
-          tipo = 'ENTRATA'
+        // Determine session state: track open/closed sessions with 18h stale limit
+        // This prevents "forgot USCITA yesterday → today's entry becomes USCITA" bug
+        let sessionOpen = false
+        let lastEntrataTime = null
+        for (const s of (recentScans || [])) {
+          if (s.tipo === 'ENTRATA') {
+            sessionOpen = true
+            lastEntrataTime = new Date(s.created_at)
+          } else if (s.tipo === 'USCITA' && sessionOpen) {
+            sessionOpen = false
+            lastEntrataTime = null
+          }
         }
+        // Stale session (>18h since ENTRATA with no USCITA) → treat as outside
+        if (sessionOpen && lastEntrataTime && Date.now() - lastEntrataTime > 18 * 3600000) {
+          sessionOpen = false
+        }
+
+        const tipo = sessionOpen ? 'USCITA' : 'ENTRATA'
 
         const { error } = await supabase
           .from('presenza')
