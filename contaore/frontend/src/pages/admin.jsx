@@ -88,6 +88,7 @@ export default function Admin() {
   const [alertEmailSaved, setAlertEmailSaved] = useState("");
   const [alertAttivo, setAlertAttivo]     = useState(true);
   const [offlineMinuti, setOfflineMinuti] = useState(5);
+  const [alertCompanies, setAlertCompanies] = useState([]); // [] = tutte le aziende
   const [savingAlert, setSavingAlert]     = useState(false);
 
   const [otaRelease, setOtaRelease]       = useState(null);
@@ -106,11 +107,11 @@ export default function Admin() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.role !== "superadmin") { navigate("/dashboard"); return; }
     loadCompanies();
-    // Aggiorna i dispositivi silenziosamente ogni 30s
+    // Aggiorna i dispositivi silenziosamente ogni 5s
     const interval = setInterval(() => {
       refreshDevices();
       setNow(Date.now());
-    }, 30000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -289,8 +290,15 @@ export default function Admin() {
         }
         if (d.settings.alert_attivo !== undefined && d.settings.alert_attivo !== null) setAlertAttivo(d.settings.alert_attivo);
         if (d.settings.offline_minuti) setOfflineMinuti(d.settings.offline_minuti);
+        if (Array.isArray(d.settings.alert_companies)) setAlertCompanies(d.settings.alert_companies);
       }
     } catch (_) {}
+  }
+
+  function toggleAlertCompany(companyId) {
+    setAlertCompanies(prev =>
+      prev.includes(companyId) ? prev.filter(id => id !== companyId) : [...prev, companyId]
+    );
   }
 
   async function saveAlertEmail(e) {
@@ -302,9 +310,10 @@ export default function Admin() {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({
-          alert_email:    alertEmail,
-          alert_attivo:   alertAttivo,
-          offline_minuti: Number(offlineMinuti) || 5
+          alert_email:     alertEmail,
+          alert_attivo:    alertAttivo,
+          offline_minuti:  Number(offlineMinuti) || 5,
+          alert_companies: alertCompanies
         })
       });
       const d = await res.json();
@@ -576,6 +585,41 @@ export default function Admin() {
                 />
                 <span className="text-xs text-zinc-400">minuti senza ping → avviso lettore offline</span>
               </div>
+            </div>
+
+            {/* Selezione aziende */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs text-zinc-400">Aziende da monitorare</p>
+                <button type="button"
+                  onClick={() => setAlertCompanies([])}
+                  className={`text-xs font-medium ${alertCompanies.length === 0 ? "text-blue-500" : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"}`}>
+                  {alertCompanies.length === 0 ? "✓ Tutte le aziende" : "Seleziona tutte"}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {companies.map(c => {
+                  const selected = alertCompanies.includes(c.id);
+                  // Se alertCompanies è vuoto, sono tutte attive implicitamente
+                  const active = alertCompanies.length === 0 || selected;
+                  return (
+                    <button key={c.id} type="button"
+                      onClick={() => toggleAlertCompany(c.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        active
+                          ? "bg-blue-500 text-white border-blue-500"
+                          : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                      }`}>
+                      {active && <span className="mr-1">✓</span>}{c.nome}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-zinc-400 mt-1.5">
+                {alertCompanies.length === 0
+                  ? "Ricevi avvisi da tutte le aziende"
+                  : `Ricevi avvisi solo da ${alertCompanies.length} azienda/e selezionata/e`}
+              </p>
             </div>
 
             {/* Nota componenti */}

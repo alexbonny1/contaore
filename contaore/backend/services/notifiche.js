@@ -437,11 +437,20 @@ async function getAdminSettings() {
   return data || null
 }
 
+// Helper: true se l'azienda è abilitata agli alert
+// alert_companies vuoto/null → tutte le aziende
+function companyAlertEnabled(settings, companyId) {
+  const list = settings.alert_companies
+  if (!Array.isArray(list) || list.length === 0) return true
+  return list.includes(companyId)
+}
+
 // EVENTO: chiamato dal ping appena un componente passa a errore → avviso SUBITO
 export async function onComponenteErrore({ companyId, nomeReader, issues }) {
   try {
     const settings = await getAdminSettings()
     if (!settings?.alert_email || settings.alert_attivo === false) return
+    if (!companyAlertEnabled(settings, companyId)) return
     const nome = await companyNome(companyId)
     await sendNotificaComponenteErrore({
       emailAdmin: settings.alert_email, companyNome: nome, nomeReader, issues
@@ -457,11 +466,15 @@ export async function checkAlertSuperadmin() {
   const OFFLINE_MINS = settings.offline_minuti ?? 5
   const now = new Date()
 
-  const { data: devices } = await supabase
+  const { data: allDevices } = await supabase
     .from('dispositivo')
     .select('id, reader_id, nome, company_id, ultimo_ping, alert_inviato_at')
 
-  if (!devices?.length) return
+  if (!allDevices?.length) return
+
+  // Filtra per aziende abilitate (alert_companies vuoto → tutte)
+  const devices = allDevices.filter(d => companyAlertEnabled(settings, d.company_id))
+  if (!devices.length) return
 
   const companyIds = [...new Set(devices.map(d => d.company_id))]
   const { data: companies } = await supabase

@@ -498,11 +498,12 @@ export default async function adminRoutes(fastify) {
     { preHandler: authenticateSuperadmin },
     async (request, reply) => {
       try {
-        const { alert_email, offline_minuti, alert_attivo } = request.body
+        const { alert_email, offline_minuti, alert_attivo, alert_companies } = request.body
         const row = { id: 1, updated_at: new Date() }
-        if (alert_email    !== undefined) row.alert_email    = alert_email || null
-        if (offline_minuti !== undefined) row.offline_minuti = offline_minuti
-        if (alert_attivo   !== undefined) row.alert_attivo   = alert_attivo
+        if (alert_email     !== undefined) row.alert_email     = alert_email || null
+        if (offline_minuti  !== undefined) row.offline_minuti  = offline_minuti
+        if (alert_attivo    !== undefined) row.alert_attivo    = alert_attivo
+        if (alert_companies !== undefined) row.alert_companies = Array.isArray(alert_companies) ? alert_companies : []
         const { data, error } = await supabase
           .from('admin_settings')
           .upsert(row)
