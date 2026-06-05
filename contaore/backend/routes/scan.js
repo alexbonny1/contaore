@@ -71,7 +71,7 @@ export default async function scanRoutes(fastify) {
 
         if (tagError || !tag) {
           // Fire-and-forget notification for unknown badge
-          onBadgeNonRiconosciuto({ uid, readerId, companyId: readerCompanyId })
+          onBadgeNonRiconosciuto({ uid, reader_id, companyId: readerCompanyId })
           return reply.send({
             success: false,
             error: 'TAG_COMPANY_MISMATCH'
@@ -94,6 +94,44 @@ export default async function scanRoutes(fastify) {
 
         if (latestPresence) {
           return reply.send({ success: true, ignored: true })
+        }
+
+        // Fasce orarie: reader-specific or company-wide forced tipo
+        {
+          const nowObj  = new Date()
+          const nowMins = nowObj.getHours() * 60 + nowObj.getMinutes()
+          const { data: fasce } = await supabase
+            .from('fasce_orarie')
+            .select('tipo, reader_id, ora_inizio, ora_fine')
+            .eq('company_id', readerCompanyId)
+
+          if (fasce?.length > 0) {
+            const mins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+            const inFascia = (f) => {
+              const s = mins(f.ora_inizio), e = mins(f.ora_fine)
+              return e < s
+                ? nowMins >= s || nowMins <= e   // cross-midnight
+                : nowMins >= s && nowMins <= e
+            }
+            const readerMatch  = fasce.find(f => f.reader_id === reader_id && inFascia(f))
+            const companyMatch = !readerMatch && fasce.find(f => !f.reader_id && inFascia(f))
+            const fascia = readerMatch || companyMatch
+
+            if (fascia) {
+              const { error: insertErr } = await supabase.from('presenza').insert({
+                company_id: readerCompanyId,
+                tag_uid:    uid,
+                reader_id:  reader_id || null,
+                tipo:       fascia.tipo
+              })
+              if (insertErr) {
+                console.log(insertErr)
+                return reply.send({ success: false })
+              }
+              if (fascia.tipo === 'ENTRATA') onRitardo({ uid, companyId: readerCompanyId })
+              return reply.send({ success: true, tipo: fascia.tipo })
+            }
+          }
         }
 
         // SECURITY FIX: Add company_id filter to lastPresence query
