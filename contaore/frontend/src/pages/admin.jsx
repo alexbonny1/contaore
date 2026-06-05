@@ -692,34 +692,55 @@ export default function Admin() {
                             const lastPing = device.ultimo_ping ? new Date(device.ultimo_ping).getTime() : 0;
                             const online = Date.now() - lastPing < 120000;
                             return (
-                              <div key={device.reader_id} className="flex items-start gap-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-                                <div className="mt-0.5 shrink-0">
-                                  <Radio size={14} className={online ? "text-green-500" : "text-zinc-400"} />
+                              <div key={device.reader_id} className={`rounded-2xl border px-4 py-3 ${online ? "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" : "bg-red-50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20"}`}>
+                                {/* Riga titolo */}
+                                <div className="flex items-center gap-2 flex-wrap mb-2">
+                                  <Radio size={13} className={online ? "text-green-500 shrink-0" : "text-red-400 shrink-0"} />
+                                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                                    {device.nome || device.reader_id}
+                                  </p>
+                                  <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${online ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"}`}>
+                                    {online ? "ONLINE" : "OFFLINE"}
+                                  </span>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                                      {device.nome || device.reader_id}
-                                    </p>
-                                    <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${online ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
-                                      {online ? "ONLINE" : "OFFLINE"}
+                                {/* Dettagli */}
+                                {device.nome && (
+                                  <p className="text-xs text-zinc-400 font-mono mb-1">{device.reader_id}</p>
+                                )}
+                                {device.sede && (
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">📍 {device.sede}</p>
+                                )}
+                                {device.firmware_version && (
+                                  <p className="text-xs text-zinc-400 mb-2">FW {device.firmware_version}</p>
+                                )}
+                                {/* Componenti */}
+                                {(device.nfc_ok !== null && device.nfc_ok !== undefined) || (device.display_ok !== null && device.display_ok !== undefined) ? (
+                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {(device.nfc_ok !== null && device.nfc_ok !== undefined) && (
+                                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium ${device.nfc_ok ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${device.nfc_ok ? "bg-green-500" : "bg-red-500"}`} />
+                                        NFC {device.nfc_ok ? "OK" : "ERRORE"}
+                                      </span>
+                                    )}
+                                    {(device.display_ok !== null && device.display_ok !== undefined) && (
+                                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium ${device.display_ok ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${device.display_ok ? "bg-green-500" : "bg-red-500"}`} />
+                                        Display {device.display_ok ? "OK" : "ERRORE"}
+                                      </span>
+                                    )}
+                                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                      ESP OK
                                     </span>
                                   </div>
-                                  {device.nome && (
-                                    <p className="text-xs text-zinc-400 mt-0.5 font-mono">{device.reader_id}</p>
-                                  )}
-                                  {device.sede && (
-                                    <p className="text-xs text-zinc-400 mt-0.5">Sede: {device.sede}</p>
-                                  )}
-                                  {device.firmware_version && (
-                                    <p className="text-xs text-zinc-400 mt-0.5">FW: {device.firmware_version}</p>
-                                  )}
-                                  {device.ultimo_ping && (
-                                    <p className="text-xs text-zinc-400 mt-0.5">
-                                      Ping: {new Date(device.ultimo_ping).toLocaleString("it-IT")}
-                                    </p>
-                                  )}
-                                </div>
+                                ) : online ? (
+                                  <p className="text-xs text-zinc-400 italic">Componenti: FW non aggiornato</p>
+                                ) : null}
+                                {device.ultimo_ping && (
+                                  <p className="text-xs text-zinc-400 mt-1.5">
+                                    Ultimo ping: {new Date(device.ultimo_ping).toLocaleString("it-IT")}
+                                  </p>
+                                )}
                               </div>
                             );
                           })}

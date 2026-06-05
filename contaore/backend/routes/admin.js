@@ -51,7 +51,7 @@ export default async function adminRoutes(fastify) {
 
             const { data: devices } = await supabase
               .from('dispositivo')
-              .select('reader_id, nome, sede, firmware_version, ultimo_ping')
+              .select('reader_id, nome, sede, firmware_version, ultimo_ping, nfc_ok, display_ok')
               .eq('company_id', company.id)
               .order('reader_id', { ascending: true })
 
@@ -354,7 +354,7 @@ export default async function adminRoutes(fastify) {
         const { id } = request.params
         const { data, error } = await supabase
           .from('dispositivo')
-          .select('reader_id, nome, sede')
+          .select('reader_id, nome, sede, firmware_version, ultimo_ping, nfc_ok, display_ok')
           .eq('company_id', id)
           .order('reader_id', { ascending: true })
         if (error) {
