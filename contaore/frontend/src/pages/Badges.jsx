@@ -79,6 +79,7 @@ export default function Badges() {
   const [editingId, setEditingId]           = useState(null);
   const [editForm, setEditForm]             = useState({ nome: '', cognome: '', email: '' });
   const [editSaving, setEditSaving]         = useState(false);
+  const [informativaConsegnata, setInformativaConsegnata] = useState(false);
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -168,9 +169,10 @@ export default function Badges() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           uid,
-          employee_name:    employeeName,
-          employee_cognome: employeeCognome,
-          employee_email:   employeeEmail.trim() || undefined
+          employee_name:          employeeName,
+          employee_cognome:       employeeCognome,
+          employee_email:         employeeEmail.trim() || undefined,
+          informativa_consegnata: informativaConsegnata
         })
       });
 
@@ -192,6 +194,7 @@ export default function Badges() {
       showToast(successMsg);
       setUid(""); setEmployeeName(""); setEmployeeCognome(""); setEmployeeEmail("");
       setWaitingScan(false);
+      setInformativaConsegnata(false);
       loadBadges();
 
     } catch (err) {
@@ -373,6 +376,19 @@ export default function Badges() {
                     />
                   </div>
                 )}
+
+                <label className="flex items-start gap-2.5 cursor-pointer sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={informativaConsegnata}
+                    onChange={e => setInformativaConsegnata(e.target.checked)}
+                    className="mt-0.5 flex-shrink-0 h-4 w-4 accent-zinc-900"
+                    required
+                  />
+                  <span className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Ho consegnato l'<strong>informativa privacy</strong> (art. 13 GDPR) al dipendente.
+                  </span>
+                </label>
 
                 <button type="submit"
                   className={`h-10 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium ${portaleAttivo ? "sm:col-span-2" : ""}`}>

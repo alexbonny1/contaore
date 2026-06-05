@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../api";
+import LegalFooter from "../components/LegalFooter";
 
 export default function Login() {
 
@@ -60,7 +61,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen bg-zinc-100 flex flex-col items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200 p-6 sm:p-8">
 
         <div className="mb-6 sm:mb-8">
@@ -109,6 +110,7 @@ export default function Login() {
         </form>
 
       </div>
+      <LegalFooter />
     </div>
   );
 }

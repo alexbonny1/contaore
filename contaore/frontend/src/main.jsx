@@ -16,6 +16,8 @@ import Admin               from "./pages/admin";
 import DipendenteDashboard from "./pages/DipendenteDashboard";   // ← nuovo
 import ResetPassword       from "./pages/ResetPassword";
 import Notifications       from "./pages/Notifications";
+import PrivacyPolicy       from "./pages/PrivacyPolicy";
+import CookiePolicy        from "./pages/CookiePolicy";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -38,6 +40,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
         <Route path="/" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
 
         {/* superadmin */}
         <Route path="/admin" element={

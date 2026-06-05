@@ -18,7 +18,7 @@ function buildUsername(nome, cognome) {
   const normalize = s =>
     s.toLowerCase()
      .normalize('NFD')
-     .replace(/[\u0300-\u036f]/g, '')  // rimuove accenti
+     .replace(/[̀-ͯ]/g, '')  // rimuove accenti
      .replace(/[^a-z0-9]/g, '')        // solo lettere e numeri
   return `${normalize(nome)}.${normalize(cognome)}`
 }
@@ -86,7 +86,8 @@ export default async function tagRoutes(fastify) {
           uid,
           employee_name,
           employee_cognome,
-          employee_email     // opzionale, richiesto se portale attivo
+          employee_email,        // opzionale, richiesto se portale attivo
+          informativa_consegnata // booleano: conferma consegna art. 13 GDPR
         } = request.body
 
         const companyId = request.user.company_id
@@ -136,14 +137,17 @@ export default async function tagRoutes(fastify) {
         }
 
         // ── crea dipendente ───────────────────────────────────────────────
+        const informativaFlag = informativa_consegnata === true
         const { data: employee, error: employeeError } = await supabase
           .from('dipendenti')
           .insert({
-            company_id: companyId,
-            nome:       employee_name,
-            cognome:    employee_cognome || '-',
-            badge_uid:  uid,
-            email:      employee_email || null
+            company_id:               companyId,
+            nome:                     employee_name,
+            cognome:                  employee_cognome || '-',
+            badge_uid:                uid,
+            email:                    employee_email || null,
+            informativa_consegnata:   informativaFlag,
+            informativa_consegnata_il: informativaFlag ? new Date().toISOString() : null
           })
           .select()
           .single()
