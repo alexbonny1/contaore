@@ -84,6 +84,10 @@ export default function Admin() {
   const [togglingPortale, setTogglingPortale] = useState(null);
   const [now, setNow] = useState(Date.now());
 
+  const [alertEmail, setAlertEmail]       = useState("");
+  const [alertEmailSaved, setAlertEmailSaved] = useState("");
+  const [savingAlert, setSavingAlert]     = useState(false);
+
   const [otaRelease, setOtaRelease]       = useState(null);
   const [showOtaForm, setShowOtaForm]     = useState(false);
   const [otaVersion, setOtaVersion]       = useState("");
@@ -257,7 +261,7 @@ export default function Admin() {
     }
   }
 
-  useEffect(() => { loadOta(); }, []);
+  useEffect(() => { loadOta(); loadSettings(); }, []);
 
   async function loadOta() {
     try {
@@ -269,6 +273,36 @@ export default function Admin() {
         if (d.release) { setOtaVersion(d.release.version); setOtaUrl(d.release.url); setOtaAttivo(d.release.attivo); }
       }
     } catch (_) {}
+  }
+
+  async function loadSettings() {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/admin/settings", { headers: { Authorization: "Bearer " + token } });
+      const d = await res.json();
+      if (d.success && d.settings?.alert_email) {
+        setAlertEmail(d.settings.alert_email);
+        setAlertEmailSaved(d.settings.alert_email);
+      }
+    } catch (_) {}
+  }
+
+  async function saveAlertEmail(e) {
+    e.preventDefault();
+    setSavingAlert(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ alert_email: alertEmail })
+      });
+      const d = await res.json();
+      if (!d.success) { showToast("Errore salvataggio", "error"); return; }
+      setAlertEmailSaved(alertEmail);
+      showToast(alertEmail ? `Alert configurati → ${alertEmail}` : "Alert disattivati");
+    } catch (_) { showToast("Errore di connessione", "error"); }
+    finally { setSavingAlert(false); }
   }
 
   async function triggerDeviceOta(readerId) {
@@ -487,6 +521,44 @@ export default function Admin() {
             </form>
           </div>
         )}
+
+        {/* SEZIONE ALERT EMAIL */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Mail size={18} className="text-zinc-500 shrink-0" />
+            <div>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Alert lettori</h3>
+              <p className="text-xs text-zinc-500 mt-0.5">Email a cui inviare notifiche se un lettore va offline o ha un componente in errore (qualsiasi azienda)</p>
+            </div>
+          </div>
+          <form onSubmit={saveAlertEmail} className="flex gap-3 items-end">
+            <div className="flex-1">
+              <input
+                type="email"
+                value={alertEmail}
+                onChange={e => setAlertEmail(e.target.value)}
+                placeholder="es. admin@timbry.it"
+                className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500"
+              />
+            </div>
+            <button type="submit" disabled={savingAlert || alertEmail === alertEmailSaved}
+              className="h-10 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-40 shrink-0">
+              {savingAlert ? "..." : "Salva"}
+            </button>
+            {alertEmail && (
+              <button type="button" onClick={() => { setAlertEmail(""); }}
+                className="h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 text-sm shrink-0">
+                <X size={14} />
+              </button>
+            )}
+          </form>
+          {alertEmailSaved && (
+            <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+              Alert attivi → {alertEmailSaved}
+            </p>
+          )}
+        </div>
 
         {/* SEZIONE OTA */}
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-8">

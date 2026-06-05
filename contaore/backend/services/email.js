@@ -301,6 +301,21 @@ export async function sendNotificaLettoreOffline({ emailOwner, companyNome, nome
   return send(emailOwner, `Lettore offline: ${nomeReader} — ${companyNome}`, html)
 }
 
+// ─── Superadmin: componente lettore in errore ────────────────────────────────
+
+export async function sendNotificaComponenteErrore({ emailAdmin, companyNome, nomeReader, issues }) {
+  const html = emailWrap(companyNome, '⚠️ Componente lettore in errore', '#d97706', `
+    <p style="font-size:14px;color:#444;margin:0 0 12px;line-height:1.6;">
+      Il lettore <strong>${nomeReader}</strong> ha riportato un errore hardware:
+    </p>
+    <div style="background:#fef3c7;border-radius:6px;padding:12px 16px;margin-bottom:12px;">
+      <p style="margin:0;font-family:monospace;font-size:14px;font-weight:600;color:#92400e;">${issues}</p>
+    </div>
+    <p style="font-size:13px;color:#888;">Controlla il lettore fisicamente — potrebbe richiedere manutenzione.</p>
+  `)
+  return send(emailAdmin, `Errore componente: ${nomeReader} — ${companyNome}`, html)
+}
+
 // ─── Badge non riconosciuto ───────────────────────────────────────────────────
 
 export async function sendNotificaBadgeNonRiconosciuto({ emailOwner, companyNome, uid, readerId }) {
