@@ -475,6 +475,36 @@ export default async function adminRoutes(fastify) {
   )
 
   /*
+    SET OTA PENDING PER SINGOLO DISPOSITIVO
+  */
+  fastify.put(
+    '/api/admin/devices/:readerId/ota-pending',
+    { preHandler: authenticateSuperadmin },
+    async (request, reply) => {
+      try {
+        const { readerId } = request.params
+        const { pending }  = request.body
+
+        const { error } = await supabase
+          .from('dispositivo')
+          .update({ ota_pending: pending === true })
+          .eq('reader_id', readerId)
+
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ success: false, error: 'UPDATE_ERROR' })
+        }
+
+        return reply.send({ success: true })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
     GET OTA RELEASE CORRENTE
   */
   fastify.get(
