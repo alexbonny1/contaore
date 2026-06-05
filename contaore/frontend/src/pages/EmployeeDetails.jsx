@@ -421,6 +421,9 @@ export default function EmployeeDetails() {
     );
   }
 
+  // Portal active but employee has no email → they can't use the portal anyway
+  const canManagePresence = !portaleAttivo || !employee?.email;
+
   if (!employee) {
     return (
       <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
@@ -788,7 +791,7 @@ export default function EmployeeDetails() {
                 <p className="text-sm text-zinc-500 mt-0.5">{employee.nome} {employee.cognome}</p>
               </div>
               <div className="flex items-center gap-2">
-                {!portaleAttivo && (
+                {canManagePresence && (
                   <button
                     onClick={() => startAddPresence()}
                     className="h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium flex items-center gap-1.5"
@@ -895,7 +898,7 @@ export default function EmployeeDetails() {
                             <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Ore</th>
                             {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Previste</th>}
                             {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Stato</th>}
-                            {!portaleAttivo && <th className="px-3 py-3"></th>}
+                            {canManagePresence && <th className="px-3 py-3"></th>}
                           </tr>
                         </thead>
 
@@ -932,7 +935,7 @@ export default function EmployeeDetails() {
                                             {coppia.entrata || "—"}
                                           </span>
                                           {coppia.entrata_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
-                                          {!portaleAttivo && coppia.entrata_manuale && coppia.entrata_id && (
+                                          {canManagePresence && coppia.entrata_manuale && coppia.entrata_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.entrata_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
                                             </button>
@@ -956,7 +959,7 @@ export default function EmployeeDetails() {
                                             <span className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
                                           )}
                                           {coppia.uscita_manuale && <Pencil size={10} className="text-amber-500 flex-shrink-0" />}
-                                          {!portaleAttivo && coppia.uscita_manuale && coppia.uscita_id && (
+                                          {canManagePresence && coppia.uscita_manuale && coppia.uscita_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.uscita_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
                                             </button>
@@ -1015,7 +1018,7 @@ export default function EmployeeDetails() {
                                 </td>
                               )}
 
-                              {!portaleAttivo && (
+                              {canManagePresence && (
                                 <td className="px-3 py-3 text-right">
                                   <button
                                     onClick={(e) => { e.stopPropagation(); startAddPresence(day.giorno); }}
@@ -1053,7 +1056,7 @@ export default function EmployeeDetails() {
 
       {/* MODALE AGGIUNGI TIMBRATURA MANUALE — solo se portale disattivo */}
 
-      {showAddPresence && !portaleAttivo && (
+      {showAddPresence && canManagePresence && (
 
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
 

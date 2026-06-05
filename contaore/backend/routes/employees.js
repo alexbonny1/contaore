@@ -854,25 +854,18 @@ export default async function employeeRoutes(fastify) {
           return reply.send({ success: false, error: 'INVALID_PARAMS' })
         }
 
-        const { data: company } = await supabase
-          .from('company')
-          .select('portale_dipendenti')
-          .eq('id', companyId)
-          .single()
-
-        if (company?.portale_dipendenti) {
-          return reply.send({ success: false, error: 'PORTAL_ACTIVE' })
-        }
-
-        const { data: employee } = await supabase
-          .from('dipendenti')
-          .select('badge_uid')
-          .eq('id', id)
-          .eq('company_id', companyId)
-          .single()
+        const [{ data: company }, { data: employee }] = await Promise.all([
+          supabase.from('company').select('portale_dipendenti').eq('id', companyId).single(),
+          supabase.from('dipendenti').select('badge_uid, email').eq('id', id).eq('company_id', companyId).single()
+        ])
 
         if (!employee) {
           return reply.send({ success: false, error: 'NOT_FOUND' })
+        }
+
+        // Block only if portal is active AND the employee has a login (email)
+        if (company?.portale_dipendenti && employee.email) {
+          return reply.send({ success: false, error: 'PORTAL_ACTIVE' })
         }
 
         const ts = new Date(datetime).toISOString()
@@ -918,19 +911,27 @@ export default async function employeeRoutes(fastify) {
           .eq('id', companyId)
           .single()
 
-        if (company?.portale_dipendenti) {
-          return reply.send({ success: false, error: 'PORTAL_ACTIVE' })
-        }
-
         const { data: presenza } = await supabase
           .from('presenza')
-          .select('id')
+          .select('id, tag_uid')
           .eq('id', id)
           .eq('company_id', companyId)
           .single()
 
         if (!presenza) {
           return reply.send({ success: false, error: 'NOT_FOUND' })
+        }
+
+        if (company?.portale_dipendenti) {
+          const { data: emp } = await supabase
+            .from('dipendenti')
+            .select('email')
+            .eq('badge_uid', presenza.tag_uid)
+            .eq('company_id', companyId)
+            .maybeSingle()
+          if (emp?.email) {
+            return reply.send({ success: false, error: 'PORTAL_ACTIVE' })
+          }
         }
 
         const { error } = await supabase
