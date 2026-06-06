@@ -756,6 +756,34 @@ export default function Admin() {
                 tag: "GDPR",
                 tagColor: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
               },
+              {
+                file: "dichiarazione_conformita_ce.html",
+                titolo: "Dichiarazione di Conformità UE — Lettore NFC",
+                sottotitolo: "Direttiva RED 2014/53/UE — da firmare per ogni modello di dispositivo",
+                tag: "DISPOSITIVO",
+                tagColor: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+              },
+              {
+                file: "scheda_tecnica_dispositivo.html",
+                titolo: "Scheda tecnica dispositivo",
+                sottotitolo: "ContaOre-NFC-R1 — da allegare all'istanza INL e al contratto cliente",
+                tag: "DISPOSITIVO",
+                tagColor: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+              },
+              {
+                file: "verbale_installazione_collaudo.html",
+                titolo: "Verbale di installazione e collaudo",
+                sottotitolo: "Da firmare sul posto con il cliente ad ogni installazione",
+                tag: "DISPOSITIVO",
+                tagColor: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+              },
+              {
+                file: "garanzia_commerciale.html",
+                titolo: "Garanzia commerciale dispositivo",
+                sottotitolo: "12 mesi — da consegnare al cliente con il dispositivo",
+                tag: "DISPOSITIVO",
+                tagColor: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+              },
             ].map((doc) => (
               <div key={doc.file} className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
                 <div className="flex items-start gap-3 min-w-0">
