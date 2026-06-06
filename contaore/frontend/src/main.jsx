@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -9,16 +9,17 @@ import Dashboard           from "./pages/Dashboard";
 import Requests            from "./pages/Requests";
 import Pause               from "./pages/Pause";
 import Employees           from "./pages/Employees";
-import EmployeeDetails     from "./pages/EmployeeDetails";
 import Badges              from "./pages/Badges";
 import Readers             from "./pages/Readers";
-import Admin               from "./pages/admin";
-import DipendenteDashboard from "./pages/DipendenteDashboard";
 import ResetPassword       from "./pages/ResetPassword";
 import Notifications       from "./pages/Notifications";
 import Settings            from "./pages/Settings";
 import PrivacyPolicy       from "./pages/PrivacyPolicy";
 import CookiePolicy        from "./pages/CookiePolicy";
+
+const EmployeeDetails     = lazy(() => import("./pages/EmployeeDetails"));
+const Admin               = lazy(() => import("./pages/admin"));
+const DipendenteDashboard = lazy(() => import("./pages/DipendenteDashboard"));
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -37,6 +38,7 @@ window.fetch = (url, options = {}) => {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
+      <Suspense fallback={null}>
       <Routes>
 
         <Route path="/" element={<Login />} />
@@ -114,6 +116,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         } />
 
       </Routes>
+      </Suspense>
     </BrowserRouter>
   </React.StrictMode>
 );
