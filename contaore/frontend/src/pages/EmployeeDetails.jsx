@@ -1,7 +1,13 @@
 import {
   useEffect,
-  useState
+  useState,
+  useMemo
 } from "react";
+import {
+  PieChart, Pie, Cell,
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, Legend
+} from "recharts";
 
 import {
   useParams,
@@ -59,6 +65,130 @@ function formatOre(decimalHours) {
   if (h === 0) return m + "m";
   if (m === 0) return h + "h";
   return h + "h " + m + "m";
+}
+
+const PIE_COLORS = {
+  presente:     "#22c55e",
+  straordinario:"#f59e0b",
+  ritardo:      "#a855f7",
+  parziale:     "#f97316",
+  assente:      "#ef4444",
+  ferie:        "#3b82f6",
+  giustificata: "#6366f1",
+};
+
+function ChartPanel({ historyMonths, turniAttivi }) {
+  const [selectedMese, setSelectedMese] = useState(historyMonths[0]?.mese ?? "");
+
+  useEffect(() => {
+    if (!selectedMese && historyMonths.length > 0) setSelectedMese(historyMonths[0].mese);
+  }, [historyMonths]);
+
+  const giorni = useMemo(() => {
+    return historyMonths.find(m => m.mese === selectedMese)?.giorni ?? [];
+  }, [historyMonths, selectedMese]);
+
+  const pieData = useMemo(() => {
+    const counts = {};
+    giorni.forEach(d => {
+      const k = d.assente ? "assente" : d.stato;
+      counts[k] = (counts[k] ?? 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [giorni]);
+
+  const barOre = useMemo(() =>
+    giorni.map(d => ({
+      g: new Date(d.giorno + "T12:00:00").getDate(),
+      lav: Number((d.ore_totali   ?? 0).toFixed(1)),
+      prv: Number((d.ore_previste ?? 0).toFixed(1)),
+    })),
+  [giorni]);
+
+  const barExtra = useMemo(() =>
+    giorni
+      .filter(d => (d.ritardo_minuti ?? 0) > 0 || (d.ore_straordinario ?? 0) > 0)
+      .map(d => ({
+        g:   new Date(d.giorno + "T12:00:00").getDate(),
+        rit: d.ritardo_minuti ?? 0,
+        str: Number(((d.ore_straordinario ?? 0) * 60).toFixed(0)),
+      })),
+  [giorni]);
+
+  if (!historyMonths.length) return null;
+
+  return (
+    <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 space-y-5">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Riepilogo</h3>
+        <select
+          value={selectedMese}
+          onChange={e => setSelectedMese(e.target.value)}
+          className="text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1.5 outline-none focus:border-blue-500"
+        >
+          {historyMonths.map(m => <option key={m.mese} value={m.mese}>{m.mese}</option>)}
+        </select>
+      </div>
+
+      {giorni.length === 0 ? (
+        <p className="text-xs text-zinc-400 text-center py-4">Nessun dato per questo mese</p>
+      ) : (
+        <>
+          {/* Torta distribuzione stati */}
+          <div>
+            <p className="text-xs font-medium text-zinc-500 mb-1">Distribuzione giorni</p>
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie data={pieData} dataKey="value" innerRadius={44} outerRadius={70} paddingAngle={2}>
+                  {pieData.map(entry => (
+                    <Cell key={entry.name} fill={PIE_COLORS[entry.name] ?? "#94a3b8"} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v, n) => [v + " gg", n]} />
+                <Legend
+                  iconType="circle"
+                  iconSize={7}
+                  formatter={v => <span style={{ fontSize: 10 }}>{v}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Colonne ore lavorate vs previste */}
+          {turniAttivi && (
+            <div>
+              <p className="text-xs font-medium text-zinc-500 mb-1">Ore lavorate vs previste</p>
+              <ResponsiveContainer width="100%" height={110}>
+                <BarChart data={barOre} barSize={5} barGap={1} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
+                  <XAxis dataKey="g" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9 }} />
+                  <Tooltip formatter={(v, n) => [v + "h", n === "prv" ? "previste" : "lavorate"]} />
+                  <Bar dataKey="prv" fill="#94a3b8" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="lav" fill="#22c55e" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Colonne ritardi + straordinari */}
+          {turniAttivi && barExtra.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-zinc-500 mb-1">Ritardi e straordinari (min)</p>
+              <ResponsiveContainer width="100%" height={110}>
+                <BarChart data={barExtra} barSize={7} barGap={2} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
+                  <XAxis dataKey="g" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9 }} />
+                  <Tooltip formatter={(v, n) => [v + " min", n === "rit" ? "ritardo" : "straordinario"]} />
+                  <Bar dataKey="rit" fill="#a855f7" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="str" fill="#f59e0b" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function EmployeeDetails() {
@@ -483,7 +613,9 @@ export default function EmployeeDetails() {
         />
       )}
 
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        <div className="flex flex-col xl:flex-row gap-5 xl:items-start">
+        <div className="flex-1 min-w-0">
 
         <button
           onClick={() => navigate("/employees")}
@@ -814,6 +946,14 @@ export default function EmployeeDetails() {
 
         )}
 
+        </div>{/* end flex-1 main content */}
+
+        {/* PANNELLO LATERALE GRAFICI */}
+        <div className="w-full xl:w-80 xl:shrink-0 xl:sticky xl:top-6">
+          <ChartPanel historyMonths={historyMonths} turniAttivi={turniAttivi} />
+        </div>
+
+        </div>{/* end flex row */}
       </div>
 
       {/* MODALE STORICO */}

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro delle Attività di Trattamento - Art. 30 GDPR</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #111; background: #fff; padding: 0; }
+    .page { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm; }
+    .header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 20px; }
+    .section-title { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; border-left: 3px solid #111; padding-left: 7px; margin-bottom: 7px; margin-top: 18px; }
+    .fill-field { display: inline-block; border-bottom: 1px solid #888; min-width: 180px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-sm { display: inline-block; border-bottom: 1px solid #888; min-width: 80px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-lg { display: inline-block; border-bottom: 1px solid #888; min-width: 280px; height: 1.3em; vertical-align: bottom; }
+    p { margin: 6px 0; line-height: 1.6; text-align: justify; }
+    .centered { text-align: center; }
+    .bold { font-weight: bold; }
+    .nota-bene { font-size: 9.5pt; font-style: italic; border: 1px solid #aaa; padding: 8px 12px; margin-top: 10px; background: #fafafa; }
+    .article { margin-left: 10px; }
+    .page-break { page-break-before: always; }
+
+    /* Registry table styles */
+    .reg-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10.5pt; }
+    .reg-table th {
+      background: #1a1a2e; color: #fff; padding: 7px 10px;
+      text-align: left; font-size: 9.5pt; font-weight: bold;
+      border: 1px solid #333; vertical-align: top;
+    }
+    .reg-table td {
+      padding: 8px 10px; border: 1px solid #bbb;
+      vertical-align: top; line-height: 1.5;
+    }
+    .reg-table tr:nth-child(even) td { background: #f7f7f7; }
+    .reg-table .field-label { font-weight: bold; font-size: 9.5pt; display: block; margin-bottom: 4px; color: #444; }
+    .reg-table .field-ref { font-size: 8.5pt; color: #666; display: block; margin-bottom: 5px; font-style: italic; }
+    .fill-cell { display: block; border-bottom: 1px solid #888; min-height: 1.4em; width: 100%; margin: 3px 0; }
+    .fill-cell-ml { display: block; border-bottom: 1px solid #888; min-height: 1.4em; width: 100%; margin: 3px 0; }
+    .tag-pill {
+      display: inline-block; border: 1px solid #888; border-radius: 3px;
+      padding: 1px 7px; margin: 2px; font-size: 9pt; background: #f0f0f0;
+    }
+    .version-box { border: 1px solid #ccc; padding: 8px 14px; margin-bottom: 16px; font-size: 9.5pt; }
+    .version-row { display: flex; gap: 20px; margin: 3px 0; }
+    .version-row span { flex: 1; }
+    .sign-line-under { display: block; border-bottom: 1px solid #555; margin-top: 30px; width: 70%; }
+    .sign-label { font-size: 9.5pt; margin-top: 3px; }
+    .update-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.5pt; }
+    .update-table th { background: #eee; padding: 5px 8px; border: 1px solid #bbb; text-align: left; }
+    .update-table td { padding: 5px 8px; border: 1px solid #bbb; min-height: 1.4em; }
+    .print-btn {
+      position: fixed; top: 18px; right: 24px; z-index: 999;
+      background: #1a1a2e; color: #fff; border: none; padding: 10px 22px;
+      font-size: 11pt; cursor: pointer; border-radius: 4px;
+      font-family: Arial, sans-serif;
+    }
+    .print-btn:hover { background: #16213e; }
+    @media print {
+      .no-print { display: none; }
+      .page { padding: 16mm 18mm; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Stampa / Salva PDF</button>
+
+<div class="page">
+  <div class="header">
+    <div class="centered bold" style="font-size:13pt; margin-bottom:5px;">REGISTRO DELLE ATTIVIT&Agrave; DI TRATTAMENTO</div>
+    <div class="centered" style="font-size:11pt; margin-bottom:4px;">Sistema di Rilevazione Presenze tramite Badge NFC</div>
+    <div class="centered bold" style="font-size:10pt;">Art. 30 Regolamento (UE) 2016/679 (GDPR)</div>
+  </div>
+
+  <div class="nota-bene">
+    <strong>Obbligo normativo:</strong> l'art. 30 GDPR impone al Titolare del Trattamento la tenuta di un registro scritto (anche in formato elettronico) delle attivit&agrave; di trattamento svolte. Il registro deve essere messo a disposizione dell'Autorit&agrave; di controllo su richiesta. L'obbligo si applica in via generale; le organizzazioni con meno di 250 dipendenti sono esonerate solo per i trattamenti non sistematici o non ad alto rischio (art. 30 co. 5 GDPR), ma il trattamento delle presenze dei lavoratori &egrave; di norma sistematico e pertanto il registro &egrave; comunque raccomandato.
+  </div>
+
+  <div class="version-box">
+    <strong>Dati del documento</strong>
+    <div class="version-row">
+      <span>Versione: <span class="fill-field-sm"></span></span>
+      <span>Data creazione: <span class="fill-field-sm"></span></span>
+      <span>Ultima revisione: <span class="fill-field-sm"></span></span>
+    </div>
+    <div class="version-row">
+      <span>Responsabile aggiornamento: <span class="fill-field"></span></span>
+    </div>
+  </div>
+
+  <table class="reg-table">
+    <!-- ROW 1 -->
+    <tr>
+      <th style="width:30%;">Campo<br><span style="font-weight:normal; font-size:8.5pt;">(Art. 30 GDPR)</span></th>
+      <th style="width:70%;">Contenuto</th>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">1. Titolare del Trattamento</span>
+        <span class="field-ref">Art. 30(1)(a) GDPR</span>
+      </td>
+      <td>
+        <strong>Ragione Sociale:</strong> <span class="fill-cell"></span>
+        <strong>Sede legale:</strong> <span class="fill-cell"></span>
+        <strong>C.F. / P.IVA:</strong> <span class="fill-cell"></span>
+        <strong>Legale Rappresentante:</strong> <span class="fill-cell"></span>
+        <strong>Referente privacy (contatto):</strong> <span class="fill-cell"></span>
+        <strong>E-mail / PEC:</strong> <span class="fill-cell"></span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">2. Rappresentante (se extra-UE)</span>
+        <span class="field-ref">Art. 30(1)(a) GDPR</span>
+      </td>
+      <td>
+        <span style="font-style:italic; font-size:9.5pt;">Non applicabile se il titolare ha sede nell'UE.</span><br>
+        <span class="fill-cell"></span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">3. Responsabile della Protezione dei Dati (DPO)</span>
+        <span class="field-ref">Art. 30(1)(a) GDPR</span>
+      </td>
+      <td>
+        <span style="font-size:9.5pt; font-style:italic;">Indicare se nominato ai sensi dell'art. 37 GDPR:</span><br>
+        &nbsp;<span class="tag-pill">DPO nominato</span>&nbsp; <span class="tag-pill">DPO non nominato</span><br><br>
+        <strong>Nome DPO (se nominato):</strong> <span class="fill-cell"></span>
+        <strong>Contatto DPO:</strong> <span class="fill-cell"></span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">4. Finalit&agrave; del Trattamento</span>
+        <span class="field-ref">Art. 30(1)(b) GDPR</span>
+      </td>
+      <td>
+        Il trattamento &egrave; effettuato per le seguenti finalit&agrave;:
+        <ul style="margin:5px 0 5px 18px; padding:0;">
+          <li>Gestione e controllo dell'orario di lavoro contrattuale dei dipendenti</li>
+          <li>Calcolo delle presenze, assenze, ritardi, straordinari ai fini retributivi</li>
+          <li>Adempimenti normativi in materia di orario di lavoro (D.Lgs. 66/2003)</li>
+          <li>Tenuta del registro presenze obbligatorio ex art. 39 D.Lgs. 81/2008</li>
+          <li>Gestione istituti contrattuali: ferie, permessi, ROL, malattia</li>
+          <li>Elaborazione buste paga e adempimenti previdenziali / fiscali</li>
+        </ul>
+        <strong>Base giuridica:</strong><br>
+        &nbsp;<span class="tag-pill">Art. 6(1)(b) GDPR &mdash; esecuzione del contratto</span><br>
+        &nbsp;<span class="tag-pill">Art. 6(1)(c) GDPR &mdash; obbligo legale</span><br>
+        &nbsp;<span class="tag-pill">Art. 9 GDPR non applicabile (no dati sensibili/biometrici)</span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">5. Categorie di Interessati</span>
+        <span class="field-ref">Art. 30(1)(c) GDPR</span>
+      </td>
+      <td>
+        <ul style="margin:5px 0 5px 18px; padding:0;">
+          <li>Dipendenti a tempo indeterminato e determinato</li>
+          <li>Collaboratori con contratto di somministrazione (interinali)</li>
+          <li>Tirocinanti / stagisti soggetti a timbratura</li>
+          <li>Personale con contratto di apprendistato</li>
+        </ul>
+        <strong>Numero approssimativo di interessati:</strong> <span class="fill-field-sm"></span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">6. Categorie di Dati Personali Trattati</span>
+        <span class="field-ref">Art. 30(1)(c) GDPR</span>
+      </td>
+      <td>
+        <strong>Dati comuni:</strong>
+        <ul style="margin:5px 0 5px 18px; padding:0;">
+          <li>Dati anagrafici: nome, cognome, data di nascita, codice fiscale</li>
+          <li>Dati occupazionali: qualifica, sede di lavoro, orario contrattuale</li>
+          <li>Badge UID (codice identificativo univoco anonimizzato)</li>
+          <li>Data e ora di ciascuna timbratura (ingresso / uscita)</li>
+          <li>Identificativo del terminale/lettore NFC utilizzato</li>
+          <li>Dati derivati: ore lavorate, straordinari, assenze, ritardi</li>
+        </ul>
+        <strong>Dati particolari ex art. 9 GDPR:</strong>
+        <ul style="margin:5px 0 5px 18px; padding:0;">
+          <li>Dati relativi alla salute: <em>solo in via indiretta per gestione malattie/infortuni (trattati separatamente)</em></li>
+        </ul>
+        <strong>Dati biometrici:</strong> <em>NO &mdash; il sistema NFC non utilizza dati biometrici</em>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">7. Categorie di Destinatari</span>
+        <span class="field-ref">Art. 30(1)(d) GDPR</span>
+      </td>
+      <td>
+        <table style="width:100%; border-collapse:collapse; font-size:9.5pt;">
+          <tr>
+            <th style="background:#eee; padding:4px 7px; border:1px solid #bbb;">Destinatario</th>
+            <th style="background:#eee; padding:4px 7px; border:1px solid #bbb;">Ruolo GDPR</th>
+            <th style="background:#eee; padding:4px 7px; border:1px solid #bbb;">Finalit&agrave;</th>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Ufficio HR interno</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Incaricato</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Gestione presenze</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Responsabili di reparto</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Incaricato</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Visione presenze propri collaboratori</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Consulente del lavoro <span class="fill-field-sm"></span></td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Responsabile ex art. 28</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Elaborazione cedolini paga</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Provider software <span class="fill-field-sm"></span></td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Responsabile ex art. 28</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Hosting / manutenzione sw</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Enti previdenziali (INPS, INAIL)</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Titolare autonomo</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Obbligo legale</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">8. Trasferimenti verso Paesi Terzi</span>
+        <span class="field-ref">Art. 30(1)(e) GDPR</span>
+      </td>
+      <td>
+        &nbsp;<span class="tag-pill" style="background:#e8f5e9; border-color:#4caf50;">Nessun trasferimento verso Paesi terzi extra-UE/SEE</span><br><br>
+        I dati sono trattati e conservati esclusivamente all'interno dello Spazio Economico Europeo.<br>
+        <em>Se applicabile, indicare paese terzo e garanzie:</em> <span class="fill-cell"></span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">9. Termini di Cancellazione</span>
+        <span class="field-ref">Art. 30(1)(f) GDPR</span>
+      </td>
+      <td>
+        <table style="width:100%; border-collapse:collapse; font-size:9.5pt;">
+          <tr>
+            <th style="background:#eee; padding:4px 7px; border:1px solid #bbb;">Categoria di dato</th>
+            <th style="background:#eee; padding:4px 7px; border:1px solid #bbb;">Periodo di conservazione</th>
+            <th style="background:#eee; padding:4px 7px; border:1px solid #bbb;">Base</th>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Timbrature / presenze giornaliere</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;"><strong>5 anni</strong></td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Obblighi previdenziali e fiscali</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Dati retributivi elaborati</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;"><strong>10 anni</strong></td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Art. 2220 c.c. (libri obbligatori)</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Log di accesso al sistema</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;"><strong>12 mesi</strong></td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Sicurezza informatica</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Dati badge associazioni nominali</td>
+            <td style="padding:4px 7px; border:1px solid #bbb;"><strong>Cessazione rapporto + 5 anni</strong></td>
+            <td style="padding:4px 7px; border:1px solid #bbb;">Obblighi di legge</td>
+          </tr>
+        </table>
+        <br>
+        <em>Allo scadere dei termini, i dati vengono cancellati in modo sicuro (sovrascrittura sicura / anonimizzazione irreversibile).</em>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">10. Misure di Sicurezza Tecniche e Organizzative</span>
+        <span class="field-ref">Art. 30(1)(g) GDPR</span>
+      </td>
+      <td>
+        <strong>Misure tecniche:</strong>
+        <ul style="margin:5px 0 5px 18px; padding:0;">
+          <li>Cifratura dei dati a riposo (AES-256 o equivalente)</li>
+          <li>Cifratura delle comunicazioni in transito (TLS 1.2+)</li>
+          <li>Accesso al software gestionale tramite autenticazione a credenziali personali (username + password complessa)</li>
+          <li>Autenticazione a due fattori (2FA) per accessi remoti &mdash; <span class="fill-field-sm"></span></li>
+          <li>Backup automatici giornalieri con conservazione per <span class="fill-field-sm"></span> giorni</li>
+          <li>Log di accesso ai dati con tracciatura degli accessi</li>
+          <li>Aggiornamento periodico del software e delle patch di sicurezza</li>
+          <li>Firewall e sistemi di protezione perimetrale</li>
+        </ul>
+        <strong>Misure organizzative:</strong>
+        <ul style="margin:5px 0 5px 18px; padding:0;">
+          <li>Profilazione degli accessi: ogni utente accede solo ai dati di propria competenza (need-to-know)</li>
+          <li>Designazione formale degli incaricati al trattamento con istruzioni scritte</li>
+          <li>Formazione periodica del personale autorizzato sulla protezione dei dati</li>
+          <li>Accordo di riservatezza (NDA) con i fornitori esterni</li>
+          <li>Contratti ex art. 28 GDPR con tutti i responsabili esterni del trattamento</li>
+          <li>Procedura di gestione delle violazioni dei dati (data breach) ex art. 33-34 GDPR</li>
+          <li>Revisione annuale del presente registro</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="field-label">11. Valutazione d'Impatto (DPIA)</span>
+        <span class="field-ref">Art. 35 GDPR</span>
+      </td>
+      <td>
+        &nbsp;<span class="tag-pill">DPIA non richiesta</span>&nbsp; <span class="tag-pill">DPIA effettuata &mdash; rif.: <span class="fill-field-sm"></span></span><br><br>
+        <em>La DPIA &egrave; obbligatoria se il trattamento comporta monitoraggio sistematico su larga scala o uso di dati biometrici. Per sistemi NFC senza dati biometrici la DPIA &egrave; generalmente non obbligatoria, ma raccomandata per organizzazioni con oltre 250 dipendenti.</em>
+      </td>
+    </tr>
+  </table>
+
+  <div class="section-title">Aggiornamenti del Registro</div>
+  <table class="update-table">
+    <tr>
+      <th>Data</th>
+      <th>Versione</th>
+      <th>Descrizione modifica</th>
+      <th>Responsabile</th>
+    </tr>
+    <tr>
+      <td style="min-width:70px;">&nbsp;</td>
+      <td style="min-width:50px;">&nbsp;</td>
+      <td>&nbsp;</td>
+      <td style="min-width:100px;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+    </tr>
+  </table>
+
+  <p style="margin-top:16px;">Il presente registro &egrave; redatto ai sensi dell'art. 30 del Regolamento (UE) 2016/679 (GDPR) e sar&agrave; messo a disposizione dell'Autorit&agrave; di controllo (Garante per la Protezione dei Dati Personali) su richiesta.</p>
+
+  <p style="margin-top:8px;">Luogo: <span class="fill-field"></span>&nbsp;&nbsp;&nbsp;&nbsp; Data: <span class="fill-field-sm"></span></p>
+
+  <div style="margin-top:24px;">
+    <p class="bold">Il Titolare del Trattamento</p>
+    <p style="font-size:9.5pt;">(Legale Rappresentante o soggetto delegato)</p>
+    <span class="sign-line-under"></span>
+    <p class="sign-label"><span class="fill-field-lg"></span></p>
+  </div>
+
+  <div class="nota-bene" style="margin-top:24px;">
+    <strong>Nota operativa:</strong> il presente registro deve essere aggiornato ogni volta che cambiano le finalit&agrave;, le categorie di dati, i responsabili esterni o le misure di sicurezza. La revisione annuale &egrave; raccomandata dal EDPB (Comitato europeo per la protezione dei dati). Conservare le versioni precedenti del registro per almeno 5 anni.
+  </div>
+</div>
+
+</body>
+</html>

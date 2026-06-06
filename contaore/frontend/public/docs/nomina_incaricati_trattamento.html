@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Designazione Incaricati al Trattamento dei Dati Personali</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #111; background: #fff; padding: 0; }
+    .page { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm; }
+    .header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 20px; }
+    .section-title { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; border-left: 3px solid #111; padding-left: 7px; margin-bottom: 7px; margin-top: 18px; }
+    .fill-field { display: inline-block; border-bottom: 1px solid #888; min-width: 180px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-sm { display: inline-block; border-bottom: 1px solid #888; min-width: 80px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-lg { display: inline-block; border-bottom: 1px solid #888; min-width: 280px; height: 1.3em; vertical-align: bottom; }
+    p { margin: 6px 0; line-height: 1.6; text-align: justify; }
+    .centered { text-align: center; }
+    .bold { font-weight: bold; }
+    .nota-bene { font-size: 9.5pt; font-style: italic; border: 1px solid #aaa; padding: 8px 12px; margin-top: 10px; background: #fafafa; }
+    .article { margin-left: 10px; }
+    ol.legal li { margin-bottom: 6px; line-height: 1.6; }
+    ul.obbl li { margin-bottom: 5px; line-height: 1.6; }
+    .sign-line-under { display: block; border-bottom: 1px solid #555; margin-top: 30px; width: 85%; }
+    .sign-label { font-size: 9.5pt; margin-top: 3px; }
+    .page-break { page-break-before: always; }
+    .copy-label { text-align: center; font-weight: bold; font-size: 13pt; letter-spacing: 1px; border: 2px solid #111; padding: 6px 0; margin-bottom: 18px; }
+    table.signatures { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    table.signatures td { width: 50%; padding: 6px 10px; vertical-align: top; }
+
+    /* Incaricato designation card */
+    .designation-card {
+      border: 2px solid #1a1a2e; padding: 16px 20px; margin: 20px 0;
+      position: relative;
+    }
+    .designation-card .card-number {
+      position: absolute; top: -1px; right: 16px;
+      background: #1a1a2e; color: #fff;
+      font-size: 9pt; padding: 2px 12px; font-family: Arial, sans-serif;
+    }
+    .card-title { font-size: 11pt; font-weight: bold; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid #ccc; padding-bottom: 6px; }
+    .dati-row { display: flex; margin: 5px 0; align-items: flex-end; gap: 8px; }
+    .dati-label { white-space: nowrap; font-weight: normal; min-width: 170px; font-size: 10.5pt; }
+    .dati-value { flex: 1; border-bottom: 1px solid #888; min-height: 1.3em; }
+    .perm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 8px 0; }
+    .checkbox-row { display: flex; align-items: flex-start; gap: 8px; font-size: 10pt; }
+    .checkbox-sq { display: inline-block; width: 13px; height: 13px; border: 1.5px solid #333; flex-shrink: 0; margin-top: 2px; }
+    .sign-card-row { display: flex; gap: 20px; margin-top: 18px; }
+    .sign-card-col { flex: 1; }
+    .sign-card-col .sign-line-under { width: 90%; }
+    .section-divider {
+      border: none; border-top: 2px dashed #ccc;
+      margin: 30px 0 10px 0;
+    }
+    .print-btn {
+      position: fixed; top: 18px; right: 24px; z-index: 999;
+      background: #1a1a2e; color: #fff; border: none; padding: 10px 22px;
+      font-size: 11pt; cursor: pointer; border-radius: 4px;
+      font-family: Arial, sans-serif;
+    }
+    .print-btn:hover { background: #16213e; }
+    @media print {
+      .no-print { display: none; }
+      .page { padding: 16mm 18mm; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Stampa / Salva PDF</button>
+
+<!-- ===== COPIA AZIENDA ===== -->
+<div class="page">
+  <div class="copy-label">COPIA AZIENDA</div>
+
+  <div class="header">
+    <div class="centered bold" style="font-size:13pt; margin-bottom:5px;">DESIGNAZIONE DEGLI INCARICATI AL TRATTAMENTO</div>
+    <div class="centered" style="font-size:11pt; margin-bottom:4px;">dei dati personali relativi al sistema di rilevazione presenze NFC</div>
+    <div class="centered bold" style="font-size:10pt;">Regolamento (UE) 2016/679 (GDPR) &mdash; D.Lgs. 196/2003 s.m.i.</div>
+  </div>
+
+  <div class="nota-bene">
+    <strong>Riferimento normativo:</strong> sebbene la figura dell'"incaricato del trattamento" non sia esplicitamente prevista dal GDPR (che la inglobava nel precedente Codice Privacy), la designazione formale degli addetti al trattamento costituisce una misura organizzativa raccomandata e buona prassi confermata dal Garante. Essa garantisce che solo il personale autorizzato acceda ai dati, nel rispetto dei principi di minimizzazione e limitazione delle finalit&agrave; (art. 5 GDPR) e delle istruzioni del Titolare (artt. 24, 29 GDPR).
+  </div>
+
+  <div class="section-title">1. Titolare del Trattamento</div>
+  <div class="article">
+    <p>La societ&agrave; <span class="fill-field-lg"></span>, con sede legale in <span class="fill-field-lg"></span>, C.F./P.IVA <span class="fill-field"></span>, in persona del legale rappresentante <span class="fill-field"></span>, in qualit&agrave; di <strong>Titolare del Trattamento</strong> ai sensi dell'art. 4 n. 7 GDPR,</p>
+    <p>preso atto che il trattamento dei dati personali relativi al sistema di rilevazione presenze mediante badge NFC riguarda dati di dipendenti e collaboratori della societ&agrave;,</p>
+  </div>
+
+  <div class="section-title">2. Ambito del Trattamento</div>
+  <div class="article">
+    <p>La presente designazione riguarda il trattamento dei seguenti dati nell'ambito del <strong>sistema di rilevazione presenze NFC</strong>:</p>
+    <ul class="obbl">
+      <li>dati anagrafici dei dipendenti (nome, cognome, codice fiscale, qualifica);</li>
+      <li>codice UID badge NFC associato al nominativo del dipendente;</li>
+      <li>dati di timbratura: data, ora ingresso/uscita, sede terminale;</li>
+      <li>dati elaborati: ore lavorate, straordinari, assenze, permessi;</li>
+      <li>configurazioni utente nel software gestionale presenze.</li>
+    </ul>
+  </div>
+
+  <div class="section-title">3. Istruzioni Generali per gli Incaricati</div>
+  <div class="article">
+    <p>Tutti gli incaricati designati con il presente atto sono tenuti a:</p>
+    <ol class="legal">
+      <li><strong>Riservatezza:</strong> trattare i dati personali in modo riservato e non divulgarli a soggetti non autorizzati, anche successivamente alla cessazione dell'incarico.</li>
+      <li><strong>Limitazione delle finalit&agrave;:</strong> utilizzare i dati esclusivamente per le finalit&agrave; indicate nella presente designazione e nel Registro delle Attivit&agrave; di Trattamento, astenendosi da qualsiasi utilizzo ulteriore o non autorizzato.</li>
+      <li><strong>Accesso limitato:</strong> accedere ai soli dati strettamente necessari all'espletamento delle proprie mansioni, in applicazione del principio di minimizzazione (art. 5(1)(c) GDPR).</li>
+      <li><strong>Sicurezza:</strong> adottare tutte le misure di sicurezza indicate dal Titolare (password sicure, blocco schermo, divieto di accesso da dispositivi non autorizzati, ecc.).</li>
+      <li><strong>Segnalazione violazioni:</strong> notificare tempestivamente al Titolare del Trattamento qualsiasi violazione della sicurezza dei dati (data breach) di cui vengano a conoscenza, ai sensi dell'art. 33 GDPR, e comunque entro le prime ore dall'accadimento.</li>
+      <li><strong>Richieste degli interessati:</strong> inoltrare senza indugio al Titolare qualsiasi richiesta di esercizio dei diritti ex artt. 15-22 GDPR ricevuta da dipendenti o collaboratori.</li>
+      <li><strong>Formazione:</strong> seguire i corsi di formazione sulla protezione dei dati organizzati dall'azienda e mantenersi aggiornati sulle istruzioni operative impartite dal Titolare.</li>
+    </ol>
+  </div>
+
+  <hr class="section-divider">
+  <div class="section-title">4. Designazioni Individuali</div>
+
+  <!-- INCARICATO 1 -->
+  <div class="designation-card">
+    <div class="card-number">INCARICATO N. 1</div>
+    <div class="card-title">Scheda di Designazione</div>
+    <div class="dati-row"><span class="dati-label">Cognome e Nome:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Data di nascita:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Codice Fiscale:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Qualifica / Mansione:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Reparto / Ufficio:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Sede di lavoro:</span><span class="dati-value"></span></div>
+
+    <p style="margin-top:12px; font-weight:bold; font-size:10pt;">Autorizzazioni concesse:</p>
+    <div class="perm-grid">
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Lettura timbrature &mdash; tutti i dipendenti</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Lettura timbrature &mdash; solo proprio reparto</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Modifica/rettifica timbrature</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Configurazione utenti nel sistema</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Estrazione reportistica presenze</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Assegnazione/disattivazione badge</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Accesso archivio storico (oltre 12 mesi)</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Accesso in sola lettura</span></div>
+    </div>
+    <div class="dati-row" style="margin-top:8px;"><span class="dati-label">Altre autorizzazioni specifiche:</span><span class="dati-value"></span></div>
+
+    <div class="sign-card-row">
+      <div class="sign-card-col">
+        <p class="bold" style="font-size:10pt;">Il Titolare del Trattamento</p>
+        <p style="font-size:9pt;">Data: <span class="fill-field-sm"></span></p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </div>
+      <div class="sign-card-col">
+        <p class="bold" style="font-size:10pt;">L'Incaricato (per presa d'atto)</p>
+        <p style="font-size:9pt;">Data: <span class="fill-field-sm"></span></p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCARICATO 2 -->
+  <div class="designation-card">
+    <div class="card-number">INCARICATO N. 2</div>
+    <div class="card-title">Scheda di Designazione</div>
+    <div class="dati-row"><span class="dati-label">Cognome e Nome:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Data di nascita:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Codice Fiscale:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Qualifica / Mansione:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Reparto / Ufficio:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Sede di lavoro:</span><span class="dati-value"></span></div>
+
+    <p style="margin-top:12px; font-weight:bold; font-size:10pt;">Autorizzazioni concesse:</p>
+    <div class="perm-grid">
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Lettura timbrature &mdash; tutti i dipendenti</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Lettura timbrature &mdash; solo proprio reparto</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Modifica/rettifica timbrature</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Configurazione utenti nel sistema</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Estrazione reportistica presenze</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Assegnazione/disattivazione badge</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Accesso archivio storico (oltre 12 mesi)</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Accesso in sola lettura</span></div>
+    </div>
+    <div class="dati-row" style="margin-top:8px;"><span class="dati-label">Altre autorizzazioni specifiche:</span><span class="dati-value"></span></div>
+
+    <div class="sign-card-row">
+      <div class="sign-card-col">
+        <p class="bold" style="font-size:10pt;">Il Titolare del Trattamento</p>
+        <p style="font-size:9pt;">Data: <span class="fill-field-sm"></span></p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </div>
+      <div class="sign-card-col">
+        <p class="bold" style="font-size:10pt;">L'Incaricato (per presa d'atto)</p>
+        <p style="font-size:9pt;">Data: <span class="fill-field-sm"></span></p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCARICATO 3 -->
+  <div class="designation-card">
+    <div class="card-number">INCARICATO N. 3</div>
+    <div class="card-title">Scheda di Designazione</div>
+    <div class="dati-row"><span class="dati-label">Cognome e Nome:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Data di nascita:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Codice Fiscale:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Qualifica / Mansione:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Reparto / Ufficio:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Sede di lavoro:</span><span class="dati-value"></span></div>
+
+    <p style="margin-top:12px; font-weight:bold; font-size:10pt;">Autorizzazioni concesse:</p>
+    <div class="perm-grid">
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Lettura timbrature &mdash; tutti i dipendenti</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Lettura timbrature &mdash; solo proprio reparto</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Modifica/rettifica timbrature</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Configurazione utenti nel sistema</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Estrazione reportistica presenze</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Assegnazione/disattivazione badge</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Accesso archivio storico (oltre 12 mesi)</span></div>
+      <div class="checkbox-row"><span class="checkbox-sq"></span><span>Accesso in sola lettura</span></div>
+    </div>
+    <div class="dati-row" style="margin-top:8px;"><span class="dati-label">Altre autorizzazioni specifiche:</span><span class="dati-value"></span></div>
+
+    <div class="sign-card-row">
+      <div class="sign-card-col">
+        <p class="bold" style="font-size:10pt;">Il Titolare del Trattamento</p>
+        <p style="font-size:9pt;">Data: <span class="fill-field-sm"></span></p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </div>
+      <div class="sign-card-col">
+        <p class="bold" style="font-size:10pt;">L'Incaricato (per presa d'atto)</p>
+        <p style="font-size:9pt;">Data: <span class="fill-field-sm"></span></p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">5. Durata e Revoca</div>
+  <div class="article">
+    <p>La presente designazione ha effetto immediato dalla data di sottoscrizione e rimane valida a tempo indeterminato, <strong>fino a revoca espressa</strong> o fino alla cessazione del rapporto di lavoro dell'incaricato, ovvero fino al mutamento delle mansioni che ne giustificava l'attribuzione.</p>
+    <p>Il Titolare del Trattamento si riserva di modificare in qualsiasi momento, con comunicazione scritta, le autorizzazioni concesse o di revocare integralmente la presente designazione. La revoca &egrave; efficace dalla data di comunicazione scritta all'incaricato.</p>
+    <p>In caso di cessazione del rapporto di lavoro, le credenziali di accesso dell'incaricato devono essere disattivate entro <strong>24 ore</strong> dalla cessazione.</p>
+  </div>
+</div>
+
+<!-- ===== COPIA INCARICATO ===== -->
+<div class="page page-break">
+  <div class="copy-label">COPIA PER L'INCARICATO AL TRATTAMENTO</div>
+
+  <div class="header">
+    <div class="centered bold" style="font-size:13pt; margin-bottom:5px;">DESIGNAZIONE INCARICATO AL TRATTAMENTO</div>
+    <div class="centered" style="font-size:11pt; margin-bottom:4px;">Sistema di Rilevazione Presenze NFC &mdash; Copia personale</div>
+  </div>
+
+  <p>La presente copia &egrave; rilasciata all'incaricato quale attestazione della designazione ricevuta, dei permessi accordati e degli obblighi assunti.</p>
+
+  <div class="section-title">I Tuoi Obblighi come Incaricato al Trattamento</div>
+  <div class="article">
+    <p>Firmando la scheda di designazione, hai assunto i seguenti obblighi vincolanti:</p>
+    <ol class="legal">
+      <li><strong>Riservatezza assoluta</strong> sui dati di timbratura e sui dati personali dei colleghi a cui hai accesso nell'esercizio delle tue funzioni, anche dopo la cessazione del rapporto di lavoro.</li>
+      <li><strong>Utilizzo esclusivo per le finalit&agrave; autorizzate:</strong> non puoi utilizzare i dati per scopi diversi da quelli indicati nella tua designazione (es. per monitorare un collega per motivi personali).</li>
+      <li><strong>Divieto di comunicazione a terzi</strong> non autorizzati, inclusi familiari, colleghi non designati, soggetti esterni.</li>
+      <li><strong>Sicurezza delle credenziali:</strong> devi mantenere riservate le tue credenziali di accesso al sistema e non condividerle con nessuno. In caso di compromissione sospetta, avvisa subito l'ufficio IT/HR.</li>
+      <li><strong>Segnalazione obbligatoria</strong> di qualsiasi violazione o anomalia (accesso non autorizzato, perdita dati, attacco informatico) al Titolare entro il minor tempo possibile.</li>
+      <li><strong>Accesso proporzionato:</strong> accedi ai soli dati strettamente necessari per svolgere le tue mansioni autorizzate.</li>
+    </ol>
+  </div>
+
+  <div class="section-title">Dati di Contatto del Titolare del Trattamento</div>
+  <div class="article">
+    <p>Per qualsiasi questione relativa al trattamento dei dati, rivolgiti a:</p>
+    <p>Societ&agrave;: <span class="fill-field-lg"></span></p>
+    <p>Referente privacy / HR: <span class="fill-field-lg"></span></p>
+    <p>E-mail: <span class="fill-field-lg"></span></p>
+    <p>DPO (se nominato): <span class="fill-field-lg"></span></p>
+  </div>
+
+  <div class="section-title">Riepilogo della Tua Designazione</div>
+  <div class="article">
+    <p>Incaricato: <span class="fill-field-lg"></span></p>
+    <p>Reparto: <span class="fill-field"></span>&nbsp;&nbsp;&nbsp; Qualifica: <span class="fill-field"></span></p>
+    <p>Data designazione: <span class="fill-field-sm"></span></p>
+    <p>Autorizzazioni concesse: <span class="fill-field-lg"></span></p>
+  </div>
+
+  <div class="nota-bene">
+    <strong>Importante:</strong> la violazione degli obblighi di riservatezza e delle istruzioni impartite dal Titolare pu&ograve; comportare: (i) responsabilit&agrave; disciplinare ai sensi del CCNL applicato; (ii) responsabilit&agrave; civile per i danni cagionati; (iii) responsabilit&agrave; penale ai sensi degli artt. 167-172 D.Lgs. 196/2003 s.m.i. e delle norme penali applicabili.
+  </div>
+
+  <p style="margin-top:20px;">Luogo: <span class="fill-field"></span>&nbsp;&nbsp;&nbsp;&nbsp; Data: <span class="fill-field-sm"></span></p>
+
+  <table class="signatures">
+    <tr>
+      <td>
+        <p class="bold">Il Titolare del Trattamento</p>
+        <p style="font-size:9.5pt;">(Legale Rappresentante)</p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </td>
+      <td>
+        <p class="bold">L'Incaricato al Trattamento</p>
+        <p style="font-size:9.5pt;">Per presa d'atto e accettazione degli obblighi</p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </td>
+    </tr>
+  </table>
+
+  <div class="nota-bene" style="margin-top:24px;">
+    <strong>Conservazione:</strong> conservare il presente documento per tutta la durata del rapporto di lavoro e per i 5 anni successivi alla cessazione. Il Titolare conserva la copia originale firmata da entrambe le parti.
+  </div>
+</div>
+
+</body>
+</html>

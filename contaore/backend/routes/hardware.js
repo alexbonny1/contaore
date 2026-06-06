@@ -59,7 +59,7 @@ export default async function hardwareRoutes(fastify) {
         // SECURITY FIX: Check if reader exists
         const { data: existingReader, error: readerError } = await supabase
           .from('dispositivo')
-          .select('company_id, ota_pending, nome, nfc_ok, display_ok')
+          .select('*')
           .eq('reader_id', reader_id)
           .maybeSingle()
 

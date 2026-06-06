@@ -16,6 +16,7 @@ import Admin               from "./pages/admin";
 import DipendenteDashboard from "./pages/DipendenteDashboard";
 import ResetPassword       from "./pages/ResetPassword";
 import Notifications       from "./pages/Notifications";
+import Settings            from "./pages/Settings";
 import PrivacyPolicy       from "./pages/PrivacyPolicy";
 import CookiePolicy        from "./pages/CookiePolicy";
 
@@ -96,6 +97,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Route path="/notifications" element={
           <ProtectedRoute>
             <Notifications />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/impostazioni" element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         } />
 

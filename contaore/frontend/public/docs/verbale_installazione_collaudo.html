@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verbale di Installazione e Collaudo — Lettore NFC ContaOre</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #111; background: #fff; padding: 0; }
+    .page { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm; }
+    .header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 20px; }
+    .section-title { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; border-left: 3px solid #111; padding-left: 7px; margin-bottom: 7px; margin-top: 18px; }
+    .fill-field { display: inline-block; border-bottom: 1px solid #888; min-width: 180px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-sm { display: inline-block; border-bottom: 1px solid #888; min-width: 80px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-lg { display: inline-block; border-bottom: 1px solid #888; min-width: 280px; height: 1.3em; vertical-align: bottom; }
+    p { margin: 6px 0; line-height: 1.6; text-align: justify; }
+    ol.legal li { margin-bottom: 6px; line-height: 1.6; }
+    .print-btn { position: fixed; top: 18px; right: 24px; z-index: 999; background: #1a1a2e; color: #fff; border: none; padding: 10px 22px; font-size: 11pt; cursor: pointer; border-radius: 4px; font-family: Arial, sans-serif; }
+    @media print { .no-print { display: none; } .page { padding: 16mm 18mm; } }
+
+    .doc-title { font-size: 15pt; font-weight: bold; text-align: center; margin-bottom: 2px; letter-spacing: 0.5px; }
+    .doc-subtitle { font-size: 10pt; text-align: center; color: #444; margin-bottom: 0; }
+
+    .copy-banner { background: #1a1a2e; color: #fff; text-align: center; font-family: Arial, sans-serif; font-size: 9pt; font-weight: bold; letter-spacing: 1px; padding: 4px 0; margin-bottom: 0; }
+
+    table.form { width: 100%; border-collapse: collapse; margin: 6px 0 10px 0; }
+    table.form td { padding: 4px 6px; vertical-align: bottom; line-height: 1.6; }
+    table.form td.lbl { width: 36%; font-weight: bold; font-size: 9.5pt; color: #333; white-space: nowrap; }
+    table.form td.val { width: 64%; }
+
+    .checklist { list-style: none; margin: 6px 0; padding: 0; }
+    .checklist li { margin-bottom: 5px; line-height: 1.6; display: flex; align-items: baseline; gap: 8px; }
+    .checklist li .box { font-size: 13pt; line-height: 1; flex-shrink: 0; }
+    .checklist li .text { font-size: 10.5pt; }
+    .checklist li .badge-count { display: inline-block; border-bottom: 1px solid #888; min-width: 40px; height: 1.2em; vertical-align: bottom; }
+
+    .textarea-field { display: block; width: 100%; border: 1px solid #aaa; min-height: 52px; margin-top: 4px; padding: 4px 6px; font-size: 10pt; font-family: 'Times New Roman', serif; box-sizing: border-box; }
+
+    .declaration-box { border: 1.5px solid #111; padding: 10px 14px; margin-top: 14px; background: #fafafa; font-size: 9.5pt; line-height: 1.6; }
+
+    .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 24px; }
+    .sig-col { }
+    .sig-label-top { font-weight: bold; font-size: 9.5pt; margin-bottom: 2px; }
+    .sig-subrow { margin-top: 8px; }
+    .sig-subrow .lbl-sm { font-size: 9pt; color: #555; }
+    .sig-line { border-bottom: 1px solid #444; margin-top: 28px; margin-bottom: 3px; }
+    .sig-note { font-size: 8.5pt; color: #666; }
+
+    .divider { border: none; border-top: 2px dashed #555; margin: 30px 0 16px 0; }
+    .divider-label { text-align: center; font-size: 9pt; color: #555; font-family: Arial, sans-serif; margin-bottom: 10px; letter-spacing: 1px; }
+
+    .page-second { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <button class="print-btn no-print" onclick="window.print()">Stampa / Salva PDF</button>
+
+  <!-- COPIA 1: TECNICO INSTALLATORE -->
+  <div class="page">
+    <div class="copy-banner no-print">COPIA 1 di 2 &mdash; TECNICO INSTALLATORE</div>
+    <div class="header">
+      <div class="doc-title">VERBALE DI INSTALLAZIONE E COLLAUDO</div>
+      <div class="doc-subtitle">Lettore NFC ContaOre &mdash; Modello ContaOre-NFC-R1</div>
+    </div>
+
+    <div class="section-title">Dati Cliente e Sede di Installazione</div>
+    <table class="form">
+      <tr>
+        <td class="lbl">Ragione sociale cliente:</td>
+        <td class="val"><span class="fill-field-lg"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">P.IVA / C.F. cliente:</td>
+        <td class="val"><span class="fill-field"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Indirizzo installazione:</td>
+        <td class="val"><span class="fill-field-lg"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Referente aziendale:</td>
+        <td class="val"><span class="fill-field"></span> &nbsp; Ruolo: <span class="fill-field-sm"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Data installazione:</td>
+        <td class="val"><span class="fill-field-sm"></span></td>
+      </tr>
+    </table>
+
+    <div class="section-title">Dati Tecnico Installatore</div>
+    <table class="form">
+      <tr>
+        <td class="lbl">Nome e cognome tecnico:</td>
+        <td class="val"><span class="fill-field"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Azienda fornitrice:</td>
+        <td class="val"><span class="fill-field"></span> (fornitore ContaOre)</td>
+      </tr>
+    </table>
+
+    <div class="section-title">Dati Dispositivo Installato</div>
+    <table class="form">
+      <tr>
+        <td class="lbl">Modello:</td>
+        <td class="val">ContaOre-NFC-R1</td>
+      </tr>
+      <tr>
+        <td class="lbl">Numero di serie:</td>
+        <td class="val"><span class="fill-field"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Versione firmware:</td>
+        <td class="val">ContaOre v<span class="fill-field-sm"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Posizione di installazione:</td>
+        <td class="val"><span class="fill-field-lg"></span> <br><span style="font-size:9pt;color:#666;">(es. Ingresso principale, parete destra)</span></td>
+      </tr>
+    </table>
+
+    <div class="section-title">Checklist di Collaudo</div>
+    <ul class="checklist">
+      <li><span class="box">&#9744;</span><span class="text">Dispositivo montato e fissato correttamente nella posizione concordata</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Alimentazione USB-C collegata e funzionante (LED acceso / display attivo)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Connessione WiFi configurata e testata (SSID: <span class="fill-field"></span>)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Comunicazione con server ContaOre verificata (ping OK, connessione HTTPS attiva)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">NFC testato con badge di prova (lettura corretta, ID badge riconosciuto)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Display funzionante e messaggi corretti (data/ora, nome azienda, feedback timbratura)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">OTA (aggiornamento remoto firmware) verificato e funzionante</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Badge di prova rimosso dopo il test e riconsegnato al tecnico</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Consegnati all'azienda: n.&nbsp;<span class="badge-count"></span>&nbsp;badge NFC personalizzati</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Credenziali accesso pannello web ContaOre consegnate al referente aziendale</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Breve dimostrazione del funzionamento effettuata al referente aziendale</span></li>
+    </ul>
+
+    <div class="section-title">Anomalie Riscontrate e Risolte</div>
+    <div class="textarea-field" style="min-height:44px;"></div>
+
+    <div class="section-title">Note</div>
+    <div class="textarea-field" style="min-height:36px;"></div>
+
+    <div class="declaration-box">
+      Il referente aziendale del cliente, firmando il presente verbale, dichiara che il dispositivo Lettore NFC ContaOre (mod. ContaOre-NFC-R1, s/n come sopra indicato) risulta correttamente installato e operativo presso la propria sede, e di aver ricevuto una dimostrazione del funzionamento da parte del tecnico installatore.
+    </div>
+
+    <div class="signature-grid">
+      <div class="sig-col">
+        <div class="sig-label-top">Tecnico Installatore</div>
+        <div class="sig-line"></div>
+        <div class="sig-note">Firma</div>
+        <div class="sig-subrow"><span class="lbl-sm">Nome: </span><span class="fill-field"></span></div>
+        <div class="sig-subrow"><span class="lbl-sm">Data: </span><span class="fill-field-sm"></span></div>
+      </div>
+      <div class="sig-col">
+        <div class="sig-label-top">Referente Aziendale Cliente</div>
+        <div class="sig-line"></div>
+        <div class="sig-note">Firma e timbro</div>
+        <div class="sig-subrow"><span class="lbl-sm">Nome: </span><span class="fill-field"></span></div>
+        <div class="sig-subrow"><span class="lbl-sm">Data: </span><span class="fill-field-sm"></span></div>
+      </div>
+    </div>
+
+    <p style="font-size:8.5pt;color:#777;margin-top:18px;text-align:center;">
+      Il presente verbale viene redatto in duplice copia: una per il tecnico installatore, una per il cliente.
+    </p>
+  </div>
+
+  <!-- COPIA 2: CLIENTE -->
+  <div class="page page-second">
+    <div class="copy-banner no-print">COPIA 2 di 2 &mdash; CLIENTE</div>
+    <div class="header">
+      <div class="doc-title">VERBALE DI INSTALLAZIONE E COLLAUDO</div>
+      <div class="doc-subtitle">Lettore NFC ContaOre &mdash; Modello ContaOre-NFC-R1</div>
+    </div>
+
+    <div class="section-title">Dati Cliente e Sede di Installazione</div>
+    <table class="form">
+      <tr>
+        <td class="lbl">Ragione sociale cliente:</td>
+        <td class="val"><span class="fill-field-lg"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">P.IVA / C.F. cliente:</td>
+        <td class="val"><span class="fill-field"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Indirizzo installazione:</td>
+        <td class="val"><span class="fill-field-lg"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Referente aziendale:</td>
+        <td class="val"><span class="fill-field"></span> &nbsp; Ruolo: <span class="fill-field-sm"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Data installazione:</td>
+        <td class="val"><span class="fill-field-sm"></span></td>
+      </tr>
+    </table>
+
+    <div class="section-title">Dati Tecnico Installatore</div>
+    <table class="form">
+      <tr>
+        <td class="lbl">Nome e cognome tecnico:</td>
+        <td class="val"><span class="fill-field"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Azienda fornitrice:</td>
+        <td class="val"><span class="fill-field"></span> (fornitore ContaOre)</td>
+      </tr>
+    </table>
+
+    <div class="section-title">Dati Dispositivo Installato</div>
+    <table class="form">
+      <tr>
+        <td class="lbl">Modello:</td>
+        <td class="val">ContaOre-NFC-R1</td>
+      </tr>
+      <tr>
+        <td class="lbl">Numero di serie:</td>
+        <td class="val"><span class="fill-field"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Versione firmware:</td>
+        <td class="val">ContaOre v<span class="fill-field-sm"></span></td>
+      </tr>
+      <tr>
+        <td class="lbl">Posizione di installazione:</td>
+        <td class="val"><span class="fill-field-lg"></span> <br><span style="font-size:9pt;color:#666;">(es. Ingresso principale, parete destra)</span></td>
+      </tr>
+    </table>
+
+    <div class="section-title">Checklist di Collaudo</div>
+    <ul class="checklist">
+      <li><span class="box">&#9744;</span><span class="text">Dispositivo montato e fissato correttamente nella posizione concordata</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Alimentazione USB-C collegata e funzionante (LED acceso / display attivo)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Connessione WiFi configurata e testata (SSID: <span class="fill-field"></span>)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Comunicazione con server ContaOre verificata (ping OK, connessione HTTPS attiva)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">NFC testato con badge di prova (lettura corretta, ID badge riconosciuto)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Display funzionante e messaggi corretti (data/ora, nome azienda, feedback timbratura)</span></li>
+      <li><span class="box">&#9744;</span><span class="text">OTA (aggiornamento remoto firmware) verificato e funzionante</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Badge di prova rimosso dopo il test e riconsegnato al tecnico</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Consegnati all'azienda: n.&nbsp;<span class="badge-count"></span>&nbsp;badge NFC personalizzati</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Credenziali accesso pannello web ContaOre consegnate al referente aziendale</span></li>
+      <li><span class="box">&#9744;</span><span class="text">Breve dimostrazione del funzionamento effettuata al referente aziendale</span></li>
+    </ul>
+
+    <div class="section-title">Anomalie Riscontrate e Risolte</div>
+    <div class="textarea-field" style="min-height:44px;"></div>
+
+    <div class="section-title">Note</div>
+    <div class="textarea-field" style="min-height:36px;"></div>
+
+    <div class="declaration-box">
+      Il referente aziendale del cliente, firmando il presente verbale, dichiara che il dispositivo Lettore NFC ContaOre (mod. ContaOre-NFC-R1, s/n come sopra indicato) risulta correttamente installato e operativo presso la propria sede, e di aver ricevuto una dimostrazione del funzionamento da parte del tecnico installatore.
+    </div>
+
+    <div class="signature-grid">
+      <div class="sig-col">
+        <div class="sig-label-top">Tecnico Installatore</div>
+        <div class="sig-line"></div>
+        <div class="sig-note">Firma</div>
+        <div class="sig-subrow"><span class="lbl-sm">Nome: </span><span class="fill-field"></span></div>
+        <div class="sig-subrow"><span class="lbl-sm">Data: </span><span class="fill-field-sm"></span></div>
+      </div>
+      <div class="sig-col">
+        <div class="sig-label-top">Referente Aziendale Cliente</div>
+        <div class="sig-line"></div>
+        <div class="sig-note">Firma e timbro</div>
+        <div class="sig-subrow"><span class="lbl-sm">Nome: </span><span class="fill-field"></span></div>
+        <div class="sig-subrow"><span class="lbl-sm">Data: </span><span class="fill-field-sm"></span></div>
+      </div>
+    </div>
+
+    <p style="font-size:8.5pt;color:#777;margin-top:18px;text-align:center;">
+      Il presente verbale viene redatto in duplice copia: una per il tecnico installatore, una per il cliente.
+    </p>
+  </div>
+
+</body>
+</html>

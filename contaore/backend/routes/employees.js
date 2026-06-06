@@ -181,7 +181,7 @@ function isInFerie(dateStr, ferie = []) {
   return ferie.some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
 }
 
-function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null) {
+function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10) {
 
   const sessions = buildSessions(reads)
 
@@ -222,7 +222,27 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       }
 
       if (ore_previste > 0) {
-        ore_straordinario = Number(Math.max(0, oreLavorate - ore_previste).toFixed(2))
+        // Per-side tolerance: count early entry / late exit only if >= toleranceMins
+        let extraMins = 0
+        for (const sess of daySessions) {
+          if (!sess.entrata || !sess.uscita) continue
+          const eIn      = new Date(sess.entrata.created_at)
+          const eOut     = new Date(sess.uscita.created_at)
+          const actStart = eIn.getHours()  * 60 + eIn.getMinutes()
+          const actEnd   = eOut.getHours() * 60 + eOut.getMinutes()
+          const shift    = dayShifts
+            .filter(s => s.ingresso_1)
+            .sort((a, b) =>
+              Math.abs(timeToMinutes(a.ingresso_1) - actStart) -
+              Math.abs(timeToMinutes(b.ingresso_1) - actStart)
+            )[0]
+          if (!shift) continue
+          const earlyMins = Math.max(0, timeToMinutes(shift.ingresso_1) - actStart)
+          const lateMins  = Math.max(0, actEnd - timeToMinutes(shift.uscita_1))
+          if (earlyMins >= toleranceMins) extraMins += earlyMins
+          if (lateMins  >= toleranceMins) extraMins += lateMins
+        }
+        ore_straordinario = Number((extraMins / 60).toFixed(2))
       } else {
         ore_straordinario = Number(oreLavorate.toFixed(2))
       }
@@ -561,6 +581,14 @@ export default async function employeeRoutes(fastify) {
           .eq('attiva', true)
           .maybeSingle()
 
+        // tolleranza straordinari configurabile per azienda
+        const { data: companySettings } = await supabase
+          .from('company')
+          .select('tolleranza_straordinario_minuti')
+          .eq('id', companyId)
+          .single()
+        const toleranceMins = companySettings?.tolleranza_straordinario_minuti ?? 10
+
         const days   = groupByDay(
           reads,
           shifts || [],
@@ -568,7 +596,8 @@ export default async function employeeRoutes(fastify) {
           employee.turni_attivati_il || employee.data_inizio,
           ferieApprovate || [],
           giustificazioni || [],
-          pausaAziendale || null
+          pausaAziendale || null,
+          toleranceMins
         )
 
         const months = groupByMonth(days)
@@ -1063,4 +1092,39 @@ export default async function employeeRoutes(fastify) {
       }
     }
   )
+
+  /* GET /api/company/settings — impostazioni aziendali */
+  fastify.get('/api/company/settings', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      const { data } = await supabase
+        .from('company')
+        .select('tolleranza_straordinario_minuti')
+        .eq('id', req.user.company_id)
+        .single()
+      return reply.send({
+        success: true,
+        tolleranza_straordinario_minuti: data?.tolleranza_straordinario_minuti ?? 10
+      })
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* PUT /api/company/settings — aggiorna impostazioni aziendali */
+  fastify.put('/api/company/settings', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      const raw = parseInt(req.body?.tolleranza_straordinario_minuti)
+      const val = isNaN(raw) ? 10 : Math.max(0, Math.min(60, raw))
+      const { error } = await supabase
+        .from('company')
+        .update({ tolleranza_straordinario_minuti: val })
+        .eq('id', req.user.company_id)
+      if (error) return reply.send({ success: false, error: error.message })
+      return reply.send({ success: true })
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
 }

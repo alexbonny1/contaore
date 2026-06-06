@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheda Tecnica — Lettore NFC ContaOre</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #111; background: #fff; padding: 0; }
+    .page { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm; }
+    .header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 20px; }
+    .section-title { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; border-left: 3px solid #111; padding-left: 7px; margin-bottom: 7px; margin-top: 18px; }
+    .fill-field { display: inline-block; border-bottom: 1px solid #888; min-width: 180px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-sm { display: inline-block; border-bottom: 1px solid #888; min-width: 80px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-lg { display: inline-block; border-bottom: 1px solid #888; min-width: 280px; height: 1.3em; vertical-align: bottom; }
+    p { margin: 6px 0; line-height: 1.6; text-align: justify; }
+    ol.legal li { margin-bottom: 6px; line-height: 1.6; }
+    .print-btn { position: fixed; top: 18px; right: 24px; z-index: 999; background: #1a1a2e; color: #fff; border: none; padding: 10px 22px; font-size: 11pt; cursor: pointer; border-radius: 4px; font-family: Arial, sans-serif; }
+    @media print { .no-print { display: none; } .page { padding: 16mm 18mm; } }
+
+    .doc-title { font-size: 15pt; font-weight: bold; text-align: center; margin-bottom: 2px; letter-spacing: 0.5px; }
+    .doc-meta { text-align: center; font-size: 9.5pt; color: #444; margin-bottom: 0; }
+    .product-badge { display: flex; justify-content: center; gap: 30px; margin: 12px 0 6px 0; font-size: 9.5pt; }
+    .product-badge span { background: #f0f0f0; padding: 3px 10px; border: 1px solid #ccc; }
+
+    table.specs { width: 100%; border-collapse: collapse; margin: 6px 0 10px 0; }
+    table.specs th { background: #1a1a2e; color: #fff; font-family: Arial, sans-serif; font-size: 9.5pt; font-weight: bold; text-align: left; padding: 5px 8px; letter-spacing: 0.3px; }
+    table.specs td { padding: 4px 8px; vertical-align: top; line-height: 1.55; border-bottom: 1px solid #e0e0e0; }
+    table.specs td:first-child { width: 35%; font-weight: bold; font-size: 9.5pt; color: #222; background: #f8f8f8; white-space: nowrap; }
+    table.specs td:last-child { width: 65%; font-size: 10pt; }
+    table.specs tr:last-child td { border-bottom: 2px solid #111; }
+
+    .ce-mark { font-size: 14pt; font-weight: bold; font-family: Arial, sans-serif; letter-spacing: -1px; border: 2px solid #111; padding: 1px 6px; display: inline-block; vertical-align: middle; margin-right: 4px; }
+
+    .note-box { border: 1px solid #ccc; background: #f9f9f9; padding: 8px 12px; font-size: 9.5pt; margin-top: 6px; }
+    .note-box ul { margin: 4px 0 0 16px; padding: 0; }
+    .note-box ul li { margin-bottom: 3px; line-height: 1.5; }
+
+    .footer { border-top: 1.5px solid #111; margin-top: 20px; padding-top: 10px; font-size: 9pt; color: #444; display: flex; justify-content: space-between; align-items: flex-start; }
+    .footer-left { flex: 2; }
+    .footer-right { flex: 1; text-align: right; }
+    .rev-tag { font-size: 8.5pt; color: #777; }
+  </style>
+</head>
+<body>
+  <button class="print-btn no-print" onclick="window.print()">Stampa / Salva PDF</button>
+  <div class="page">
+
+    <div class="header">
+      <div class="doc-title">SCHEDA TECNICA</div>
+      <div class="doc-title" style="font-size:13pt;">Lettore NFC ContaOre</div>
+      <div class="doc-meta">Datasheet — Documento tecnico di prodotto</div>
+    </div>
+
+    <div class="product-badge">
+      <span>Codice: <strong>ContaOre-NFC-R1</strong></span>
+      <span>Versione HW: <span class="fill-field-sm"></span></span>
+      <span>Rev. doc.: <span class="fill-field-sm"></span></span>
+    </div>
+
+    <div class="section-title">Specifiche Tecniche</div>
+    <table class="specs">
+      <tr><th colspan="2">Identificazione Prodotto</th></tr>
+      <tr>
+        <td>Nome prodotto</td>
+        <td>Lettore NFC ContaOre</td>
+      </tr>
+      <tr>
+        <td>Codice modello</td>
+        <td>ContaOre-NFC-R1</td>
+      </tr>
+      <tr>
+        <td>Firmware</td>
+        <td>ContaOre v<span class="fill-field-sm"></span></td>
+      </tr>
+
+      <tr><th colspan="2">Elettronica &amp; Microcontrollore</th></tr>
+      <tr>
+        <td>Microcontrollore</td>
+        <td>ESP32 (Espressif Systems) — dual-core Xtensa LX6 240 MHz, WiFi 802.11 b/g/n 2,4 GHz, Bluetooth 4.2 Classic &amp; BLE</td>
+      </tr>
+      <tr>
+        <td>Modulo NFC</td>
+        <td><span class="fill-field" style="min-width:120px;"></span> (es. PN532 / RC522) — protocollo ISO/IEC 14443 A/B, frequenza 13,56 MHz</td>
+      </tr>
+      <tr>
+        <td>Display</td>
+        <td><span class="fill-field" style="min-width:120px;"></span> (es. OLED 0,96" / LCD 2,4") — risoluzione <span class="fill-field-sm"></span></td>
+      </tr>
+
+      <tr><th colspan="2">Alimentazione &amp; Consumi</th></tr>
+      <tr>
+        <td>Alimentazione</td>
+        <td>USB-C 5V DC, corrente nominale <span class="fill-field-sm"></span> mA</td>
+      </tr>
+      <tr>
+        <td>Consumo in standby</td>
+        <td><span class="fill-field-sm"></span> mA</td>
+      </tr>
+      <tr>
+        <td>Consumo a pieno carico</td>
+        <td><span class="fill-field-sm"></span> mA</td>
+      </tr>
+      <tr>
+        <td>Standard di carica USB</td>
+        <td>USB 2.0 Type-C, 5V / fino a 2A (non richiede PD)</td>
+      </tr>
+
+      <tr><th colspan="2">Connettività Radio</th></tr>
+      <tr>
+        <td>WiFi</td>
+        <td>IEEE 802.11 b/g/n 2,4 GHz — utilizzato per upload dati al server cloud ContaOre</td>
+      </tr>
+      <tr>
+        <td>NFC</td>
+        <td>13,56 MHz — lettura badge ISO/IEC 14443 A/B (es. MIFARE Classic, MIFARE Ultralight, NTAG)</td>
+      </tr>
+      <tr>
+        <td>Bluetooth</td>
+        <td>Bluetooth 4.2 (non attivo nel firmware ContaOre standard)</td>
+      </tr>
+
+      <tr><th colspan="2">Meccanica &amp; Ambiente</th></tr>
+      <tr>
+        <td>Dimensioni (con case)</td>
+        <td><span class="fill-field-sm"></span> mm × <span class="fill-field-sm"></span> mm × <span class="fill-field-sm"></span> mm (L × H × P)</td>
+      </tr>
+      <tr>
+        <td>Materiale case</td>
+        <td>PLA o PETG (stampa 3D FDM), colore <span class="fill-field-sm"></span></td>
+      </tr>
+      <tr>
+        <td>Metodo di fissaggio</td>
+        <td>Viti a parete / nastro biadesivo industriale</td>
+      </tr>
+      <tr>
+        <td>Temperatura operativa</td>
+        <td>0 °C — +50 °C</td>
+      </tr>
+      <tr>
+        <td>Temperatura di stoccaggio</td>
+        <td>-10 °C — +60 °C</td>
+      </tr>
+      <tr>
+        <td>Umidità operativa</td>
+        <td>10% — 85% RH non condensante</td>
+      </tr>
+      <tr>
+        <td>Uso previsto</td>
+        <td>Interno (ambienti chiusi)</td>
+      </tr>
+
+      <tr><th colspan="2">Conformità &amp; Certificazioni</th></tr>
+      <tr>
+        <td>Marcatura</td>
+        <td><span class="ce-mark">CE</span> Conformità UE</td>
+      </tr>
+      <tr>
+        <td>Direttive applicabili</td>
+        <td>RED 2014/53/UE, RoHS 2011/65/UE</td>
+      </tr>
+      <tr>
+        <td>Classe radio (RED)</td>
+        <td>Classe 2</td>
+      </tr>
+      <tr>
+        <td>Norme armonizzate</td>
+        <td>EN 300 328 V2.2.2, EN 302 291-1/2, EN 55032, EN 55035, EN 62368-1</td>
+      </tr>
+    </table>
+
+    <div class="section-title">Accessori Inclusi nella Fornitura</div>
+    <div class="note-box">
+      <ul>
+        <li>Alimentatore USB-C 5V <span class="fill-field-sm"></span> A, certificato CE (caricabatterie standard)</li>
+        <li>Cavo USB-C — USB-A / USB-C, lunghezza <span class="fill-field-sm"></span> m</li>
+        <li><span class="fill-field-lg"></span></li>
+      </ul>
+    </div>
+
+    <div class="section-title">Note per l'Installazione</div>
+    <div class="note-box">
+      <ul>
+        <li>Installazione a parete tramite viti o nastro biadesivo industriale (incluso o a cura del cliente).</li>
+        <li>Richiede connessione WiFi 2,4 GHz disponibile nel luogo di installazione.</li>
+        <li>Il dispositivo richiede raggiungibilità del server cloud ContaOre via Internet (porta 443 HTTPS).</li>
+        <li>Non installare in ambienti con umidità superiore all'85% RH o in presenza di condensa.</li>
+        <li>Utilizzare esclusivamente l'alimentatore USB-C certificato CE fornito in dotazione o un alimentatore equivalente certificato CE 5V.</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      <div class="footer-left">
+        <strong><span class="fill-field"></span></strong> &mdash; <span class="fill-field"></span><br>
+        P.IVA: <span class="fill-field-sm"></span> &nbsp;|&nbsp; Email: <span class="fill-field"></span>
+      </div>
+      <div class="footer-right">
+        <span class="rev-tag">
+          Scheda Tecnica ContaOre-NFC-R1<br>
+          Rev. <span class="fill-field-sm"></span> &mdash; Data: <span class="fill-field-sm"></span>
+        </span>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
