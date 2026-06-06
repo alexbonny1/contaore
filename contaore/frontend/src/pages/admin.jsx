@@ -784,6 +784,13 @@ export default function Admin() {
                 tag: "DISPOSITIVO",
                 tagColor: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
               },
+              {
+                file: "guida_documenti.html",
+                titolo: "Guida ai documenti legali",
+                sottotitolo: "Spiega a cosa serve ogni documento, quando usarlo e come compilarlo",
+                tag: "GUIDA",
+                tagColor: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+              },
             ].map((doc) => (
               <div key={doc.file} className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
                 <div className="flex items-start gap-3 min-w-0">
