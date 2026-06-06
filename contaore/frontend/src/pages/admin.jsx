@@ -694,28 +694,80 @@ export default function Admin() {
             <Shield size={18} className="text-zinc-500 shrink-0" />
             <div>
               <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Documenti legali</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Modelli pronti da compilare e far firmare</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Modelli pronti — compila, stampa, fai firmare, archivia</p>
             </div>
           </div>
-          <div className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <FileText size={16} className="text-zinc-400 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Informativa privacy dipendente</p>
-                <p className="text-xs text-zinc-400 mt-0.5">Art. 13 GDPR — badge NFC</p>
+
+          <div className="flex flex-col gap-2">
+            {[
+              {
+                file: "informativa_privacy_dipendente.html",
+                titolo: "Informativa privacy dipendente",
+                sottotitolo: "Art. 13 GDPR — da consegnare ad ogni dipendente",
+                tag: "GDPR",
+                tagColor: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+              },
+              {
+                file: "accordo_sindacale_art4.html",
+                titolo: "Accordo sindacale — sistema rilevazione presenze",
+                sottotitolo: "Art. 4 L. 300/1970 — da firmare con RSA/RSU prima dell'attivazione",
+                tag: "OBBLIGATORIO",
+                tagColor: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
+              },
+              {
+                file: "comunicazione_inl.html",
+                titolo: "Istanza autorizzazione INL",
+                sottotitolo: "Art. 4 co. 1 L. 300/1970 — alternativa se non ci sono RSA/RSU",
+                tag: "SE NO SINDACATO",
+                tagColor: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+              },
+              {
+                file: "ricevuta_consegna_badge.html",
+                titolo: "Ricevuta consegna badge NFC",
+                sottotitolo: "Con regolamento d'uso — da far firmare ad ogni dipendente",
+                tag: "PER DIPENDENTE",
+                tagColor: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
+              },
+              {
+                file: "registro_attivita_trattamento.html",
+                titolo: "Registro attività di trattamento",
+                sottotitolo: "Art. 30 GDPR — registro interno da tenere aggiornato",
+                tag: "GDPR",
+                tagColor: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+              },
+              {
+                file: "nomina_incaricati_trattamento.html",
+                titolo: "Nomina incaricati al trattamento",
+                sottotitolo: "Per HR e responsabili che accedono ai dati di presenza",
+                tag: "GDPR",
+                tagColor: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+              },
+            ].map((doc) => (
+              <div key={doc.file} className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <FileText size={15} className="text-zinc-400 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug">{doc.titolo}</p>
+                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${doc.tagColor}`}>{doc.tag}</span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-0.5 leading-snug">{doc.sottotitolo}</p>
+                  </div>
+                </div>
+                <a
+                  href={`/docs/${doc.file}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 flex items-center gap-1.5 h-10 px-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium"
+                >
+                  <ExternalLink size={13} /> Apri
+                </a>
               </div>
-            </div>
-            <a
-              href="/docs/informativa_privacy_dipendente.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium"
-            >
-              <ExternalLink size={14} /> Apri
-            </a>
+            ))}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-2.5 leading-relaxed">
-            Su iPhone: Apri → tocca il quadrato con freccia → Stampa → Salva PDF
+
+          <p className="text-[11px] text-zinc-400 mt-3 leading-relaxed">
+            Su iPhone: Apri → tocca il quadrato con freccia in alto → Stampa → Salva PDF
           </p>
         </div>
 

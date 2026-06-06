@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Istanza di Autorizzazione INL - Art. 4 L. 300/1970</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #111; background: #fff; padding: 0; }
+    .page { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm; }
+    .header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 20px; }
+    .section-title { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; border-left: 3px solid #111; padding-left: 7px; margin-bottom: 7px; margin-top: 18px; }
+    .fill-field { display: inline-block; border-bottom: 1px solid #888; min-width: 180px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-sm { display: inline-block; border-bottom: 1px solid #888; min-width: 80px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-lg { display: inline-block; border-bottom: 1px solid #888; min-width: 280px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-full { display: block; border-bottom: 1px solid #888; width: 100%; height: 1.3em; margin: 6px 0; }
+    p { margin: 6px 0; line-height: 1.6; text-align: justify; }
+    .centered { text-align: center; }
+    .bold { font-weight: bold; }
+    .destinatario-box {
+      border: 1px solid #555; padding: 12px 16px; margin-bottom: 22px;
+      max-width: 260px; float: right; font-size: 11pt; line-height: 1.8;
+    }
+    .mittente-box { margin-bottom: 22px; line-height: 1.8; }
+    .oggetto { font-weight: bold; margin: 16px 0; text-decoration: underline; font-size: 11pt; }
+    .nota-bene { font-size: 9.5pt; font-style: italic; border: 1px solid #aaa; padding: 8px 12px; margin-top: 10px; background: #fafafa; }
+    .article { margin-left: 10px; }
+    ol.legal li { margin-bottom: 6px; line-height: 1.6; }
+    .clearfix::after { content: ""; display: table; clear: both; }
+    .sign-line-under { display: block; border-bottom: 1px solid #555; margin-top: 30px; width: 85%; }
+    .sign-label { font-size: 9.5pt; margin-top: 3px; }
+    .allegati-box { border: 1px solid #ccc; padding: 10px 16px; margin-top: 12px; background: #fafafa; }
+    .allegati-box ul { margin: 6px 0 0 18px; }
+    .allegati-box ul li { margin-bottom: 4px; }
+    .bollo-box {
+      float: right; border: 2px dashed #888; width: 70px; height: 80px;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; font-size: 8.5pt; color: #888; margin-left: 20px; margin-top: 8px;
+    }
+    .page-break { page-break-before: always; }
+    .copy-label { text-align: center; font-weight: bold; font-size: 13pt; letter-spacing: 1px; border: 2px solid #111; padding: 6px 0; margin-bottom: 18px; }
+    table.signatures td { width: 50%; padding: 6px 10px; vertical-align: top; }
+    .print-btn {
+      position: fixed; top: 18px; right: 24px; z-index: 999;
+      background: #1a1a2e; color: #fff; border: none; padding: 10px 22px;
+      font-size: 11pt; cursor: pointer; border-radius: 4px;
+      font-family: Arial, sans-serif;
+    }
+    .print-btn:hover { background: #16213e; }
+    @media print {
+      .no-print { display: none; }
+      .page { padding: 16mm 18mm; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Stampa / Salva PDF</button>
+
+<!-- ===== COPIA AZIENDA ===== -->
+<div class="page">
+  <div class="copy-label">COPIA AZIENDA</div>
+
+  <div class="clearfix">
+    <div class="destinatario-box">
+      <strong>Spett.le</strong><br>
+      Ispettorato Territoriale<br>
+      del Lavoro di<br>
+      <span class="fill-field" style="min-width:140px;"></span><br>
+      <br>
+      <span class="fill-field-lg" style="min-width:200px;"></span><br>
+      (indirizzo ufficio)
+    </div>
+    <div class="mittente-box">
+      <strong>Mittente:</strong><br>
+      <span class="fill-field-lg"></span><br>
+      (ragione sociale)<br>
+      Via <span class="fill-field"></span><br>
+      <span class="fill-field-sm"></span> &mdash; <span class="fill-field"></span><br>
+      C.F./P.IVA: <span class="fill-field"></span><br>
+      Tel.: <span class="fill-field-sm"></span> &nbsp; PEC: <span class="fill-field"></span>
+    </div>
+  </div>
+
+  <div class="bollo-box no-print">Marca da bollo &euro;&nbsp;16,00</div>
+  <div class="bollo-box" style="display:none;" id="bollo-print">Marca da bollo &euro;&nbsp;16,00</div>
+
+  <div class="header" style="clear:both; margin-top:10px;">
+    <div class="centered bold" style="font-size:13pt; margin-bottom:4px;">ISTANZA DI AUTORIZZAZIONE</div>
+    <div class="centered" style="font-size:11pt;">all'installazione di strumenti di controllo dell'orario di lavoro</div>
+    <div class="centered bold" style="margin-top:4px;">Art. 4, comma 1, Legge 20 maggio 1970, n. 300 (Statuto dei Lavoratori)</div>
+    <div class="centered" style="font-size:9.5pt;">come modificato dall'art. 23, D.Lgs. 14 settembre 2015, n. 151</div>
+  </div>
+
+  <div class="nota-bene">
+    <strong>Quando utilizzare questa istanza:</strong> la presente domanda deve essere presentata all'Ispettorato Territoriale del Lavoro competente <em>esclusivamente</em> quando nell'unità produttiva non siano presenti rappresentanze sindacali aziendali (RSA) o unitarie (RSU). In presenza di RSA/RSU, l'accordo sindacale sostituisce integralmente la presente autorizzazione.
+  </div>
+
+  <p style="margin-top:16px;">Il/La sottoscritto/a <span class="fill-field"></span>, nato/a a <span class="fill-field-sm"></span> il <span class="fill-field-sm"></span>, C.F. <span class="fill-field"></span>, in qualità di legale rappresentante / procuratore della società <span class="fill-field-lg"></span>,</p>
+
+  <div class="section-title">chiede</div>
+  <p>l'autorizzazione all'installazione di un sistema di rilevazione delle presenze mediante tecnologia NFC (Near Field Communication), ai sensi e per gli effetti dell'art. 4, co. 1, L. 20 maggio 1970, n. 300, come modificato dall'art. 23 D.Lgs. 14 settembre 2015, n. 151, esponendo quanto segue.</p>
+
+  <div class="section-title">1. Dati del Datore di Lavoro</div>
+  <div class="article">
+    <p>Ragione Sociale: <span class="fill-field-lg"></span></p>
+    <p>Sede legale: Via <span class="fill-field"></span>, n. <span class="fill-field-sm"></span>, CAP <span class="fill-field-sm"></span>, Comune <span class="fill-field"></span></p>
+    <p>Sede operativa / unità produttiva interessata: <span class="fill-field-lg"></span></p>
+    <p>Codice Fiscale: <span class="fill-field"></span>&nbsp;&nbsp;&nbsp; P.IVA: <span class="fill-field"></span></p>
+    <p>CCNL applicato: <span class="fill-field-lg"></span></p>
+    <p>Numero dipendenti in forza: <span class="fill-field-sm"></span>&nbsp;&nbsp;&nbsp; di cui interessati dal sistema: <span class="fill-field-sm"></span></p>
+    <p>Attività svolta (codice ATECO): <span class="fill-field"></span> &mdash; <span class="fill-field-lg"></span></p>
+    <p>Assenza di RSA/RSU: si dichiara che presso l'unità produttiva sopra indicata <strong>non sono presenti</strong> rappresentanze sindacali aziendali (RSA) o unitarie (RSU), né è stato possibile stipulare accordo collettivo aziendale.</p>
+  </div>
+
+  <div class="section-title">2. Descrizione del Sistema</div>
+  <div class="article">
+    <ol class="legal">
+      <li><strong>Tipologia di sistema:</strong> sistema di rilevazione automatica delle presenze mediante badge NFC (Near Field Communication) e lettori/terminali fisici.</li>
+      <li><strong>Componenti hardware:</strong> n. <span class="fill-field-sm"></span> lettori NFC modello <span class="fill-field"></span>, installati presso <span class="fill-field-lg"></span>; badge NFC personali nominativi assegnati a ciascun dipendente.</li>
+      <li><strong>Software gestionale:</strong> applicativo <span class="fill-field"></span>, versione <span class="fill-field-sm"></span>, fornito da <span class="fill-field"></span>, per la gestione e l'archiviazione delle timbrature.</li>
+      <li><strong>Dati rilevati:</strong> codice UID del badge, data e ora della timbratura, identificazione del terminale. Nessun dato biometrico, immagine, audio o informazione relativa all'attività svolta viene raccolto.</li>
+      <li><strong>Modalità di funzionamento:</strong> il dipendente avvicina il badge al lettore NFC all'ingresso e all'uscita dalla sede di lavoro; il sistema registra automaticamente la timbratura collegandola all'identità del dipendente tramite il database gestionale.</li>
+    </ol>
+  </div>
+
+  <div class="section-title">3. Finalità del Sistema</div>
+  <div class="article">
+    <p>Il sistema viene installato esclusivamente per le seguenti finalità:</p>
+    <ol class="legal" type="a">
+      <li>rilevazione e gestione dell'orario di lavoro dei dipendenti;</li>
+      <li>calcolo delle presenze, assenze, ritardi, straordinari ai fini retributivi;</li>
+      <li>adempimenti normativi in materia di orario di lavoro (D.Lgs. 66/2003);</li>
+      <li>gestione istituti contrattuali (ferie, permessi, ROL).</li>
+    </ol>
+    <p>Si dichiara espressamente che il sistema <strong>non è installato</strong> per controllare a distanza l'attività lavorativa dei dipendenti e non è configurato per tale scopo.</p>
+  </div>
+
+  <div class="section-title">4. Misure a Tutela dei Lavoratori</div>
+  <div class="article">
+    <ol class="legal">
+      <li>I dati raccolti saranno accessibili esclusivamente al personale HR, ai responsabili diretti per i propri collaboratori e al consulente del lavoro.</li>
+      <li>Ogni lavoratore riceverà informativa scritta ai sensi dell'art. 13 GDPR prima dell'attivazione del sistema.</li>
+      <li>I dati saranno conservati per un massimo di 5 anni, nel rispetto degli obblighi previdenziali e fiscali.</li>
+      <li>I dati non saranno utilizzati per finalità disciplinari senza previa comunicazione scritta al lavoratore ai sensi dell'art. 4, co. 3, e art. 7 L. 300/1970.</li>
+    </ol>
+  </div>
+
+  <div class="section-title">Allegati</div>
+  <div class="allegati-box">
+    <p><strong>Documenti allegati alla presente istanza:</strong></p>
+    <ul>
+      <li>Scheda tecnica del sistema NFC (hardware e software)</li>
+      <li>Planimetria con indicazione dei punti di installazione dei lettori</li>
+      <li>Informativa privacy dipendenti ex art. 13 GDPR</li>
+      <li>Dichiarazione assenza RSA/RSU (sottoscritta dal datore di lavoro)</li>
+      <li>Visura camerale o documento di identità del legale rappresentante</li>
+      <li>Copia del CCNL applicato (frontespizio)</li>
+    </ul>
+  </div>
+
+  <p style="margin-top:16px;">Il sottoscritto dichiara, ai sensi del D.P.R. 28 dicembre 2000, n. 445, che le informazioni fornite nella presente istanza sono veritiere e si impegna a comunicare tempestivamente all'Ispettorato eventuali modifiche significative al sistema autorizzato.</p>
+
+  <p style="margin-top:14px;">Luogo: <span class="fill-field"></span>&nbsp;&nbsp;&nbsp;&nbsp; Data: <span class="fill-field-sm"></span></p>
+
+  <div style="margin-top:30px;">
+    <p class="bold">Il Legale Rappresentante / Procuratore</p>
+    <span class="sign-line-under"></span>
+    <p class="sign-label"><span class="fill-field-lg"></span></p>
+  </div>
+</div>
+
+<!-- ===== COPIA DIPENDENTE (RICEVUTA DI DEPOSITO/NOTIFICA) ===== -->
+<div class="page page-break">
+  <div class="copy-label">RICEVUTA DI PRESENTAZIONE &mdash; COPIA AZIENDA</div>
+
+  <div class="header">
+    <div class="centered bold" style="font-size:12pt;">ISTANZA DI AUTORIZZAZIONE INL</div>
+    <div class="centered" style="font-size:10pt;">Art. 4, co. 1, L. 300/1970 &mdash; Sistema rilevazione presenze NFC</div>
+  </div>
+
+  <p>La società <span class="fill-field-lg"></span>, in persona del legale rappresentante <span class="fill-field"></span>, dichiara di aver presentato in data <span class="fill-field-sm"></span> all'<strong>Ispettorato Territoriale del Lavoro di <span class="fill-field-sm"></span></strong> la presente istanza di autorizzazione per l'installazione del sistema di rilevazione presenze NFC presso la sede di <span class="fill-field-lg"></span>.</p>
+
+  <div class="section-title">Riepilogo Istanza Presentata</div>
+  <div class="article">
+    <p><strong>Protocollo di presentazione:</strong> <span class="fill-field"></span> del <span class="fill-field-sm"></span></p>
+    <p><strong>Modalità di presentazione:</strong> &nbsp;<span class="fill-field-lg"></span> (PEC / sportello / raccomandata A/R)</p>
+    <p><strong>Sistema descritto:</strong> lettori NFC, badge personali nominativi, software <span class="fill-field"></span></p>
+    <p><strong>Finalit&agrave; dichiarata:</strong> esclusiva gestione delle presenze e dell'orario di lavoro</p>
+    <p><strong>Numero dipendenti interessati:</strong> <span class="fill-field-sm"></span></p>
+    <p><strong>Allegati trasmessi:</strong> scheda tecnica, planimetria, informativa GDPR, dichiarazione assenza RSA/RSU, visura camerale</p>
+  </div>
+
+  <div class="nota-bene">
+    <strong>Importante:</strong> L'autorizzazione dell'INL si intende concessa decorso il termine di 30 giorni dalla presentazione dell'istanza, salvo provvedimento espresso di diniego o richiesta di integrazione documentale. L'azienda non deve attivare il sistema prima del rilascio dell'autorizzazione (espressa o per silenzio-assenso). Conservare copia della ricevuta di presentazione con numero di protocollo.
+  </div>
+
+  <div class="section-title">Esito dell'Autorizzazione</div>
+  <div class="article">
+    <p>Autorizzazione ricevuta in data: <span class="fill-field-sm"></span></p>
+    <p>Numero provvedimento INL: <span class="fill-field"></span></p>
+    <p>Sistema attivato in data: <span class="fill-field-sm"></span></p>
+    <p>Note / condizioni imposte dall'INL: <span class="fill-field-full"></span></p>
+  </div>
+
+  <p style="margin-top:20px;">Il presente documento, unitamente all'istanza presentata e al provvedimento di autorizzazione dell'INL, deve essere conservato in azienda e reso disponibile agli organi di vigilanza in caso di ispezione.</p>
+
+  <p style="margin-top:14px;">Luogo: <span class="fill-field"></span>&nbsp;&nbsp;&nbsp;&nbsp; Data: <span class="fill-field-sm"></span></p>
+
+  <div style="margin-top:30px;">
+    <p class="bold">Il Legale Rappresentante</p>
+    <span class="sign-line-under"></span>
+    <p class="sign-label"><span class="fill-field-lg"></span></p>
+  </div>
+</div>
+
+</body>
+</html>

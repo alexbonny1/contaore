@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ricevuta Consegna Badge NFC e Regolamento d'Uso</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #111; background: #fff; padding: 0; }
+    .page { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm; }
+    .header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 20px; }
+    .section-title { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; border-left: 3px solid #111; padding-left: 7px; margin-bottom: 7px; margin-top: 18px; }
+    .fill-field { display: inline-block; border-bottom: 1px solid #888; min-width: 180px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-sm { display: inline-block; border-bottom: 1px solid #888; min-width: 80px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-lg { display: inline-block; border-bottom: 1px solid #888; min-width: 280px; height: 1.3em; vertical-align: bottom; }
+    p { margin: 6px 0; line-height: 1.6; text-align: justify; }
+    .centered { text-align: center; }
+    .bold { font-weight: bold; }
+    .nota-bene { font-size: 9.5pt; font-style: italic; border: 1px solid #aaa; padding: 8px 12px; margin-top: 10px; background: #fafafa; }
+    .article { margin-left: 10px; }
+    ol.legal li { margin-bottom: 6px; line-height: 1.6; }
+    ul.rules li { margin-bottom: 5px; line-height: 1.6; }
+    .dati-box { border: 1px solid #ccc; padding: 12px 16px; margin: 12px 0; background: #fafafa; }
+    .dati-row { display: flex; margin: 5px 0; align-items: flex-end; gap: 8px; }
+    .dati-label { white-space: nowrap; font-weight: normal; min-width: 160px; }
+    .dati-value { flex: 1; border-bottom: 1px solid #888; min-height: 1.3em; }
+    .badge-uid-box {
+      border: 2px solid #111; padding: 10px 16px; margin: 12px 0;
+      display: flex; align-items: center; gap: 16px; background: #f8f8f8;
+    }
+    .badge-uid-label { font-size: 10pt; font-weight: bold; white-space: nowrap; }
+    .badge-uid-value { font-size: 14pt; font-family: 'Courier New', monospace; border-bottom: 2px solid #111; flex: 1; min-height: 1.4em; letter-spacing: 2px; }
+    table.signatures { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    table.signatures td { width: 50%; padding: 6px 10px; vertical-align: top; }
+    .sign-line-under { display: block; border-bottom: 1px solid #555; margin-top: 30px; width: 85%; }
+    .sign-label { font-size: 9.5pt; margin-top: 3px; }
+    .page-break { page-break-before: always; }
+    .copy-label { text-align: center; font-weight: bold; font-size: 13pt; letter-spacing: 1px; border: 2px solid #111; padding: 6px 0; margin-bottom: 18px; }
+    .consent-box { border: 1px solid #555; padding: 10px 14px; margin-top: 14px; font-size: 10.5pt; }
+    .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin: 6px 0; }
+    .checkbox-sq { display: inline-block; width: 14px; height: 14px; border: 1.5px solid #333; flex-shrink: 0; margin-top: 2px; }
+    .print-btn {
+      position: fixed; top: 18px; right: 24px; z-index: 999;
+      background: #1a1a2e; color: #fff; border: none; padding: 10px 22px;
+      font-size: 11pt; cursor: pointer; border-radius: 4px;
+      font-family: Arial, sans-serif;
+    }
+    .print-btn:hover { background: #16213e; }
+    @media print {
+      .no-print { display: none; }
+      .page { padding: 16mm 18mm; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Stampa / Salva PDF</button>
+
+<!-- ===== COPIA AZIENDA ===== -->
+<div class="page">
+  <div class="copy-label">COPIA AZIENDA</div>
+
+  <div class="header">
+    <div class="centered bold" style="font-size:13pt; margin-bottom:4px;">RICEVUTA DI CONSEGNA BADGE NFC</div>
+    <div class="centered" style="font-size:11pt; margin-bottom:4px;">e Regolamento d'Uso del Sistema di Rilevazione Presenze</div>
+  </div>
+
+  <div class="section-title">1. Dati Azienda</div>
+  <div class="dati-box">
+    <div class="dati-row"><span class="dati-label">Ragione Sociale:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Sede legale:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">C.F. / P.IVA:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Titolare / L.R.:</span><span class="dati-value"></span></div>
+  </div>
+
+  <div class="section-title">2. Dati del Dipendente</div>
+  <div class="dati-box">
+    <div class="dati-row"><span class="dati-label">Cognome e Nome:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Data di nascita:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Codice Fiscale:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Qualifica / Mansione:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Sede di lavoro:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Data assunzione:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">CCNL applicato:</span><span class="dati-value"></span></div>
+  </div>
+
+  <div class="section-title">3. Dettagli Badge Consegnato</div>
+  <div class="badge-uid-box">
+    <span class="badge-uid-label">UID Badge:</span>
+    <span class="badge-uid-value">&nbsp;</span>
+  </div>
+  <div class="dati-box">
+    <div class="dati-row"><span class="dati-label">N. progressivo badge:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Data consegna:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Consegnato da:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Cauzione trattenuta:</span><span class="dati-value">&nbsp;&euro; <span style="border-bottom:1px solid #888; min-width:60px; display:inline-block;"></span> &nbsp;&nbsp; (se applicabile)</span></div>
+  </div>
+
+  <div class="section-title">4. Regolamento d'Uso del Badge NFC</div>
+  <div class="article">
+    <p>Il/La dipendente dichiara di aver ricevuto il badge NFC sopra indicato e di aver preso visione e accettato le seguenti regole d'uso:</p>
+    <ol class="legal">
+      <li><strong>Personalit&agrave; del badge:</strong> il badge &egrave; personale e nominativo. &Egrave; <strong>assolutamente vietato</strong> cedere, prestare o consentire ad altri soggetti l'utilizzo del proprio badge.</li>
+      <li><strong>Timbratura obbligatoria:</strong> il dipendente &egrave; tenuto a timbrare l'ingresso e l'uscita ad ogni presenza in servizio, inclusi rientri da pausa mensa e uscite intermedie, ove previsto dal regolamento aziendale.</li>
+      <li><strong>Custodia e conservazione:</strong> il dipendente &egrave; responsabile della custodia del badge. Il badge non deve essere piegato, esposto a campi magnetici intensi, bagnato o danneggiato.</li>
+      <li><strong>Smarrimento o furto:</strong> in caso di smarrimento, furto o danneggiamento del badge, il dipendente deve darne comunicazione immediata (e comunque entro 24 ore) all'ufficio HR / responsabile diretto per procedere alla disattivazione e sostituzione.</li>
+      <li><strong>Dimenticanza del badge:</strong> in caso di dimenticanza del badge, il dipendente deve comunicarlo tempestivamente al responsabile diretto e firmare il registro manuale delle presenze o altra procedura alternativa definita dall'azienda.</li>
+      <li><strong>Divieto di manipolazione:</strong> &egrave; vietato tentare di modificare, duplicare o manomettere il badge NFC o il sistema di rilevazione. La violazione &egrave; perseguibile disciplinarmente e, ove ricorrano gli estremi, penalmente.</li>
+      <li><strong>Riconsegna:</strong> il badge deve essere obbligatoriamente riconsegnato all'azienda al momento della cessazione del rapporto di lavoro per qualsiasi causa, nonch&eacute; in caso di trasferimento, cambio mansione o sospensione prolungata. In caso di mancata restituzione, l'azienda si riserva di addebitare il costo di sostituzione pari a &euro; <span class="fill-field-sm"></span>.</li>
+    </ol>
+  </div>
+
+  <div class="section-title">5. Responsabilit&agrave;</div>
+  <div class="article">
+    <ol class="legal">
+      <li><strong>Azienda (Titolare del trattamento):</strong> la societ&agrave; &egrave; responsabile del trattamento dei dati di timbratura nel rispetto del Reg. UE 2016/679 (GDPR) e del D.Lgs. 196/2003 s.m.i. I dati sono utilizzati esclusivamente per la gestione delle presenze e dei connessi adempimenti lavoristici e retributivi. Il dipendente ha diritto di accedere ai propri dati, chiederne la rettifica e l'aggiornamento.</li>
+      <li><strong>Dipendente:</strong> il dipendente &egrave; responsabile del corretto utilizzo del badge e risponde, nei confronti dell'azienda, di eventuali danni derivanti da uso improprio, negligente o fraudolento, ivi compresa la falsificazione delle timbrature.</li>
+    </ol>
+  </div>
+
+  <div class="section-title">6. Conseguenze delle Violazioni</div>
+  <div class="article">
+    <p>Il mancato rispetto del presente regolamento, ed in particolare:</p>
+    <ul class="rules">
+      <li>la cessione del badge a terzi;</li>
+      <li>la timbratura in nome e per conto di altri colleghi ("timbratura in delega" non autorizzata);</li>
+      <li>la manipolazione o il tentativo di manomissione del sistema;</li>
+      <li>la mancata comunicazione di smarrimento o furto;</li>
+    </ul>
+    <p>costituisce infrazione disciplinare ai sensi del CCNL <span class="fill-field"></span> applicato al rapporto di lavoro, e potr&agrave; comportare l'applicazione delle sanzioni disciplinari previste, fino al licenziamento per giusta causa nei casi pi&ugrave; gravi, previo esperimento della procedura di cui all'art. 7 L. 300/1970.</p>
+  </div>
+
+  <div class="consent-box">
+    <p class="bold" style="margin-bottom:8px;">Il/La dipendente dichiara:</p>
+    <div class="checkbox-row"><span class="checkbox-sq"></span><span>di aver ricevuto il badge NFC con UID sopra indicato in buono stato di conservazione;</span></div>
+    <div class="checkbox-row"><span class="checkbox-sq"></span><span>di aver letto e compreso il presente regolamento d'uso;</span></div>
+    <div class="checkbox-row"><span class="checkbox-sq"></span><span>di aver ricevuto l'informativa sul trattamento dei dati personali ai sensi dell'art. 13 GDPR;</span></div>
+    <div class="checkbox-row"><span class="checkbox-sq"></span><span>di essere a conoscenza che i dati di timbratura potranno essere usati per finalit&agrave; disciplinari solo nel rispetto dell'art. 4 co. 3 e art. 7 L. 300/1970.</span></div>
+  </div>
+
+  <p style="margin-top:14px;">Luogo: <span class="fill-field"></span>&nbsp;&nbsp;&nbsp;&nbsp; Data: <span class="fill-field-sm"></span></p>
+
+  <table class="signatures">
+    <tr>
+      <td>
+        <p class="bold">Per l'Azienda</p>
+        <p style="font-size:9.5pt;">Il Responsabile HR / Legale Rappresentante</p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </td>
+      <td>
+        <p class="bold">Il/La Dipendente</p>
+        <p style="font-size:9.5pt;">Per ricevuta e accettazione del regolamento</p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== COPIA DIPENDENTE ===== -->
+<div class="page page-break">
+  <div class="copy-label">COPIA DIPENDENTE</div>
+
+  <div class="header">
+    <div class="centered bold" style="font-size:13pt; margin-bottom:4px;">RICEVUTA DI CONSEGNA BADGE NFC</div>
+    <div class="centered" style="font-size:11pt; margin-bottom:4px;">e Regolamento d'Uso del Sistema di Rilevazione Presenze</div>
+  </div>
+
+  <p>La presente copia &egrave; rilasciata al/alla dipendente quale attestazione della consegna avvenuta e documento riepilogativo dei propri diritti e obblighi.</p>
+
+  <div class="section-title">Riepilogo Dati di Consegna</div>
+  <div class="dati-box">
+    <div class="dati-row"><span class="dati-label">Dipendente:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Azienda:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">UID Badge NFC:</span><span class="dati-value" style="font-family:'Courier New',monospace; font-size:13pt; letter-spacing:2px; border-bottom:2px solid #111;"></span></div>
+    <div class="dati-row"><span class="dati-label">N. progressivo:</span><span class="dati-value"></span></div>
+    <div class="dati-row"><span class="dati-label">Data consegna:</span><span class="dati-value"></span></div>
+  </div>
+
+  <div class="section-title">I Tuoi Diritti sul Trattamento dei Dati</div>
+  <div class="article">
+    <p>In qualit&agrave; di interessato ai sensi del GDPR (Reg. UE 2016/679), hai il diritto di:</p>
+    <ul class="rules">
+      <li>accedere ai tuoi dati di timbratura (art. 15 GDPR);</li>
+      <li>chiederne la rettifica in caso di errori (art. 16 GDPR);</li>
+      <li>opporti al trattamento per motivi legittimi (art. 21 GDPR);</li>
+      <li>richiedere la limitazione del trattamento (art. 18 GDPR);</li>
+      <li>presentare reclamo al Garante per la Protezione dei Dati Personali (www.garanteprivacy.it).</li>
+    </ul>
+    <p>Per esercitare i tuoi diritti, invia richiesta scritta a: <span class="fill-field-lg"></span>.</p>
+  </div>
+
+  <div class="section-title">Regole Essenziali da Ricordare</div>
+  <div class="article">
+    <ul class="rules">
+      <li>Il badge &egrave; <strong>personale</strong>: non cederlo mai ad altri.</li>
+      <li><strong>Timbra sempre</strong> in entrata e in uscita.</li>
+      <li>In caso di <strong>smarrimento o furto</strong>, avvisa subito il responsabile HR.</li>
+      <li>Il badge va <strong>riconsegnato</strong> alla fine del rapporto di lavoro.</li>
+      <li>I tuoi dati di timbratura sono utilizzati solo per la gestione delle presenze e della retribuzione.</li>
+      <li>I dati possono essere usati per fini disciplinari solo con previa comunicazione scritta (art. 7 Statuto dei Lavoratori).</li>
+    </ul>
+  </div>
+
+  <div class="nota-bene">
+    <strong>Informativa sintetica:</strong> i tuoi dati (UID badge, data e ora timbratura) sono trattati dalla societ&agrave; <span class="fill-field"></span> in qualit&agrave; di Titolare del Trattamento, ai sensi degli artt. 6(1)(b) e 6(1)(c) GDPR, per la gestione del rapporto di lavoro. I dati sono conservati per 5 anni. Per l'informativa completa rivolgiti all'ufficio HR.
+  </div>
+
+  <p style="margin-top:14px;">Luogo: <span class="fill-field"></span>&nbsp;&nbsp;&nbsp;&nbsp; Data: <span class="fill-field-sm"></span></p>
+
+  <table class="signatures">
+    <tr>
+      <td>
+        <p class="bold">Per l'Azienda</p>
+        <p style="font-size:9.5pt;">Il Responsabile HR / Legale Rappresentante</p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </td>
+      <td>
+        <p class="bold">Il/La Dipendente</p>
+        <p style="font-size:9.5pt;">Firma per ricevuta</p>
+        <span class="sign-line-under"></span>
+        <p class="sign-label"><span class="fill-field"></span></p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>
