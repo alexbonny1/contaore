@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import {
   Building2, Plus, Trash2, KeyRound,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
-  Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio, Download
+  Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio, Download,
+  FileText, ExternalLink, Shield
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -461,36 +462,38 @@ export default function Admin() {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">ContaOre</h1>
+            <h1 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">ContaOre</h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Pannello Superadmin</p>
           </div>
-          <button onClick={logout} className="h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
+          <button onClick={logout} className="h-10 sm:h-11 px-4 sm:px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
             Logout
           </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
 
         {/* TITLE + BUTTON */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Aziende</h2>
-            <p className="text-zinc-500 mt-1">{companies.length} aziende registrate</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Aziende</h2>
+            <p className="text-sm text-zinc-500 mt-0.5">{companies.length} aziende registrate</p>
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
+            className="flex items-center gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
           >
-            <Plus size={16} /> Nuova azienda
+            <Plus size={16} />
+            <span className="hidden sm:inline">Nuova azienda</span>
+            <span className="sm:hidden">Nuova</span>
           </button>
         </div>
 
         {/* FORM CREA AZIENDA */}
         {showCreate && (
-          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-8">
+          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-6 sm:mb-8">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Nuova azienda</h3>
@@ -542,7 +545,7 @@ export default function Admin() {
         )}
 
         {/* SEZIONE ALERT EMAIL */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-6">
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-5 sm:mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Mail size={18} className="text-zinc-500 shrink-0" />
@@ -646,7 +649,7 @@ export default function Admin() {
         </div>
 
         {/* SEZIONE OTA */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-8">
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-5 sm:mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -711,6 +714,44 @@ export default function Admin() {
           )}
         </div>
 
+        {/* SEZIONE DOCUMENTI LEGALI */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Shield size={18} className="text-zinc-500 shrink-0" />
+            <div>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Documenti legali</h3>
+              <p className="text-xs text-zinc-500 mt-0.5">Modelli pronti da compilare, stampare e far firmare</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {/* Informativa Privacy GDPR */}
+            <div className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText size={16} className="text-zinc-400 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
+                    Informativa privacy dipendente
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-0.5">Art. 13 GDPR — rilevazione presenze badge NFC</p>
+                </div>
+              </div>
+              <a
+                href="/docs/informativa_privacy_dipendente.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-3 shrink-0 flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium hover:opacity-90 transition-opacity"
+              >
+                <ExternalLink size={13} />
+                <span className="hidden sm:inline">Apri</span>
+                <span className="sm:hidden">Apri</span>
+              </a>
+            </div>
+          </div>
+          <p className="text-[11px] text-zinc-400 mt-3">
+            Apri il documento nel browser → usa "Stampa" per salvarlo come PDF o stamparlo direttamente
+          </p>
+        </div>
+
         {/* LISTA AZIENDE */}
         {loading ? (
           <div className="text-zinc-500 text-center py-20">Caricamento...</div>
@@ -722,7 +763,7 @@ export default function Admin() {
               <div key={company.id} className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] overflow-hidden">
 
                 {/* HEADER CARD */}
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
@@ -755,7 +796,7 @@ export default function Admin() {
                     <div className="flex-1 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-3">
                       <div>
                         <p className="text-xs text-zinc-400 mb-0.5">Company ID</p>
-                        <p className="text-xs font-mono text-zinc-700 dark:text-zinc-300 truncate max-w-[220px]">{company.id}</p>
+                        <p className="text-xs font-mono text-zinc-700 dark:text-zinc-300 truncate max-w-[140px] sm:max-w-[220px]">{company.id}</p>
                       </div>
                       <button onClick={() => copyToClipboard(company.id, company.id)} className="ml-2 shrink-0 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200">
                         {copiedId === company.id ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
@@ -801,7 +842,7 @@ export default function Admin() {
 
                 {/* DETTAGLI ESPANDIBILI */}
                 {expandedCompany === company.id && (
-                  <div className="border-t border-zinc-200 dark:border-zinc-800 p-6 grid md:grid-cols-2 gap-6">
+                  <div className="border-t border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 grid md:grid-cols-2 gap-5 sm:gap-6">
 
                     {/* ACCOUNT */}
                     <div>
