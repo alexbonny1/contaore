@@ -38,7 +38,7 @@ window.fetch = (url, options = {}) => {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10]" />}>
       <Routes>
 
         <Route path="/" element={<Login />} />
