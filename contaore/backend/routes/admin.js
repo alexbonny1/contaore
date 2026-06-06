@@ -606,4 +606,74 @@ export default async function adminRoutes(fastify) {
       }
     }
   )
+
+  // ─── DOCUMENTI PERSONALIZZATI ──────────────────────────────────────────────
+
+  const BUCKET = 'documenti-legali'
+
+  async function ensureBucket() {
+    const { data } = await supabase.storage.getBucket(BUCKET)
+    if (!data) await supabase.storage.createBucket(BUCKET, { public: true })
+  }
+
+  /* GET /api/admin/documenti — lista documenti con versione personalizzata */
+  fastify.get('/api/admin/documenti', { preHandler: authenticateSuperadmin }, async (req, reply) => {
+    try {
+      await ensureBucket()
+      const { data, error } = await supabase.storage.from(BUCKET).list('', { limit: 200 })
+      if (error) return reply.send({ success: false })
+      const base = process.env.SUPABASE_URL
+      const files = (data || []).map(f => ({
+        key: f.name,
+        url: `${base}/storage/v1/object/public/${BUCKET}/${f.name}`
+      }))
+      return reply.send({ success: true, files })
+    } catch (err) {
+      console.log(err)
+      return reply.send({ success: false })
+    }
+  })
+
+  /* PUT /api/admin/documenti/:key — carica versione personalizzata (base64 JSON) */
+  fastify.put('/api/admin/documenti/:key', {
+    preHandler: authenticateSuperadmin,
+    bodyLimit: 12 * 1024 * 1024
+  }, async (req, reply) => {
+    try {
+      const { key } = req.params
+      // Sanitize: only filename chars allowed
+      if (!/^[\w\-. ]+\.(pdf|html)$/i.test(key)) {
+        return reply.status(400).send({ success: false, error: 'INVALID_KEY' })
+      }
+      const { base64, mimeType } = req.body
+      if (!base64 || !mimeType) return reply.status(400).send({ success: false, error: 'MISSING_DATA' })
+
+      await ensureBucket()
+      const buffer = Buffer.from(base64, 'base64')
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .upload(key, buffer, { contentType: mimeType, upsert: true })
+      if (error) return reply.send({ success: false, error: error.message })
+
+      const url = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${key}`
+      return reply.send({ success: true, url })
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* DELETE /api/admin/documenti/:key — ripristina template originale */
+  fastify.delete('/api/admin/documenti/:key', { preHandler: authenticateSuperadmin }, async (req, reply) => {
+    try {
+      const { key } = req.params
+      const { error } = await supabase.storage.from(BUCKET).remove([key])
+      if (error) return reply.send({ success: false })
+      return reply.send({ success: true })
+    } catch (err) {
+      console.log(err)
+      return reply.send({ success: false })
+    }
+  })
+
 }

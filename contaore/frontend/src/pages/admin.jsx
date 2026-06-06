@@ -4,7 +4,7 @@ import {
   Building2, Plus, Trash2,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
   Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio, Download,
-  FileText, ExternalLink, Shield
+  FileText, ExternalLink, Shield, Upload, RotateCcw
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -97,6 +97,9 @@ export default function Admin() {
   const [savingOta, setSavingOta]         = useState(false);
   const [otaPendingReaders, setOtaPendingReaders] = useState(new Set());
 
+  const [customDocs, setCustomDocs]         = useState({}); // key → url
+  const [uploadingDoc, setUploadingDoc]     = useState(null); // key in progress
+
   function showToast(message, type = "success") {
     setToast({ message, type });
   }
@@ -105,12 +108,72 @@ export default function Admin() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.role !== "superadmin") { navigate("/dashboard"); return; }
     loadCompanies();
+    loadCustomDocs();
     const interval = setInterval(() => {
       refreshDevices();
       setNow(Date.now());
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  async function loadCustomDocs() {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/admin/documenti", {
+        headers: { Authorization: "Bearer " + token }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const map = {};
+        (data.files || []).forEach(f => { map[f.key] = f.url; });
+        setCustomDocs(map);
+      }
+    } catch (_) {}
+  }
+
+  async function uploadDoc(key, file) {
+    setUploadingDoc(key);
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/admin/documenti/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ base64, mimeType: file.type })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCustomDocs(prev => ({ ...prev, [key]: data.url }));
+        showToast("Documento aggiornato");
+      } else {
+        showToast("Errore caricamento", "error");
+      }
+    } catch (_) {
+      showToast("Errore caricamento", "error");
+    } finally {
+      setUploadingDoc(null);
+    }
+  }
+
+  async function resetDoc(key) {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/admin/documenti/" + encodeURIComponent(key), {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCustomDocs(prev => { const n = { ...prev }; delete n[key]; return n; });
+        showToast("Template ripristinato");
+      }
+    } catch (_) {}
+  }
 
   async function refreshDevices() {
     try {
@@ -791,28 +854,56 @@ export default function Admin() {
                 tag: "GUIDA",
                 tagColor: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
               },
-            ].map((doc) => (
-              <div key={doc.file} className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <FileText size={15} className="text-zinc-400 shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug">{doc.titolo}</p>
-                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${doc.tagColor}`}>{doc.tag}</span>
+            ].map((doc) => {
+              const customUrl = customDocs[doc.file];
+              const isUploading = uploadingDoc === doc.file;
+              return (
+                <div key={doc.file} className="flex items-start justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <FileText size={15} className="text-zinc-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug">{doc.titolo}</p>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${doc.tagColor}`}>{doc.tag}</span>
+                        {customUrl && (
+                          <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                            PERSONALIZZATO
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-0.5 leading-snug">{doc.sottotitolo}</p>
                     </div>
-                    <p className="text-xs text-zinc-400 mt-0.5 leading-snug">{doc.sottotitolo}</p>
+                  </div>
+                  <div className="shrink-0 flex flex-col items-end gap-1.5">
+                    <a
+                      href={customUrl || `/docs/${doc.file}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium"
+                    >
+                      <ExternalLink size={13} /> Apri
+                    </a>
+                    <label className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-medium cursor-pointer transition-colors ${isUploading ? "opacity-50 pointer-events-none bg-zinc-100 dark:bg-zinc-800 text-zinc-400" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}>
+                      <Upload size={12} /> {isUploading ? "..." : "Sostituisci"}
+                      <input
+                        type="file"
+                        accept=".pdf,.html"
+                        className="hidden"
+                        onChange={e => { if (e.target.files[0]) uploadDoc(doc.file, e.target.files[0]); e.target.value = ""; }}
+                      />
+                    </label>
+                    {customUrl && (
+                      <button
+                        onClick={() => resetDoc(doc.file)}
+                        className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors"
+                      >
+                        <RotateCcw size={12} /> Template
+                      </button>
+                    )}
                   </div>
                 </div>
-                <a
-                  href={`/docs/${doc.file}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 flex items-center gap-1.5 h-10 px-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium"
-                >
-                  <ExternalLink size={13} /> Apri
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <p className="text-[11px] text-zinc-400 mt-3 leading-relaxed">
