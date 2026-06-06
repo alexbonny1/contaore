@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guida ai Documenti Legali — ContaOre</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10.5pt; color: #111; background: #fff; }
+    .page { max-width: 210mm; margin: 0 auto; padding: 16mm 20mm; }
+
+    /* COPERTINA */
+    .cover { min-height: 297mm; display: flex; flex-direction: column; justify-content: center; padding: 24mm 20mm; border-right: 6px solid #1a1a2e; }
+    .cover-tag { font-size: 9pt; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-bottom: 18px; }
+    .cover-title { font-size: 28pt; font-weight: 900; color: #1a1a2e; line-height: 1.1; margin-bottom: 12px; }
+    .cover-sub { font-size: 13pt; color: #555; margin-bottom: 36px; line-height: 1.5; }
+    .cover-meta { font-size: 9pt; color: #888; border-top: 1px solid #ddd; padding-top: 12px; }
+    .cover-divider { width: 60px; height: 4px; background: #1a1a2e; margin: 24px 0; }
+
+    /* INDICE */
+    .toc { padding: 14mm 20mm; page-break-before: always; }
+    .toc-title { font-size: 18pt; font-weight: 800; color: #1a1a2e; margin-bottom: 20px; border-bottom: 2px solid #1a1a2e; padding-bottom: 8px; }
+    .toc-section { font-size: 9pt; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin: 16px 0 6px 0; }
+    .toc-item { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px dotted #ddd; font-size: 10pt; }
+    .toc-item .num { font-weight: bold; color: #1a1a2e; margin-right: 8px; flex-shrink: 0; }
+    .toc-item .name { flex: 1; }
+    .toc-item .tag { font-size: 8pt; font-weight: bold; padding: 1px 7px; border-radius: 20px; flex-shrink: 0; margin-left: 8px; }
+
+    /* SEZIONI */
+    .section-header { page-break-before: always; padding: 10mm 20mm 6mm 20mm; border-bottom: 3px solid #1a1a2e; margin-bottom: 0; }
+    .section-label { font-size: 8pt; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; color: #888; margin-bottom: 4px; }
+    .section-name { font-size: 20pt; font-weight: 800; color: #1a1a2e; }
+
+    /* CARD DOCUMENTO */
+    .doc-card { padding: 10mm 20mm; border-bottom: 1px solid #eee; }
+    .doc-card:last-child { border-bottom: none; }
+    .doc-num { font-size: 8pt; font-weight: bold; letter-spacing: 1px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+    .doc-title { font-size: 14pt; font-weight: 800; color: #1a1a2e; margin-bottom: 4px; line-height: 1.3; }
+    .doc-law { font-size: 8.5pt; color: #666; margin-bottom: 12px; font-style: italic; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 10px; }
+    .row.single { grid-template-columns: 1fr; }
+    .row.thirds { grid-template-columns: 1fr 1fr 1fr; }
+
+    .info-box { background: #f7f7f7; border-left: 3px solid #ddd; padding: 9px 12px; border-radius: 0 4px 4px 0; }
+    .info-box.blue { border-left-color: #3b82f6; background: #eff6ff; }
+    .info-box.green { border-left-color: #22c55e; background: #f0fdf4; }
+    .info-box.red { border-left-color: #ef4444; background: #fef2f2; }
+    .info-box.amber { border-left-color: #f59e0b; background: #fffbeb; }
+    .info-box.purple { border-left-color: #a855f7; background: #faf5ff; }
+    .info-box.gray { border-left-color: #6b7280; background: #f9fafb; }
+
+    .info-label { font-size: 7.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+    .info-content { font-size: 9.5pt; line-height: 1.55; color: #222; }
+
+    .steps { margin: 0; padding: 0; list-style: none; }
+    .steps li { display: flex; gap: 8px; margin-bottom: 5px; font-size: 9.5pt; line-height: 1.5; }
+    .steps li .step-n { background: #1a1a2e; color: #fff; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; font-weight: bold; flex-shrink: 0; margin-top: 1px; }
+
+    .badge-pill { display: inline-block; font-size: 7.5pt; font-weight: bold; padding: 2px 8px; border-radius: 20px; margin-right: 4px; }
+    .pill-red { background: #fee2e2; color: #b91c1c; }
+    .pill-green { background: #dcfce7; color: #15803d; }
+    .pill-blue { background: #dbeafe; color: #1d4ed8; }
+    .pill-amber { background: #fef3c7; color: #92400e; }
+    .pill-purple { background: #f3e8ff; color: #7e22ce; }
+    .pill-gray { background: #f3f4f6; color: #374151; }
+
+    .print-btn {
+      position: fixed; top: 18px; right: 24px; z-index: 999;
+      background: #1a1a2e; color: #fff; border: none; padding: 11px 24px;
+      font-size: 11pt; font-weight: bold; cursor: pointer; border-radius: 6px;
+      font-family: Arial, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .print-btn:hover { background: #2d2d4e; }
+
+    @media print {
+      .no-print { display: none; }
+      .page, .toc, .section-header, .doc-card { padding-left: 14mm; padding-right: 14mm; }
+      .cover { padding: 18mm 14mm; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨 Stampa / Salva PDF</button>
+
+<!-- ═══════════════ COPERTINA ═══════════════ -->
+<div class="cover">
+  <div class="cover-tag">ContaOre — Sistema Rilevazione Presenze NFC</div>
+  <div class="cover-title">Guida ai<br>Documenti<br>Legali</div>
+  <div class="cover-divider"></div>
+  <div class="cover-sub">
+    Cosa sono, a cosa servono<br>e cosa fare con ognuno
+  </div>
+  <div class="cover-meta">
+    12 documenti &nbsp;·&nbsp; 2 sezioni &nbsp;·&nbsp; Software + Dispositivo fisico<br>
+    Aggiornato a: <strong>Giugno 2025</strong>
+  </div>
+</div>
+
+<!-- ═══════════════ INDICE ═══════════════ -->
+<div class="toc">
+  <div class="toc-title">Indice dei documenti</div>
+
+  <div class="toc-section">Sezione A — Software, Privacy e Lavoro</div>
+  <div class="toc-item"><span class="num">A1</span><span class="name">Comunicazione attivazione sistema ai dipendenti</span><span class="tag pill-red">OBBLIGATORIO</span></div>
+  <div class="toc-item"><span class="num">A2</span><span class="name">Accordo sindacale Art. 4 Statuto Lavoratori</span><span class="tag pill-red">OBBLIGATORIO</span></div>
+  <div class="toc-item"><span class="num">A3</span><span class="name">Istanza autorizzazione INL</span><span class="tag pill-amber">SE NO SINDACATO</span></div>
+  <div class="toc-item"><span class="num">A4</span><span class="name">Informativa privacy dipendente (Art. 13 GDPR)</span><span class="tag pill-green">PER DIPENDENTE</span></div>
+  <div class="toc-item"><span class="num">A5</span><span class="name">Ricevuta consegna badge NFC</span><span class="tag pill-green">PER DIPENDENTE</span></div>
+  <div class="toc-item"><span class="num">A6</span><span class="name">Registro attività di trattamento (Art. 30 GDPR)</span><span class="tag pill-blue">GDPR</span></div>
+  <div class="toc-item"><span class="num">A7</span><span class="name">Nomina incaricati al trattamento</span><span class="tag pill-blue">GDPR</span></div>
+  <div class="toc-item"><span class="num">A8</span><span class="name">Accordo Responsabile del Trattamento (Art. 28 GDPR)</span><span class="tag pill-blue">GDPR</span></div>
+
+  <div class="toc-section" style="margin-top: 14px;">Sezione B — Dispositivo Fisico NFC</div>
+  <div class="toc-item"><span class="num">B1</span><span class="name">Dichiarazione di Conformità CE (RED 2014/53/UE)</span><span class="tag pill-purple">DISPOSITIVO</span></div>
+  <div class="toc-item"><span class="num">B2</span><span class="name">Scheda tecnica dispositivo ContaOre-NFC-R1</span><span class="tag pill-purple">DISPOSITIVO</span></div>
+  <div class="toc-item"><span class="num">B3</span><span class="name">Verbale di installazione e collaudo</span><span class="tag pill-purple">DISPOSITIVO</span></div>
+  <div class="toc-item"><span class="num">B4</span><span class="name">Garanzia commerciale 12 mesi</span><span class="tag pill-purple">DISPOSITIVO</span></div>
+</div>
+
+<!-- ═══════════════ SEZIONE A ═══════════════ -->
+<div class="section-header">
+  <div class="section-label">Sezione A</div>
+  <div class="section-name">Software, Privacy e Lavoro</div>
+</div>
+
+<!-- A1 -->
+<div class="doc-card">
+  <div class="doc-num">Documento A1 &nbsp;·&nbsp; <span class="badge-pill pill-red">OBBLIGATORIO</span></div>
+  <div class="doc-title">Comunicazione attivazione sistema ai dipendenti</div>
+  <div class="doc-law">Art. 4, comma 3, Legge 20 maggio 1970 n. 300 (Statuto dei Lavoratori)</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Una lettera formale che l'azienda consegna a tutti i dipendenti per comunicare che il sistema di badge NFC viene attivato, come funziona, e quali sono le regole. È la comunicazione obbligatoria che "sblocca" l'uso legale dei dati.</div>
+    </div>
+    <div class="info-box red">
+      <div class="info-label">Perché è obbligatorio</div>
+      <div class="info-content">Senza questo documento, anche se hai l'accordo sindacale firmato, i dati delle timbrature <strong>non possono essere usati</strong> per nessuno scopo valutativo o disciplinare. La legge lo richiede espressamente prima dell'attivazione.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="info-box green">
+      <div class="info-label">Quando compilarlo</div>
+      <div class="info-content"><strong>Prima di accendere il sistema</strong> per la prima volta. Deve essere consegnato ad ogni dipendente almeno qualche giorno prima dell'attivazione, non il giorno stesso.</div>
+    </div>
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila i campi (nome azienda, data attivazione, sedi, accordo sindacale o INL)</li>
+          <li><span class="step-n">2</span>Stampa una copia per ogni dipendente</li>
+          <li><span class="step-n">3</span>Fai firmare il tagliando di ricevuta in fondo a ogni dipendente</li>
+          <li><span class="step-n">4</span>Tieni i tagliandi firmati nel fascicolo personale di ogni dipendente</li>
+          <li><span class="step-n">5</span>Usa il foglio raccolta firme (pagina 2) per tracciare chi ha ricevuto il documento</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A2 -->
+<div class="doc-card">
+  <div class="doc-num">Documento A2 &nbsp;·&nbsp; <span class="badge-pill pill-red">OBBLIGATORIO</span> <span class="badge-pill pill-gray">se hai RSA/RSU</span></div>
+  <div class="doc-title">Accordo sindacale per sistema rilevazione presenze</div>
+  <div class="doc-law">Art. 4 Legge 300/1970 come modificato da D.Lgs. 151/2015 art. 23</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Un contratto tra il datore di lavoro e i rappresentanti sindacali (RSA o RSU) che autorizza l'installazione del sistema badge. È il "via libera" sindacale richiesto dalla legge prima di installare qualsiasi sistema che registri l'orario dei lavoratori.</div>
+    </div>
+    <div class="info-box red">
+      <div class="info-label">Perché è obbligatorio</div>
+      <div class="info-content">La legge vieta di installare strumenti di controllo dell'orario senza accordo sindacale O autorizzazione INL. Se installi il sistema senza questo documento (o il A3), rischi sanzioni penali e amministrative.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="info-box amber">
+      <div class="info-label">Quando usarlo vs documento A3</div>
+      <div class="info-content">Usa <strong>questo</strong> (A2) se hai RSA o RSU in azienda. Usa il documento <strong>A3</strong> (Istanza INL) se non hai rappresentanti sindacali. Non servono entrambi: uno esclude l'altro.</div>
+    </div>
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila con i dati di entrambe le parti (azienda + RSA/RSU)</li>
+          <li><span class="step-n">2</span>Firma con il/la delegato/a sindacale prima dell'installazione</li>
+          <li><span class="step-n">3</span>Conserva l'originale in azienda — consegna copia alla RSA/RSU</li>
+          <li><span class="step-n">4</span>Poi procedi con A1 (comunicazione ai dipendenti)</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A3 -->
+<div class="doc-card">
+  <div class="doc-num">Documento A3 &nbsp;·&nbsp; <span class="badge-pill pill-amber">SE NON HAI SINDACATO</span></div>
+  <div class="doc-title">Istanza di autorizzazione all'Ispettorato Nazionale del Lavoro</div>
+  <div class="doc-law">Art. 4 co. 1 L. 300/1970 — da presentare all'Ispettorato Territoriale del Lavoro</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Una domanda formale all'Ispettorato del Lavoro della tua provincia per ottenere l'autorizzazione a installare il sistema badge. Si usa <strong>solo</strong> se in azienda non ci sono rappresentanti sindacali (RSA/RSU).</div>
+    </div>
+    <div class="info-box amber">
+      <div class="info-label">Cosa succede dopo</div>
+      <div class="info-content">L'INL ha 30 giorni per rispondere. Se non risponde, l'autorizzazione si intende concessa per <strong>silenzio-assenso</strong>. Non puoi installare il sistema prima di aver ricevuto (o maturato) l'autorizzazione.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila con i dati dell'azienda e la descrizione del sistema</li>
+          <li><span class="step-n">2</span>Applica una marca da bollo da €16,00</li>
+          <li><span class="step-n">3</span>Invia all'Ispettorato Territoriale del Lavoro competente (per provincia della sede) via PEC, oppure consegna a mano allo sportello</li>
+          <li><span class="step-n">4</span>Conserva la ricevuta di presentazione con numero di protocollo</li>
+          <li><span class="step-n">5</span>Attendi 30 giorni — poi puoi procedere con l'installazione</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A4 -->
+<div class="doc-card">
+  <div class="doc-num">Documento A4 &nbsp;·&nbsp; <span class="badge-pill pill-green">PER OGNI DIPENDENTE</span></div>
+  <div class="doc-title">Informativa privacy dipendente</div>
+  <div class="doc-law">Art. 13 Regolamento (UE) 2016/679 (GDPR)</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Il documento con cui l'azienda informa ogni dipendente di come vengono trattati i suoi dati personali: quali dati raccoglie il badge, perché, per quanto tempo li conserva, e quali diritti ha. È obbligatorio per legge prima di raccogliere i dati.</div>
+    </div>
+    <div class="info-box green">
+      <div class="info-label">Quando consegnarlo</div>
+      <div class="info-content">Al momento dell'assunzione o, per i dipendenti già in forza, prima dell'attivazione del sistema badge. Va consegnato anche quando assumi un nuovo dipendente in futuro.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila con i dati dell'azienda (nome, P.IVA, email) e il nome del fornitore ContaOre</li>
+          <li><span class="step-n">2</span>Stampa in doppia copia per ogni dipendente</li>
+          <li><span class="step-n">3</span>Il dipendente firma entrambe le copie — una la tieni tu, una la consegni a lui</li>
+          <li><span class="step-n">4</span>Archivia la copia firmata nel fascicolo personale del dipendente per tutta la durata del rapporto + 5 anni</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A5 -->
+<div class="doc-card">
+  <div class="doc-num">Documento A5 &nbsp;·&nbsp; <span class="badge-pill pill-green">PER OGNI DIPENDENTE</span></div>
+  <div class="doc-title">Ricevuta consegna badge NFC e regolamento d'uso</div>
+  <div class="doc-law">Documento gestionale interno — da abbinare al fascicolo del dipendente</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Una ricevuta che certifica la consegna del badge fisico al dipendente, con l'UID del badge registrato, e il regolamento d'uso (regole su come usarlo, cosa fare se si perde, ecc.). Protegge l'azienda in caso di contestazioni.</div>
+    </div>
+    <div class="info-box green">
+      <div class="info-label">Quando compilarlo</div>
+      <div class="info-content">Ogni volta che consegni fisicamente un badge NFC a un dipendente — sia per i dipendenti esistenti che per i nuovi assunti. Anche quando sostituisci un badge smarrito o rotto.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila con nome dipendente e UID del badge (visibile nel pannello ContaOre)</li>
+          <li><span class="step-n">2</span>Il dipendente firma — una copia a lui, una in archivio</li>
+          <li><span class="step-n">3</span>Quando il dipendente lascia l'azienda, fai firmare la restituzione del badge sul retro</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A6 -->
+<div class="doc-card">
+  <div class="doc-num">Documento A6 &nbsp;·&nbsp; <span class="badge-pill pill-blue">GDPR</span></div>
+  <div class="doc-title">Registro delle attività di trattamento</div>
+  <div class="doc-law">Art. 30 Regolamento (UE) 2016/679 (GDPR) — obbligatorio per aziende con ≥250 dipendenti o con trattamenti a rischio</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Un registro interno che documenta tutti i trattamenti di dati personali effettuati dall'azienda. Il template fornito copre solo il trattamento presenze tramite ContaOre — nella realtà il registro dovrebbe coprire tutti i trattamenti aziendali (paghe, clienti, ecc.).</div>
+    </div>
+    <div class="info-box amber">
+      <div class="info-label">Chi è obbligato</div>
+      <div class="info-content">Obbligatorio per legge per aziende con ≥250 dipendenti. Per aziende più piccole è <strong>fortemente consigliato</strong> comunque, perché il Garante può richiederlo in caso di ispezione e la sua assenza è considerata una mancanza.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila con i dati dell'azienda come Titolare del trattamento</li>
+          <li><span class="step-n">2</span>Non si firma né si consegna a nessuno — è un documento interno</li>
+          <li><span class="step-n">3</span>Tienilo aggiornato: ogni volta che cambia qualcosa (nuovi fornitori, nuove categorie di dati), aggiornalo</li>
+          <li><span class="step-n">4</span>Va conservato e mostrato al Garante Privacy se richiesto</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A7 -->
+<div class="doc-card">
+  <div class="doc-num">Documento A7 &nbsp;·&nbsp; <span class="badge-pill pill-blue">GDPR</span></div>
+  <div class="doc-title">Nomina incaricati al trattamento dei dati</div>
+  <div class="doc-law">GDPR — Principio di responsabilizzazione (accountability) Art. 5 par. 2</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Una lettera con cui il Titolare (l'azienda) nomina ufficialmente le persone autorizzate ad accedere ai dati di presenza: tipicamente il responsabile HR, i responsabili di reparto, chi gestisce le paghe. Definisce i limiti di cosa possono fare con i dati.</div>
+    </div>
+    <div class="info-box green">
+      <div class="info-label">Quando farlo</div>
+      <div class="info-content">Prima di dare accesso al pannello ContaOre a qualsiasi dipendente diverso dal titolare. Va fatto anche per i nuovi responsabili assunti in futuro, e revocato quando qualcuno lascia l'azienda.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila con i dati dell'incaricato (nome, ruolo, accessi autorizzati)</li>
+          <li><span class="step-n">2</span>Firma il titolare + firma di accettazione dell'incaricato</li>
+          <li><span class="step-n">3</span>Copia in archivio aziendale + copia all'incaricato</li>
+          <li><span class="step-n">4</span>Emetti uno per ogni persona che ha accesso al sistema</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A8 -->
+<div class="doc-card">
+  <div class="doc-num">Documento A8 &nbsp;·&nbsp; <span class="badge-pill pill-blue">GDPR</span></div>
+  <div class="doc-title">Accordo Responsabile del Trattamento (DPA)</div>
+  <div class="doc-law">Art. 28 Regolamento (UE) 2016/679 (GDPR)</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Il contratto GDPR tra l'azienda cliente (Titolare) e ContaOre (Responsabile). Regola come ContaOre tratta i dati dei dipendenti del cliente: obblighi di sicurezza, cosa succede in caso di data breach, dove sono i dati, come vengono cancellati a fine contratto.</div>
+    </div>
+    <div class="info-box amber">
+      <div class="info-label">Chi lo firma</div>
+      <div class="info-content"><strong>Due parti:</strong> il legale rappresentante dell'azienda cliente (Titolare) e il legale rappresentante di ContaOre/tua società (Responsabile). Deve essere firmato prima che il cliente inizi a usare il sistema.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila con i dati dell'azienda cliente (Titolare) e i tuoi dati come ContaOre (Responsabile)</li>
+          <li><span class="step-n">2</span>Inserisci il nome del tuo provider hosting (es. Supabase) nella sezione sub-responsabili</li>
+          <li><span class="step-n">3</span>Firmate entrambi — copia al cliente, copia in archivio tuo</li>
+          <li><span class="step-n">4</span>Va firmato con ogni nuovo cliente prima dell'attivazione</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SEZIONE B ═══════════════ -->
+<div class="section-header">
+  <div class="section-label">Sezione B</div>
+  <div class="section-name">Dispositivo Fisico NFC</div>
+</div>
+
+<!-- B1 -->
+<div class="doc-card">
+  <div class="doc-num">Documento B1 &nbsp;·&nbsp; <span class="badge-pill pill-purple">DISPOSITIVO</span></div>
+  <div class="doc-title">Dichiarazione di Conformità UE (CE)</div>
+  <div class="doc-law">Direttiva RED 2014/53/UE — Radio Equipment Directive — obbligatoria per dispositivi con radio (WiFi + NFC)</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Il documento con cui tu, come fabbricante, dichiari che il dispositivo rispetta le direttive europee applicabili (sicurezza, compatibilità elettromagnetica, radio). È il documento che "giustifica" il marchio CE sul prodotto. Senza di esso non puoi legalmente installare il dispositivo presso clienti.</div>
+    </div>
+    <div class="info-box red">
+      <div class="info-label">Cosa significa per te</div>
+      <div class="info-content">Poiché assembli il dispositivo da componenti, sei legalmente il <strong>fabbricante</strong> e devi rilasciare questa dichiarazione. Il template usa l'autocertificazione basata sui certificati dei componenti (ESP32 è già CE/FCC). Per una commercializzazione su larga scala considera un test di laboratorio accreditato.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila una volta sola con i dati della tua società e le specifiche tecniche del dispositivo</li>
+          <li><span class="step-n">2</span>Firma tu come legale rappresentante del fabbricante</li>
+          <li><span class="step-n">3</span>Conserva l'originale firmato per almeno <strong>10 anni</strong> (obbligo di legge)</li>
+          <li><span class="step-n">4</span>Allega una copia al verbale di installazione (B3) per ogni cliente</li>
+          <li><span class="step-n">5</span>Allegala anche all'Istanza INL (A3) come "scheda tecnica del sistema"</li>
+          <li><span class="step-n">6</span>Va aggiornata ogni volta che cambi significativamente l'hardware</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B2 -->
+<div class="doc-card">
+  <div class="doc-num">Documento B2 &nbsp;·&nbsp; <span class="badge-pill pill-purple">DISPOSITIVO</span></div>
+  <div class="doc-title">Scheda tecnica dispositivo ContaOre-NFC-R1</div>
+  <div class="doc-law">Documento tecnico — allegato alla Dichiarazione CE e ai contratti cliente</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Il "datasheet" del dispositivo: microcontrollore, modulo NFC, display, alimentazione, dimensioni, temperatura operativa, standard applicabili. È il documento tecnico di riferimento che descrive cosa è fisicamente il lettore NFC ContaOre.</div>
+    </div>
+    <div class="info-box green">
+      <div class="info-label">Quando si usa</div>
+      <div class="info-content">Va allegato a: Istanza INL (come "scheda tecnica del sistema NFC"), Dichiarazione CE (come parte del fascicolo tecnico), contratto con il cliente (come specifica tecnica del prodotto acquistato/installato).</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila una volta sola con le specifiche esatte dei componenti che usi (modello NFC, display, corrente assorbita)</li>
+          <li><span class="step-n">2</span>Aggiornala quando cambi componenti</li>
+          <li><span class="step-n">3</span>Allegala sempre alla Dichiarazione CE e all'Istanza INL</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B3 -->
+<div class="doc-card">
+  <div class="doc-num">Documento B3 &nbsp;·&nbsp; <span class="badge-pill pill-purple">DISPOSITIVO</span></div>
+  <div class="doc-title">Verbale di installazione e collaudo</div>
+  <div class="doc-law">Documento contrattuale — da compilare ad ogni installazione</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Il documento che certifica che il dispositivo è stato installato correttamente, testato e consegnato funzionante al cliente. Include una checklist di 11 punti (WiFi OK, NFC OK, display OK, badge testati, ecc.) e la dichiarazione del cliente di aver ricevuto dimostrazione del funzionamento.</div>
+    </div>
+    <div class="info-box red">
+      <div class="info-label">Perché è importante</div>
+      <div class="info-content">Protegge entrambe le parti: tu dimostri di aver installato tutto correttamente, il cliente dichiara di aver accettato il dispositivo. Se dopo l'installazione il cliente dice "non funzionava", hai la prova che al momento della consegna era tutto OK.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Porta il documento stampato ad ogni installazione</li>
+          <li><span class="step-n">2</span>Compila la checklist sul posto mentre installi e testi</li>
+          <li><span class="step-n">3</span>Fai firmare il referente aziendale del cliente prima di andartene</li>
+          <li><span class="step-n">4</span>Una copia la tieni tu, una la lasci al cliente</li>
+          <li><span class="step-n">5</span>Archivia la tua copia per tutta la durata del contratto + 5 anni</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B4 -->
+<div class="doc-card">
+  <div class="doc-num">Documento B4 &nbsp;·&nbsp; <span class="badge-pill pill-purple">DISPOSITIVO</span></div>
+  <div class="doc-title">Garanzia commerciale 12 mesi</div>
+  <div class="doc-law">D.Lgs. 206/2005 (Codice del Consumo) — garanzia volontaria su prodotto</div>
+  <div class="row">
+    <div class="info-box blue">
+      <div class="info-label">Cos'è</div>
+      <div class="info-content">Le condizioni di garanzia sul dispositivo fisico: cosa è coperto (difetti di fabbricazione, guasti hardware), cosa non è coperto (danni fisici, uso improprio, alimentatori non certificati), come fare reclamo, e i termini per aggiornamenti firmware gratuiti via OTA.</div>
+    </div>
+    <div class="info-box green">
+      <div class="info-label">Quando consegnarla</div>
+      <div class="info-content">Al momento dell'installazione, insieme al verbale (B3). Va consegnata al cliente come parte della documentazione del prodotto. Puoi anche includerla nel contratto di fornitura come allegato.</div>
+    </div>
+  </div>
+  <div class="row single">
+    <div class="info-box gray">
+      <div class="info-label">Cosa fare con questo documento</div>
+      <div class="info-content">
+        <ol class="steps">
+          <li><span class="step-n">1</span>Compila con i tuoi dati (società, contatti assistenza) e i tempi di intervento che ti puoi impegnare a rispettare</li>
+          <li><span class="step-n">2</span>Indica per quanti anni fornisci aggiornamenti firmware OTA gratuiti</li>
+          <li><span class="step-n">3</span>Consegna al cliente insieme al verbale di installazione</li>
+          <li><span class="step-n">4</span>Non richiede firma del cliente — è una dichiarazione unilaterale tua</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ RIEPILOGO ORDINE ═══════════════ -->
+<div style="page-break-before: always; padding: 14mm 20mm;">
+  <div style="font-size: 18pt; font-weight: 800; color: #1a1a2e; margin-bottom: 6px; border-bottom: 2px solid #1a1a2e; padding-bottom: 8px;">Ordine operativo — cosa fare e quando</div>
+  <p style="font-size: 9.5pt; color: #666; margin-bottom: 20px;">Segui questo ordine per ogni nuovo cliente che attiva ContaOre.</p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+
+    <div>
+      <div style="font-size: 9pt; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin-bottom: 8px;">PRIMA dell'installazione</div>
+
+      <div class="info-box red" style="margin-bottom: 8px;">
+        <div class="info-label">Passo 1 — Autorizzazione legale</div>
+        <div class="info-content">
+          <strong>Se c'è sindacato:</strong> firma <strong>A2</strong> (Accordo sindacale)<br>
+          <strong>Se non c'è:</strong> presenta <strong>A3</strong> (Istanza INL) e attendi 30 giorni
+        </div>
+      </div>
+
+      <div class="info-box blue" style="margin-bottom: 8px;">
+        <div class="info-label">Passo 2 — GDPR tra te e cliente</div>
+        <div class="info-content">Firma <strong>A8</strong> (Accordo Art. 28 GDPR) con il cliente</div>
+      </div>
+
+      <div class="info-box green" style="margin-bottom: 8px;">
+        <div class="info-label">Passo 3 — Informare i dipendenti</div>
+        <div class="info-content">
+          Il cliente consegna a ogni dipendente:<br>
+          → <strong>A4</strong> Informativa privacy (firma)<br>
+          → <strong>A1</strong> Comunicazione attivazione (firma)
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size: 9pt; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin-bottom: 8px;">AL MOMENTO dell'installazione</div>
+
+      <div class="info-box purple" style="margin-bottom: 8px;">
+        <div class="info-label">Passo 4 — Installazione dispositivo</div>
+        <div class="info-content">Porta e compila sul posto:<br>
+          → <strong>B3</strong> Verbale installazione (firma cliente)<br>
+          → <strong>B4</strong> Garanzia commerciale (consegni al cliente)<br>
+          → <strong>B1+B2</strong> Dichiarazione CE + Scheda tecnica (allegato)
+        </div>
+      </div>
+
+      <div class="info-box green" style="margin-bottom: 8px;">
+        <div class="info-label">Passo 5 — Consegna badge</div>
+        <div class="info-content">Per ogni dipendente che riceve il badge:<br>
+          → <strong>A5</strong> Ricevuta consegna badge (firma dipendente)
+        </div>
+      </div>
+
+      <div style="font-size: 9pt; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin: 16px 0 8px 0;">DA FARE in azienda (una tantum)</div>
+
+      <div class="info-box blue">
+        <div class="info-label">Documenti interni</div>
+        <div class="info-content">
+          → <strong>A6</strong> Registro trattamento (tieni aggiornato)<br>
+          → <strong>A7</strong> Nomina incaricati (per chi accede al sistema)<br>
+          → <strong>B1</strong> Dichiarazione CE (firma una volta, conserva 10 anni)
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
