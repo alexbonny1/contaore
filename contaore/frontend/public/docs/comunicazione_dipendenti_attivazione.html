@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comunicazione Attivazione Sistema Rilevazione Presenze</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #111; background: #fff; padding: 0; }
+    .page { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm; }
+    .header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 20px; }
+    .section-title { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; border-left: 3px solid #111; padding-left: 7px; margin-bottom: 7px; margin-top: 18px; }
+    .fill-field { display: inline-block; border-bottom: 1px solid #888; min-width: 180px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-sm { display: inline-block; border-bottom: 1px solid #888; min-width: 80px; height: 1.3em; vertical-align: bottom; }
+    .fill-field-lg { display: inline-block; border-bottom: 1px solid #888; min-width: 280px; height: 1.3em; vertical-align: bottom; }
+    p { margin: 6px 0; line-height: 1.6; text-align: justify; }
+    .centered { text-align: center; }
+    .bold { font-weight: bold; }
+    .article { margin-left: 10px; }
+    ol.legal li { margin-bottom: 6px; line-height: 1.6; }
+    ul.legal li { margin-bottom: 6px; line-height: 1.6; }
+    .box-avviso { border: 2px solid #111; padding: 12px 16px; margin: 14px 0; background: #fafafa; }
+    .nota-bene { font-size: 9.5pt; font-style: italic; border: 1px solid #aaa; padding: 8px 12px; margin-top: 10px; background: #fafafa; }
+    .sign-line-under { display: block; border-bottom: 1px solid #555; margin-top: 30px; width: 85%; }
+    .sign-label { font-size: 9.5pt; margin-top: 3px; }
+    .page-break { page-break-before: always; }
+    .copy-label { text-align: center; font-weight: bold; font-size: 13pt; letter-spacing: 1px; border: 2px solid #111; padding: 6px 0; margin-bottom: 18px; }
+    table.ricevuta { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    table.ricevuta td { border: 1px solid #aaa; padding: 6px 10px; vertical-align: top; }
+    table.ricevuta th { border: 1px solid #aaa; padding: 6px 10px; background: #f0f0f0; font-size: 10pt; text-align: left; }
+    .print-btn {
+      position: fixed; top: 18px; right: 24px; z-index: 999;
+      background: #1a1a2e; color: #fff; border: none; padding: 10px 22px;
+      font-size: 11pt; cursor: pointer; border-radius: 4px;
+      font-family: Arial, sans-serif;
+    }
+    .print-btn:hover { background: #16213e; }
+    @media print {
+      .no-print { display: none; }
+      .page { padding: 16mm 18mm; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Stampa / Salva PDF</button>
+
+<!-- ===== COMUNICAZIONE ===== -->
+<div class="page">
+
+  <div class="header">
+    <div style="font-size: 14pt; font-weight: bold;">[ NOME AZIENDA ]</div>
+    <div style="font-size: 9pt; color: #555; margin-top: 3px;">
+      Sede: <span class="fill-field"></span> &nbsp;|&nbsp; P.IVA: <span class="fill-field-sm"></span>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 16px;">
+    <p><strong>A tutti i dipendenti</strong></p>
+    <p>Data: <span class="fill-field-sm"></span></p>
+    <p>Protocollo interno: <span class="fill-field-sm"></span></p>
+  </div>
+
+  <div class="centered bold" style="font-size: 13pt; margin: 18px 0 6px 0; text-decoration: underline;">
+    COMUNICAZIONE AI SENSI DELL'ART. 4, CO. 3, L. 20 MAGGIO 1970, N. 300
+  </div>
+  <div class="centered" style="font-size: 11pt; margin-bottom: 18px;">
+    Attivazione del sistema di rilevazione automatica delle presenze tramite badge NFC
+  </div>
+
+  <p>Gentili collaboratori,</p>
+  <p>con la presente comunicazione, ai sensi e per gli effetti dell'art. 4, comma 3, della Legge 20 maggio 1970, n. 300 (Statuto dei Lavoratori), come modificato dall'art. 23 del D.Lgs. 14 settembre 2015, n. 151, vi informiamo di quanto segue.</p>
+
+  <div class="section-title">1. Attivazione del Sistema</div>
+  <div class="article">
+    <p>A far data dal <span class="fill-field-sm"></span>, la scrivente azienda attiva il sistema di rilevazione automatica delle presenze tramite tecnologia <strong>NFC (Near Field Communication)</strong>, denominato <strong>ContaOre</strong>, presso la/le sede/i di: <span class="fill-field-lg"></span>.</p>
+    <p>Tale sistema sostituisce / integra <span class="fill-field-lg"></span> (indicare il precedente metodo di rilevazione presenze, oppure "non è presente un precedente sistema").</p>
+    <p>Il sistema è stato installato
+      <span class="fill-field-lg"></span>
+      (indicare: "previo accordo sindacale del ___" oppure "previa autorizzazione dell'Ispettorato Territoriale del Lavoro di ___ del ___").
+    </p>
+  </div>
+
+  <div class="section-title">2. Descrizione del Sistema e Modalità di Funzionamento</div>
+  <div class="article">
+    <p>Il sistema è composto da:</p>
+    <ul class="legal">
+      <li><strong>Lettori NFC</strong> installati presso gli accessi della sede lavorativa (posizioni: <span class="fill-field-lg"></span>);</li>
+      <li><strong>Badge personale NFC</strong> nominativo assegnato individualmente a ciascun dipendente;</li>
+      <li><strong>Software gestionale ContaOre</strong> (cloud), che archivia e gestisce i dati di timbratura.</li>
+    </ul>
+    <p>La procedura di utilizzo è la seguente: all'inizio e al termine di ogni prestazione lavorativa (e in caso di uscita/rientro intermedi), il dipendente è tenuto ad <strong>avvicinare il proprio badge al lettore NFC</strong> installato presso l'ingresso/uscita. Il sistema registra automaticamente data, ora e terminale utilizzato.</p>
+  </div>
+
+  <div class="section-title">3. Finalità del Trattamento dei Dati</div>
+  <div class="article">
+    <p>I dati raccolti tramite il sistema vengono trattati esclusivamente per le seguenti finalità:</p>
+    <ol class="legal" type="a">
+      <li>gestione e controllo dell'orario di lavoro contrattuale;</li>
+      <li>calcolo delle presenze, delle assenze, degli straordinari e delle relative retribuzioni;</li>
+      <li>adempimenti di legge in materia di orario di lavoro (D.Lgs. 66/2003) e tenuta del registro presenze;</li>
+      <li>gestione di ferie, permessi e altri istituti contrattuali.</li>
+    </ol>
+    <p>I dati <strong>non</strong> vengono utilizzati per finalità di controllo a distanza dell'attività lavorativa, profilazione o scopi diversi da quelli indicati.</p>
+  </div>
+
+  <div class="section-title">4. Dati Raccolti</div>
+  <div class="article">
+    <p>Il sistema raccoglie esclusivamente:</p>
+    <ul class="legal">
+      <li>codice identificativo del badge NFC (UID), associato al dipendente esclusivamente nel sistema gestionale;</li>
+      <li>data e ora della timbratura;</li>
+      <li>identificativo del lettore/terminale utilizzato.</li>
+    </ul>
+    <p><strong>Non vengono raccolti</strong> immagini, audio, dati biometrici, informazioni sull'attività svolta o sulla posizione all'interno dei locali.</p>
+  </div>
+
+  <div class="section-title">5. Regole di Utilizzo del Badge</div>
+  <div class="article">
+    <div class="box-avviso">
+      <p><strong>Il dipendente è tenuto a:</strong></p>
+      <ol class="legal">
+        <li>Timbrare <strong>personalmente</strong> all'entrata e all'uscita in ogni giornata lavorativa;</li>
+        <li>Timbrare ogni volta che si allontana dalla sede durante l'orario di lavoro e al rientro;</li>
+        <li><strong>Non cedere il badge ad altri</strong> né utilizzare badge altrui;</li>
+        <li>Conservare il badge con cura ed evitarne danneggiamenti;</li>
+        <li>Segnalare <strong>immediatamente</strong> alla direzione lo smarrimento, il furto o il danneggiamento del badge;</li>
+        <li>Restituire il badge al termine del rapporto di lavoro.</li>
+      </ol>
+    </div>
+    <p>La timbratura effettuata da persona diversa dal titolare del badge o la mancata timbratura deliberata costituiscono <strong>gravi irregolarità disciplinari</strong>, perseguibili ai sensi del CCNL applicato e delle norme di legge.</p>
+  </div>
+
+  <div class="section-title">6. Conservazione dei Dati e Accesso</div>
+  <div class="article">
+    <p>I dati di timbratura sono conservati per <strong>5 anni</strong> dalla rilevazione, nel rispetto degli obblighi di legge, e successivamente cancellati. L'accesso è limitato al personale HR, ai responsabili diretti (limitatamente ai propri collaboratori) e al consulente del lavoro.</p>
+    <p>Ogni dipendente ha il diritto di visualizzare i propri dati tramite: <span class="fill-field-lg"></span> (es. "portale dipendenti ContaOre accessibile con le proprie credenziali" oppure "richiesta scritta all'ufficio HR").</p>
+  </div>
+
+  <div class="section-title">7. Diritti del Dipendente (GDPR)</div>
+  <div class="article">
+    <p>In qualità di interessato ai sensi del GDPR, ogni dipendente ha diritto di accesso, rettifica, cancellazione (nei limiti di legge), limitazione, portabilità e opposizione al trattamento dei propri dati. Per esercitare tali diritti o per qualsiasi informazione, è possibile contattare: <span class="fill-field-lg"></span>.</p>
+    <p>È inoltre consegnata a ciascun dipendente l'informativa completa ai sensi dell'art. 13 GDPR.</p>
+  </div>
+
+  <div class="section-title">8. Disposizioni Finali</div>
+  <div class="article">
+    <p>La presente comunicazione è effettuata ai sensi dell'art. 4, co. 3, L. 300/1970, condizione necessaria affinché i dati rilevati dal sistema possano essere utilizzati a tutti i fini connessi al rapporto di lavoro.</p>
+    <p>Per qualsiasi chiarimento è possibile rivolgersi a: <span class="fill-field-lg"></span>.</p>
+  </div>
+
+  <p style="margin-top: 20px;">Distinti saluti.</p>
+  <p style="margin-top: 6px;">Luogo e data: <span class="fill-field"></span></p>
+
+  <div style="margin-top: 24px;">
+    <p class="bold">Il Datore di Lavoro / Legale Rappresentante</p>
+    <span class="sign-line-under"></span>
+    <p class="sign-label"><span class="fill-field"></span></p>
+  </div>
+
+  <div class="nota-bene" style="margin-top: 24px;">
+    <strong>Istruzioni per l'uso:</strong> consegnare una copia firmata a ciascun dipendente e conservare la ricevuta firmata in busta paga o fascicolo personale. La sezione sottostante serve come conferma di ricezione da staccare e restituire al datore di lavoro.
+  </div>
+
+  <!-- TAGLIANDO RICEVUTA -->
+  <div style="border-top: 2px dashed #888; margin-top: 28px; padding-top: 14px;">
+    <p class="centered bold" style="font-size: 10pt; margin-bottom: 10px;">✂ &nbsp; RICEVUTA DI RICEZIONE &mdash; DA RESTITUIRE AL DATORE DI LAVORO &nbsp; ✂</p>
+    <p>Il/La sottoscritto/a <span class="fill-field-lg"></span>, dipendente di <span class="fill-field-lg"></span>, dichiara di aver ricevuto e preso visione della comunicazione ai sensi dell'art. 4, co. 3, L. 300/1970 relativa all'attivazione del sistema di rilevazione presenze NFC <strong>ContaOre</strong>, in data <span class="fill-field-sm"></span>.</p>
+    <p style="margin-top: 14px;">Firma: <span class="fill-field-lg"></span></p>
+  </div>
+</div>
+
+<!-- ===== FOGLIO FIRME MULTIPLO (per raccogliere le ricevute) ===== -->
+<div class="page page-break">
+  <div class="copy-label">FOGLIO RACCOLTA FIRME — USO INTERNO</div>
+
+  <div class="header">
+    <div style="font-size: 12pt; font-weight: bold; margin-bottom: 4px;">[ NOME AZIENDA ] — Ricevute ricezione comunicazione art. 4 co. 3 L. 300/1970</div>
+    <div style="font-size: 9.5pt; color: #555;">Sistema ContaOre — attivazione in data <span class="fill-field-sm"></span></div>
+  </div>
+
+  <table class="ricevuta">
+    <thead>
+      <tr>
+        <th style="width: 5%;">#</th>
+        <th style="width: 35%;">Nome e Cognome dipendente</th>
+        <th style="width: 20%;">Data ricezione</th>
+        <th style="width: 25%;">Firma</th>
+        <th style="width: 15%;">Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>2</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>3</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>4</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>5</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>6</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>7</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>8</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>9</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>10</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>11</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>12</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>13</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>14</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>15</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>16</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>17</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>18</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>19</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>20</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top: 14px; font-size: 9.5pt; color: #555;">Conservare il presente foglio nel registro aziendale delle comunicazioni. Archiviare per almeno 5 anni.</p>
+</div>
+
+</body>
+</html>

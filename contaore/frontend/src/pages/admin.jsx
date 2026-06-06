@@ -708,6 +708,13 @@ export default function Admin() {
                 tagColor: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
               },
               {
+                file: "comunicazione_dipendenti_attivazione.html",
+                titolo: "Comunicazione attivazione sistema ai dipendenti",
+                sottotitolo: "Art. 4 co. 3 L. 300/1970 — da consegnare a ogni dipendente prima dell'attivazione",
+                tag: "OBBLIGATORIO",
+                tagColor: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
+              },
+              {
                 file: "accordo_sindacale_art4.html",
                 titolo: "Accordo sindacale — sistema rilevazione presenze",
                 sottotitolo: "Art. 4 L. 300/1970 — da firmare con RSA/RSU prima dell'attivazione",
