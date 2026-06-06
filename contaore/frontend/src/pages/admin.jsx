@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Building2, Plus, Trash2, KeyRound,
+  Building2, Plus, Trash2,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
   Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio, Download,
   FileText, ExternalLink, Shield
@@ -15,32 +15,26 @@ function Toast({ message, type, onClose }) {
   }, []);
   return (
     <div className={`
-      fixed bottom-6 left-1/2 -translate-x-1/2 z-50
-      flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium
+      fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] sm:w-auto
+      flex items-center gap-2 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium
       ${type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
     `}>
-      {type === "success" ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-      {message}
+      {type === "success" ? <CheckCircle2 size={16} className="shrink-0" /> : <XCircle size={16} className="shrink-0" />}
+      <span className="leading-snug">{message}</span>
     </div>
   );
 }
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white dark:bg-[#161618] rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 max-w-sm w-full mx-4 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white dark:bg-[#161618] rounded-t-3xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 w-full sm:max-w-sm shadow-xl">
         <p className="text-zinc-900 dark:text-zinc-100 font-medium mb-6 leading-relaxed">{message}</p>
         <div className="flex gap-3">
-          <button
-            onClick={onConfirm}
-            className="flex-1 h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors"
-          >
+          <button onClick={onConfirm} className="flex-1 h-12 rounded-2xl bg-red-500 text-white text-sm font-medium">
             Elimina
           </button>
-          <button
-            onClick={onCancel}
-            className="flex-1 h-11 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium"
-          >
+          <button onClick={onCancel} className="flex-1 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium">
             Annulla
           </button>
         </div>
@@ -48,6 +42,9 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     </div>
   );
 }
+
+// Input class helper — 16px font su mobile previene auto-zoom iOS Safari
+const inputCls = "w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[16px] sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500";
 
 export default function Admin() {
 
@@ -63,12 +60,12 @@ export default function Admin() {
   const [saving, setSaving]                 = useState(false);
   const [error, setError]                   = useState("");
 
-  const [resettingPassword, setResettingPassword] = useState(null); // userId
+  const [resettingPassword, setResettingPassword] = useState(null);
   const [resetLoading, setResetLoading]     = useState(false);
-  const [resetResult, setResetResult]       = useState(null); // { id, nuova_password } quando email non inviata
+  const [resetResult, setResetResult]       = useState(null);
 
   const [toast, setToast]                   = useState(null);
-  const [confirm, setConfirm]               = useState(null); // { message, onConfirm }
+  const [confirm, setConfirm]               = useState(null);
 
   const [copiedId, setCopiedId]             = useState(null);
   const [expandedCompany, setExpandedCompany] = useState(null);
@@ -80,7 +77,7 @@ export default function Admin() {
   const [fasciaNome, setFasciaNome]         = useState("");
   const [fasciaReaderId, setFasciaReaderId] = useState("");
   const [savingFascia, setSavingFascia]     = useState(false);
-  const [companyDevices, setCompanyDevices] = useState({}); // companyId → devices[]
+  const [companyDevices, setCompanyDevices] = useState({});
 
   const [togglingPortale, setTogglingPortale] = useState(null);
   const [now, setNow] = useState(Date.now());
@@ -89,7 +86,7 @@ export default function Admin() {
   const [alertEmailSaved, setAlertEmailSaved] = useState("");
   const [alertAttivo, setAlertAttivo]     = useState(true);
   const [offlineMinuti, setOfflineMinuti] = useState(5);
-  const [alertCompanies, setAlertCompanies] = useState([]); // [] = tutte le aziende
+  const [alertCompanies, setAlertCompanies] = useState([]);
   const [savingAlert, setSavingAlert]     = useState(false);
 
   const [otaRelease, setOtaRelease]       = useState(null);
@@ -98,7 +95,7 @@ export default function Admin() {
   const [otaUrl, setOtaUrl]               = useState("");
   const [otaAttivo, setOtaAttivo]         = useState(true);
   const [savingOta, setSavingOta]         = useState(false);
-  const [otaPendingReaders, setOtaPendingReaders] = useState(new Set()); // reader_ids in loading
+  const [otaPendingReaders, setOtaPendingReaders] = useState(new Set());
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -108,7 +105,6 @@ export default function Admin() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.role !== "superadmin") { navigate("/dashboard"); return; }
     loadCompanies();
-    // Aggiorna i dispositivi silenziosamente ogni 5s
     const interval = setInterval(() => {
       refreshDevices();
       setNow(Date.now());
@@ -157,10 +153,7 @@ export default function Admin() {
       const token = localStorage.getItem("token");
       const response = await fetch(API_URL + "/api/admin/companies", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token
-        },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ company_name: companyName, username, email: ownerEmail })
       });
       const data = await response.json();
@@ -175,7 +168,7 @@ export default function Admin() {
       if (data.email_inviata) {
         showToast(`Azienda creata — credenziali inviate a ${ownerEmail}`);
       } else {
-        showToast("Azienda creata. Attenzione: email non inviata (verifica config Resend)", "error");
+        showToast("Azienda creata. Email non inviata (verifica Resend)", "error");
       }
       loadCompanies();
     } catch (err) {
@@ -210,7 +203,6 @@ export default function Admin() {
     }
   }
 
-  // Reset password: auto-genera e invia via email
   async function resetPassword(userId, userEmail) {
     setResetLoading(true);
     try {
@@ -218,7 +210,7 @@ export default function Admin() {
       const response = await fetch(API_URL + "/api/admin/users/" + userId + "/password", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({}) // password auto-generata dal backend
+        body: JSON.stringify({})
       });
       const data = await response.json();
       if (!data.success) { showToast("Errore reset password", "error"); return; }
@@ -253,9 +245,7 @@ export default function Admin() {
       const data = await response.json();
       if (!data.success) { showToast("Errore aggiornamento portale", "error"); return; }
       setCompanies(prev =>
-        prev.map(c =>
-          c.id === companyId ? { ...c, portale_dipendenti: !attivoAttuale } : c
-        )
+        prev.map(c => c.id === companyId ? { ...c, portale_dipendenti: !attivoAttuale } : c)
       );
     } catch (err) {
       console.log(err);
@@ -285,10 +275,7 @@ export default function Admin() {
       const res = await fetch(API_URL + "/api/admin/settings", { headers: { Authorization: "Bearer " + token } });
       const d = await res.json();
       if (d.success && d.settings) {
-        if (d.settings.alert_email) {
-          setAlertEmail(d.settings.alert_email);
-          setAlertEmailSaved(d.settings.alert_email);
-        }
+        if (d.settings.alert_email) { setAlertEmail(d.settings.alert_email); setAlertEmailSaved(d.settings.alert_email); }
         if (d.settings.alert_attivo !== undefined && d.settings.alert_attivo !== null) setAlertAttivo(d.settings.alert_attivo);
         if (d.settings.offline_minuti) setOfflineMinuti(d.settings.offline_minuti);
         if (Array.isArray(d.settings.alert_companies)) setAlertCompanies(d.settings.alert_companies);
@@ -336,14 +323,13 @@ export default function Admin() {
       });
       const d = await res.json();
       if (!d.success) { showToast("Errore invio comando OTA", "error"); return; }
-      // Update local state so badge "In attesa" appare subito
       setCompanies(prev => prev.map(c => ({
         ...c,
         devices: (c.devices || []).map(dev =>
           dev.reader_id === readerId ? { ...dev, ota_pending: true } : dev
         )
       })));
-      showToast(`Aggiornamento OTA pianificato per ${readerId} — si aggiornerà al prossimo ping`);
+      showToast(`OTA pianificato per ${readerId} — si aggiornerà al prossimo ping`);
     } catch (_) { showToast("Errore di connessione", "error"); }
     finally { setOtaPendingReaders(prev => { const s = new Set(prev); s.delete(readerId); return s; }); }
   }
@@ -362,7 +348,7 @@ export default function Admin() {
       if (!d.success) { showToast("Errore salvataggio OTA", "error"); return; }
       setOtaRelease(d.release);
       setShowOtaForm(false);
-      showToast(otaAttivo ? `OTA attivo: v${otaVersion} — i dispositivi si aggiorneranno al prossimo ping` : "OTA disattivato");
+      showToast(otaAttivo ? `OTA attivo: v${otaVersion}` : "OTA disattivato");
     } catch (_) { showToast("Errore di connessione", "error"); }
     finally { setSavingOta(false); }
   }
@@ -461,55 +447,54 @@ export default function Admin() {
       )}
 
       {/* HEADER */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#111113]/90 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div>
-            <h1 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">ContaOre</h1>
+            <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">ContaOre</h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Pannello Superadmin</p>
           </div>
-          <button onClick={logout} className="h-10 sm:h-11 px-4 sm:px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
+          <button onClick={logout} className="h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
             Logout
           </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-4 sm:space-y-6">
 
         {/* TITLE + BUTTON */}
-        <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Aziende</h2>
+            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Aziende</h2>
             <p className="text-sm text-zinc-500 mt-0.5">{companies.length} aziende registrate</p>
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
+            className="flex items-center gap-2 h-11 px-4 sm:px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
           >
             <Plus size={16} />
-            <span className="hidden sm:inline">Nuova azienda</span>
-            <span className="sm:hidden">Nuova</span>
+            <span>Nuova</span>
           </button>
         </div>
 
         {/* FORM CREA AZIENDA */}
         {showCreate && (
-          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-6 sm:mb-8">
-            <div className="flex items-center justify-between mb-6">
+          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6">
+            <div className="flex items-start justify-between mb-5">
               <div>
-                <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Nuova azienda</h3>
-                <p className="text-sm text-zinc-500 mt-1">La password viene generata automaticamente e inviata via email al titolare</p>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Nuova azienda</h3>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">La password viene generata automaticamente e inviata via email al titolare</p>
               </div>
-              <button onClick={() => { setShowCreate(false); setError(""); }}>
+              <button onClick={() => { setShowCreate(false); setError(""); }} className="ml-3 shrink-0 p-1">
                 <X size={20} className="text-zinc-500" />
               </button>
             </div>
-            <form onSubmit={createCompany} className="grid md:grid-cols-2 gap-4">
+            <form onSubmit={createCompany} className="flex flex-col gap-3">
               <input
                 type="text"
                 placeholder="Nome azienda *"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
+                className={inputCls}
                 required
               />
               <input
@@ -517,196 +502,185 @@ export default function Admin() {
                 placeholder="Username titolare *"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="h-12 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
+                className={inputCls}
                 required
               />
-              <div className="md:col-span-2 relative">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+              <div className="relative">
+                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                 <input
                   type="email"
-                  placeholder="Email titolare * (riceverà username e password)"
+                  placeholder="Email titolare * (riceverà le credenziali)"
                   value={ownerEmail}
                   onChange={(e) => setOwnerEmail(e.target.value)}
-                  className="w-full h-12 pl-10 pr-4 rounded-2xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 placeholder-zinc-400"
+                  className="w-full h-11 pl-9 pr-3 rounded-xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-[16px] sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 placeholder-zinc-400"
                   required
                 />
               </div>
-              {error && <p className="md:col-span-2 text-sm text-red-500">{error}</p>}
+              {error && <p className="text-sm text-red-500">{error}</p>}
               <button
                 type="submit"
                 disabled={saving}
-                className="md:col-span-2 h-12 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                className="h-12 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black font-medium disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Mail size={16} />
-                {saving ? "Creazione in corso..." : "Crea azienda e invia credenziali via email"}
+                {saving ? "Creazione in corso..." : "Crea e invia credenziali"}
               </button>
             </form>
           </div>
         )}
 
-        {/* SEZIONE ALERT EMAIL */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-5 sm:mb-6">
+        {/* ─── SEZIONE ALERT EMAIL ─── */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <Mail size={18} className="text-zinc-500 shrink-0" />
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Alert lettori</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">Notifiche via email se un lettore di qualsiasi azienda va offline o ha un componente guasto</p>
+                <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">Notifiche se un lettore va offline o ha un componente guasto</p>
               </div>
             </div>
-            {/* Toggle attivo/disattivo */}
-            <button type="button" onClick={() => setAlertAttivo(!alertAttivo)}
-              className="shrink-0" title={alertAttivo ? "Avvisi attivi" : "Avvisi disattivati"}>
+            <button type="button" onClick={() => setAlertAttivo(!alertAttivo)} className="ml-3 shrink-0">
               {alertAttivo
-                ? <ToggleRight size={30} className="text-green-500" />
-                : <ToggleLeft size={30} className="text-zinc-400" />}
+                ? <ToggleRight size={32} className="text-green-500" />
+                : <ToggleLeft size={32} className="text-zinc-400" />}
             </button>
           </div>
 
-          <form onSubmit={saveAlertEmail} className="grid gap-3">
-            {/* Email */}
+          <form onSubmit={saveAlertEmail} className="flex flex-col gap-4">
             <div>
-              <p className="text-xs text-zinc-400 mb-1">Email destinatario avvisi</p>
+              <p className="text-xs text-zinc-400 mb-1.5">Email destinatario avvisi</p>
               <input
                 type="email"
                 value={alertEmail}
                 onChange={e => setAlertEmail(e.target.value)}
                 placeholder="es. admin@timbry.it"
-                className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500"
+                className={inputCls}
               />
             </div>
 
-            {/* Soglia offline */}
             <div>
-              <p className="text-xs text-zinc-400 mb-1">Avvisa se offline da più di (minuti)</p>
-              <div className="flex items-center gap-2">
+              <p className="text-xs text-zinc-400 mb-1.5">Avvisa se offline da più di (minuti)</p>
+              <div className="flex items-center gap-3">
                 <input
                   type="number" min="1" max="1440"
                   value={offlineMinuti}
                   onChange={e => setOfflineMinuti(e.target.value)}
-                  className="w-28 h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500"
+                  className="w-24 h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[16px] sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500"
                 />
-                <span className="text-xs text-zinc-400">minuti senza ping → avviso lettore offline</span>
+                <span className="text-xs text-zinc-400 leading-snug">minuti senza ping → avviso offline</span>
               </div>
             </div>
 
-            {/* Selezione aziende */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-2">
                 <p className="text-xs text-zinc-400">Aziende da monitorare</p>
                 <button type="button"
                   onClick={() => setAlertCompanies([])}
-                  className={`text-xs font-medium ${alertCompanies.length === 0 ? "text-blue-500" : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"}`}>
-                  {alertCompanies.length === 0 ? "✓ Tutte le aziende" : "Seleziona tutte"}
+                  className={`text-xs font-medium ${alertCompanies.length === 0 ? "text-blue-500" : "text-zinc-400"}`}>
+                  {alertCompanies.length === 0 ? "✓ Tutte" : "Tutte"}
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {companies.map(c => {
-                  const selected = alertCompanies.includes(c.id);
-                  // Se alertCompanies è vuoto, sono tutte attive implicitamente
-                  const active = alertCompanies.length === 0 || selected;
+                  const active = alertCompanies.length === 0 || alertCompanies.includes(c.id);
                   return (
                     <button key={c.id} type="button"
                       onClick={() => toggleAlertCompany(c.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      className={`h-9 px-3 rounded-lg text-xs font-medium border transition-colors ${
                         active
                           ? "bg-blue-500 text-white border-blue-500"
                           : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
                       }`}>
-                      {active && <span className="mr-1">✓</span>}{c.nome}
+                      {active && "✓ "}{c.nome}
                     </button>
                   );
                 })}
               </div>
               <p className="text-[11px] text-zinc-400 mt-1.5">
-                {alertCompanies.length === 0
-                  ? "Ricevi avvisi da tutte le aziende"
-                  : `Ricevi avvisi solo da ${alertCompanies.length} azienda/e selezionata/e`}
+                {alertCompanies.length === 0 ? "Ricevi avvisi da tutte le aziende" : `Solo ${alertCompanies.length} azienda/e selezionata/e`}
               </p>
             </div>
 
-            {/* Nota componenti */}
-            <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3 py-2.5">
               <XCircle size={14} className="text-amber-500 shrink-0" />
-              <p className="text-xs text-amber-700 dark:text-amber-400">Guasto componente (NFC / Display) → avviso immediato al primo ping</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 leading-snug">Guasto NFC / Display → avviso immediato al primo ping</p>
             </div>
 
-            <div className="flex items-center justify-between">
-              {alertEmailSaved && alertAttivo ? (
-                <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                  Avvisi attivi → {alertEmailSaved}
-                </p>
-              ) : (
-                <p className="text-xs text-zinc-400">{alertAttivo ? "Imposta un'email per ricevere gli avvisi" : "Avvisi disattivati"}</p>
-              )}
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-zinc-400 leading-snug min-w-0">
+                {alertEmailSaved && alertAttivo
+                  ? <span className="text-green-600 dark:text-green-400 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />Attivi → {alertEmailSaved}</span>
+                  : alertAttivo ? "Imposta un'email" : "Avvisi disattivati"}
+              </p>
               <button type="submit" disabled={savingAlert}
-                className="h-10 px-5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-40 shrink-0">
+                className="shrink-0 h-11 px-5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-40">
                 {savingAlert ? "..." : "Salva"}
               </button>
             </div>
           </form>
         </div>
 
-        {/* SEZIONE OTA */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-5 sm:mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <Download size={18} /> Aggiornamento Firmware OTA
+        {/* ─── SEZIONE OTA ─── */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Download size={16} className="shrink-0" /> Firmware OTA
               </h3>
-              <p className="text-xs text-zinc-500 mt-1">Configura la release, poi usa il bottone "Aggiorna" su ogni lettore per aggiornarlo singolarmente</p>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Configura la release, poi seleziona i lettori da aggiornare</p>
             </div>
-            <button onClick={() => setShowOtaForm(!showOtaForm)} className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+            <button onClick={() => setShowOtaForm(!showOtaForm)}
+              className="ml-3 shrink-0 flex items-center gap-1 text-sm text-zinc-500 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800">
               <Plus size={14} /> {showOtaForm ? "Chiudi" : "Configura"}
             </button>
           </div>
 
-          {/* Stato attuale */}
           {otaRelease ? (
-            <div className={`flex items-center justify-between rounded-2xl px-4 py-3 border ${otaRelease.attivo ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30" : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"}`}>
-              <div>
-                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">v{otaRelease.version}</p>
-                <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-xs">{otaRelease.url}</p>
+            <div className={`rounded-2xl px-4 py-3 border ${otaRelease.attivo ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30" : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">v{otaRelease.version}</p>
+                  <p className="text-xs text-zinc-400 mt-0.5 truncate">{otaRelease.url}</p>
+                </div>
+                <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${otaRelease.attivo ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                  {otaRelease.attivo ? "ATTIVO" : "OFF"}
+                </span>
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${otaRelease.attivo ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
-                {otaRelease.attivo ? "ATTIVO" : "DISATTIVATO"}
-              </span>
             </div>
           ) : (
             <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-4 text-center">
-              <p className="text-xs text-zinc-400">Nessun aggiornamento configurato — i dispositivi rimangono sulla versione attuale</p>
+              <p className="text-xs text-zinc-400">Nessun aggiornamento configurato</p>
             </div>
           )}
 
-          {/* Form configurazione */}
           {showOtaForm && (
-            <form onSubmit={saveOta} className="mt-4 grid gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-zinc-400 mb-1">Versione target (es. 2.4.0)</p>
+            <form onSubmit={saveOta} className="mt-4 flex flex-col gap-3">
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <p className="text-xs text-zinc-400 mb-1.5">Versione (es. 2.4.0)</p>
                   <input type="text" value={otaVersion} onChange={e => setOtaVersion(e.target.value)} required placeholder="2.4.0"
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                    className={inputCls} />
                 </div>
-                <div className="flex items-end gap-2">
+                <div className="flex flex-col justify-end">
                   <button type="button" onClick={() => setOtaAttivo(!otaAttivo)}
-                    className={`h-10 px-4 rounded-xl text-sm font-medium transition-all ${otaAttivo ? "bg-blue-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
-                    {otaAttivo ? "Attivo" : "Disattivato"}
+                    className={`h-11 px-4 rounded-xl text-sm font-medium transition-all ${otaAttivo ? "bg-blue-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
+                    {otaAttivo ? "Attivo" : "Off"}
                   </button>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-zinc-400 mb-1">URL del file .bin (deve essere pubblicamente accessibile)</p>
-                <input type="url" value={otaUrl} onChange={e => setOtaUrl(e.target.value)} required placeholder="https://esempio.com/firmware-v2.4.0.bin"
-                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                <p className="text-xs text-zinc-400 mb-1.5">URL file .bin (pubblicamente accessibile)</p>
+                <input type="url" value={otaUrl} onChange={e => setOtaUrl(e.target.value)} required
+                  placeholder="https://esempio.com/firmware.bin"
+                  className={inputCls} />
               </div>
               <div className="flex gap-2">
                 <button type="submit" disabled={savingOta}
-                  className="flex-1 h-10 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
-                  {savingOta ? "Salvataggio..." : "Salva e attiva OTA"}
+                  className="flex-1 h-11 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
+                  {savingOta ? "Salvataggio..." : "Salva OTA"}
                 </button>
                 <button type="button" onClick={() => setShowOtaForm(false)}
-                  className="h-10 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm">
+                  className="h-11 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm">
                   Annulla
                 </button>
               </div>
@@ -714,127 +688,118 @@ export default function Admin() {
           )}
         </div>
 
-        {/* SEZIONE DOCUMENTI LEGALI */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-6 sm:mb-8">
+        {/* ─── SEZIONE DOCUMENTI LEGALI ─── */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-4">
             <Shield size={18} className="text-zinc-500 shrink-0" />
             <div>
               <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Documenti legali</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Modelli pronti da compilare, stampare e far firmare</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Modelli pronti da compilare e far firmare</p>
             </div>
           </div>
-          <div className="space-y-2">
-            {/* Informativa Privacy GDPR */}
-            <div className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <FileText size={16} className="text-zinc-400 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
-                    Informativa privacy dipendente
-                  </p>
-                  <p className="text-xs text-zinc-400 mt-0.5">Art. 13 GDPR — rilevazione presenze badge NFC</p>
-                </div>
+          <div className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <FileText size={16} className="text-zinc-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Informativa privacy dipendente</p>
+                <p className="text-xs text-zinc-400 mt-0.5">Art. 13 GDPR — badge NFC</p>
               </div>
-              <a
-                href="/docs/informativa_privacy_dipendente.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-3 shrink-0 flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium hover:opacity-90 transition-opacity"
-              >
-                <ExternalLink size={13} />
-                <span className="hidden sm:inline">Apri</span>
-                <span className="sm:hidden">Apri</span>
-              </a>
             </div>
+            <a
+              href="/docs/informativa_privacy_dipendente.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium"
+            >
+              <ExternalLink size={14} /> Apri
+            </a>
           </div>
-          <p className="text-[11px] text-zinc-400 mt-3">
-            Apri il documento nel browser → usa "Stampa" per salvarlo come PDF o stamparlo direttamente
+          <p className="text-[11px] text-zinc-400 mt-2.5 leading-relaxed">
+            Su iPhone: Apri → tocca il quadrato con freccia → Stampa → Salva PDF
           </p>
         </div>
 
-        {/* LISTA AZIENDE */}
+        {/* ─── LISTA AZIENDE ─── */}
         {loading ? (
-          <div className="text-zinc-500 text-center py-20">Caricamento...</div>
+          <div className="text-zinc-500 text-center py-16">Caricamento...</div>
         ) : companies.length === 0 ? (
-          <div className="text-zinc-500 text-center py-20">Nessuna azienda creata</div>
+          <div className="text-zinc-500 text-center py-16">Nessuna azienda creata</div>
         ) : (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
             {companies.map((company) => (
               <div key={company.id} className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] overflow-hidden">
 
                 {/* HEADER CARD */}
                 <div className="p-4 sm:p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                        <Building2 size={20} className="text-zinc-700 dark:text-zinc-200" />
+
+                  {/* Nome + azioni */}
+                  <div className="flex items-start justify-between mb-4 gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                        <Building2 size={18} className="text-zinc-700 dark:text-zinc-200" />
                       </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{company.nome}</h3>
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">{company.nome}</h3>
                         <p className="text-xs text-zinc-400 mt-0.5">
-                          Creata il {new Date(company.created_at).toLocaleDateString("it-IT")}
+                          {new Date(company.created_at).toLocaleDateString("it-IT")}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => setExpandedCompany(expandedCompany === company.id ? null : company.id)}
-                        className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                        className="flex items-center gap-1 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-300"
                       >
-                        {expandedCompany === company.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        {expandedCompany === company.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         {expandedCompany === company.id ? "Chiudi" : "Dettagli"}
                       </button>
-                      <button onClick={() => askDeleteCompany(company.id, company.nome)} className="text-red-500 hover:text-red-700">
-                        <Trash2 size={16} />
+                      <button onClick={() => askDeleteCompany(company.id, company.nome)}
+                        className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500">
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>
 
-                  {/* COMPANY ID + PORTALE ROW */}
-                  <div className="flex flex-col sm:flex-row gap-3">
-
-                    <div className="flex-1 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-3">
-                      <div>
+                  {/* Company ID + Portale */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-3">
+                      <div className="min-w-0">
                         <p className="text-xs text-zinc-400 mb-0.5">Company ID</p>
-                        <p className="text-xs font-mono text-zinc-700 dark:text-zinc-300 truncate max-w-[140px] sm:max-w-[220px]">{company.id}</p>
+                        <p className="text-xs font-mono text-zinc-700 dark:text-zinc-300 truncate">{company.id}</p>
                       </div>
-                      <button onClick={() => copyToClipboard(company.id, company.id)} className="ml-2 shrink-0 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200">
+                      <button onClick={() => copyToClipboard(company.id, company.id)}
+                        className="ml-3 shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
                         {copiedId === company.id ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-3 min-w-[220px]">
+                    <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-3">
                       <div>
                         <p className="text-xs text-zinc-400 mb-0.5">Portale dipendenti</p>
                         <div className="flex items-center gap-1.5">
                           <Users size={12} className="text-zinc-400" />
-                          {company.account_dipendenti > 0 ? (
-                            <p className="text-xs text-zinc-500">{company.account_dipendenti} account</p>
-                          ) : (
-                            <p className="text-xs text-zinc-400">Nessun account</p>
-                          )}
+                          <p className="text-xs text-zinc-500">
+                            {company.account_dipendenti > 0 ? `${company.account_dipendenti} account` : "Nessun account"}
+                          </p>
                         </div>
                       </div>
                       <button
                         onClick={() => togglePortale(company.id, company.portale_dipendenti)}
                         disabled={togglingPortale === company.id}
-                        className="ml-3 shrink-0 transition-opacity disabled:opacity-40"
-                        title={company.portale_dipendenti ? "Disabilita portale" : "Abilita portale"}
+                        className="ml-3 shrink-0 disabled:opacity-40"
                       >
-                        {company.portale_dipendenti ? (
-                          <ToggleRight size={28} className="text-green-500" />
-                        ) : (
-                          <ToggleLeft size={28} className="text-zinc-400" />
-                        )}
+                        {company.portale_dipendenti
+                          ? <ToggleRight size={32} className="text-green-500" />
+                          : <ToggleLeft size={32} className="text-zinc-400" />}
                       </button>
                     </div>
                   </div>
 
                   {company.portale_dipendenti && (
-                    <div className="mt-3 flex items-center gap-2 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-2xl px-4 py-2.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                      <p className="text-xs text-green-700 dark:text-green-400">
-                        Portale attivo — aggiungendo un badge con email verrà creato automaticamente l'account dipendente
+                    <div className="mt-2 flex items-start gap-2 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-2xl px-4 py-2.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1 shrink-0" />
+                      <p className="text-xs text-green-700 dark:text-green-400 leading-relaxed">
+                        Portale attivo — badge con email crea automaticamente l'account dipendente
                       </p>
                     </div>
                   )}
@@ -842,79 +807,70 @@ export default function Admin() {
 
                 {/* DETTAGLI ESPANDIBILI */}
                 {expandedCompany === company.id && (
-                  <div className="border-t border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 grid md:grid-cols-2 gap-5 sm:gap-6">
+                  <div className="border-t border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 flex flex-col gap-5">
 
                     {/* ACCOUNT */}
                     <div>
                       <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Account azienda</h4>
-                      <div className="space-y-3">
+                      <div className="flex flex-col gap-3">
                         {company.users.map((user) => (
                           <div key={user.id} className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
                                 <p className="text-xs text-zinc-400 mb-0.5">Username</p>
-                                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{user.username}</p>
-                                {user.email && (
-                                  <p className="text-xs text-zinc-400 mt-0.5">{user.email}</p>
-                                )}
+                                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{user.username}</p>
+                                {user.email && <p className="text-xs text-zinc-400 mt-0.5 truncate">{user.email}</p>}
                               </div>
                               <button
                                 onClick={() => setResettingPassword(resettingPassword === user.id ? null : user.id)}
-                                className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                                className="shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-500 dark:text-zinc-400"
                               >
-                                <RefreshCw size={14} /> Reset password
+                                <RefreshCw size={13} /> Reset
                               </button>
                             </div>
 
-                            {/* Panel reset password */}
                             {resettingPassword === user.id && (
-                              <div className="mt-4 p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                              <div className="mt-3 p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                                 {resetResult?.id === user.id ? (
                                   <>
-                                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-                                      Email non inviata (Resend non configurato). Copia la password e condividila manualmente con il titolare.
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-3 leading-relaxed">
+                                      Email non inviata (Resend non configurato). Copia e condividi manualmente.
                                     </p>
                                     <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 mb-3">
-                                      <p className="flex-1 font-mono text-sm text-zinc-900 dark:text-zinc-100 select-all">{resetResult.nuova_password}</p>
-                                      <button
-                                        onClick={() => copyToClipboard(resetResult.nuova_password, `pwd_${user.id}`)}
-                                        className="shrink-0 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-                                      >
-                                        {copiedId === `pwd_${user.id}` ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
+                                      <p className="flex-1 font-mono text-sm text-zinc-900 dark:text-zinc-100 select-all min-w-0 truncate">{resetResult.nuova_password}</p>
+                                      <button onClick={() => copyToClipboard(resetResult.nuova_password, `pwd_${user.id}`)}
+                                        className="shrink-0 w-8 h-8 flex items-center justify-center">
+                                        {copiedId === `pwd_${user.id}` ? <Check size={15} className="text-green-500" /> : <Copy size={15} className="text-zinc-400" />}
                                       </button>
                                     </div>
-                                    <button
-                                      onClick={() => { setResettingPassword(null); setResetResult(null); }}
-                                      className="h-9 px-3 rounded-xl bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm"
-                                    >
+                                    <button onClick={() => { setResettingPassword(null); setResetResult(null); }}
+                                      className="h-10 px-4 rounded-xl bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm">
                                       Chiudi
                                     </button>
                                   </>
                                 ) : user.email ? (
                                   <>
-                                    <p className="text-xs text-zinc-500 mb-3">
-                                      Verrà generata una nuova password casuale e inviata via email a <strong className="text-zinc-700 dark:text-zinc-300">{user.email}</strong>
+                                    <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
+                                      Nuova password casuale inviata a <strong className="text-zinc-700 dark:text-zinc-300">{user.email}</strong>
                                     </p>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-col sm:flex-row gap-2">
                                       <button
                                         onClick={() => resetPassword(user.id, user.email)}
                                         disabled={resetLoading}
-                                        className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
+                                        className="flex items-center justify-center gap-1.5 h-11 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
                                       >
                                         <Mail size={13} />
-                                        {resetLoading ? "Invio..." : "Genera e invia via email"}
+                                        {resetLoading ? "Invio..." : "Genera e invia email"}
                                       </button>
-                                      <button
-                                        onClick={() => setResettingPassword(null)}
-                                        className="h-9 px-3 rounded-xl bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm"
-                                      >
+                                      <button onClick={() => setResettingPassword(null)}
+                                        className="h-11 px-4 rounded-xl bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm">
                                         Annulla
                                       </button>
                                     </div>
                                   </>
                                 ) : (
-                                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                                    Nessuna email associata a questo account. Impossibile inviare le credenziali.
+                                  <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
+                                    Nessuna email associata. Impossibile inviare le credenziali.
                                   </p>
                                 )}
                               </div>
@@ -930,7 +886,7 @@ export default function Admin() {
                         <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Fasce orarie</h4>
                         <button
                           onClick={() => openFasciaForm(company.id)}
-                          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                          className="flex items-center gap-1 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-500 dark:text-zinc-400"
                         >
                           <Plus size={13} /> Aggiungi
                         </button>
@@ -940,35 +896,35 @@ export default function Admin() {
                         <div className="mb-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4">
                           <div className="grid grid-cols-2 gap-3 mb-3">
                             <div>
-                              <p className="text-xs text-zinc-400 mb-1">Dalle</p>
+                              <p className="text-xs text-zinc-400 mb-1.5">Dalle</p>
                               <input type="time" value={fasciaOraInizio} onChange={(e) => setFasciaOraInizio(e.target.value)}
-                                className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                                className={inputCls} />
                             </div>
                             <div>
-                              <p className="text-xs text-zinc-400 mb-1">Alle</p>
+                              <p className="text-xs text-zinc-400 mb-1.5">Alle</p>
                               <input type="time" value={fasciaOraFine} onChange={(e) => setFasciaOraFine(e.target.value)}
-                                className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                                className={inputCls} />
                             </div>
                           </div>
                           <div className="mb-3">
-                            <p className="text-xs text-zinc-400 mb-1">Tipo</p>
+                            <p className="text-xs text-zinc-400 mb-1.5">Tipo</p>
                             <div className="flex gap-2">
                               <button type="button" onClick={() => setFasciaTipo("ENTRATA")}
-                                className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all ${fasciaTipo === "ENTRATA" ? "bg-green-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
+                                className={`flex-1 h-11 rounded-xl text-sm font-medium ${fasciaTipo === "ENTRATA" ? "bg-green-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
                                 ENTRATA
                               </button>
                               <button type="button" onClick={() => setFasciaTipo("USCITA")}
-                                className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all ${fasciaTipo === "USCITA" ? "bg-red-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
+                                className={`flex-1 h-11 rounded-xl text-sm font-medium ${fasciaTipo === "USCITA" ? "bg-red-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
                                 USCITA
                               </button>
                             </div>
                           </div>
                           <div className="mb-3">
-                            <p className="text-xs text-zinc-400 mb-1">Lettore (opzionale — lascia vuoto per tutti)</p>
+                            <p className="text-xs text-zinc-400 mb-1.5">Lettore (vuoto = tutti)</p>
                             <select
                               value={fasciaReaderId}
                               onChange={(e) => setFasciaReaderId(e.target.value)}
-                              className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                              className={inputCls}
                             >
                               <option value="">Tutti i lettori</option>
                               {(companyDevices[company.id] || []).map(d => (
@@ -979,18 +935,18 @@ export default function Admin() {
                             </select>
                           </div>
                           <div className="mb-3">
-                            <p className="text-xs text-zinc-400 mb-1">Nome fascia (opzionale)</p>
-                            <input type="text" placeholder={`es. ${fasciaTipo === "ENTRATA" ? "Entrata mattina" : "Uscita pomeriggio"}`}
+                            <p className="text-xs text-zinc-400 mb-1.5">Nome fascia (opzionale)</p>
+                            <input type="text" placeholder={fasciaTipo === "ENTRATA" ? "es. Entrata mattina" : "es. Uscita pomeriggio"}
                               value={fasciaNome} onChange={(e) => setFasciaNome(e.target.value)}
-                              className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                              className={inputCls} />
                           </div>
                           <div className="flex gap-2">
                             <button onClick={() => addFascia(company.id)} disabled={savingFascia}
-                              className="flex-1 h-10 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
+                              className="flex-1 h-11 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
                               {savingFascia ? "Salvataggio..." : "Salva fascia"}
                             </button>
                             <button onClick={() => setShowFasciaForm(null)}
-                              className="h-10 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm">
+                              className="h-11 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm">
                               Annulla
                             </button>
                           </div>
@@ -998,26 +954,25 @@ export default function Admin() {
                       )}
 
                       {company.fasce && company.fasce.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="flex flex-col gap-2">
                           {company.fasce.map((fascia) => (
-                            <div key={fascia.id} className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-                              <div className="flex items-center gap-3">
+                            <div key={fascia.id} className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
                                 <Clock size={14} className="text-zinc-400 shrink-0" />
-                                <div>
-                                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{fascia.nome}</p>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{fascia.nome}</p>
                                   <p className="text-xs text-zinc-400 mt-0.5">{fascia.ora_inizio.slice(0, 5)} — {fascia.ora_fine.slice(0, 5)}</p>
                                   {fascia.reader_id && (
-                                    <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5">
-                                      Lettore: {fascia.reader_id}
-                                    </p>
+                                    <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5 truncate">Lettore: {fascia.reader_id}</p>
                                   )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${fascia.tipo === "ENTRATA" ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300"}`}>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${fascia.tipo === "ENTRATA" ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300"}`}>
                                   {fascia.tipo}
                                 </span>
-                                <button onClick={() => askDeleteFascia(fascia.id)} className="text-zinc-400 hover:text-red-500">
+                                <button onClick={() => askDeleteFascia(fascia.id)}
+                                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-red-400">
                                   <Trash2 size={14} />
                                 </button>
                               </div>
@@ -1027,85 +982,79 @@ export default function Admin() {
                       ) : (
                         <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-6 text-center">
                           <p className="text-xs text-zinc-400">Nessuna fascia configurata</p>
-                          <p className="text-xs text-zinc-400 mt-1">Senza fasce la logica usa l'ultima timbratura</p>
+                          <p className="text-xs text-zinc-400 mt-1">Senza fasce usa l'ultima timbratura</p>
                         </div>
                       )}
                     </div>
 
                     {/* LETTORI NFC */}
-                    <div className="md:col-span-2">
+                    <div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Lettori NFC</h4>
                         <span className="text-xs text-zinc-400">{company.devices?.length || 0} dispositivi</span>
                       </div>
                       {company.devices && company.devices.length > 0 ? (
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
                           {company.devices.map((device) => {
                             const lastPing = device.ultimo_ping ? new Date(device.ultimo_ping).getTime() : 0;
                             const online = now - lastPing < 120000;
                             return (
                               <div key={device.reader_id} className={`rounded-2xl border px-4 py-3 ${online ? "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" : "bg-red-50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20"}`}>
-                                {/* Riga titolo */}
                                 <div className="flex items-center gap-2 flex-wrap mb-2">
                                   <Radio size={13} className={online ? "text-green-500 shrink-0" : "text-red-400 shrink-0"} />
-                                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate flex-1">
                                     {device.nome || device.reader_id}
                                   </p>
                                   <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${online ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"}`}>
                                     {online ? "ONLINE" : "OFFLINE"}
                                   </span>
                                 </div>
-                                {/* Dettagli */}
                                 {device.nome && (
-                                  <p className="text-xs text-zinc-400 font-mono mb-1">{device.reader_id}</p>
+                                  <p className="text-xs text-zinc-400 font-mono mb-1 truncate">{device.reader_id}</p>
                                 )}
                                 {device.sede && (
                                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">📍 {device.sede}</p>
                                 )}
                                 {device.firmware_version && (
-                                  <p className="text-xs text-zinc-400 mb-2">FW {device.firmware_version}</p>
+                                  <p className="text-xs text-zinc-400 mb-1">FW {device.firmware_version}</p>
                                 )}
-                                {/* Componenti */}
-                                {(device.nfc_ok !== null && device.nfc_ok !== undefined) || (device.display_ok !== null && device.display_ok !== undefined) ? (
+                                {((device.nfc_ok !== null && device.nfc_ok !== undefined) || (device.display_ok !== null && device.display_ok !== undefined)) ? (
                                   <div className="flex flex-wrap gap-1.5 mt-1">
                                     {(device.nfc_ok !== null && device.nfc_ok !== undefined) && (
                                       <span className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium ${device.nfc_ok ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"}`}>
                                         <span className={`w-1.5 h-1.5 rounded-full ${device.nfc_ok ? "bg-green-500" : "bg-red-500"}`} />
-                                        NFC {device.nfc_ok ? "OK" : "ERRORE"}
+                                        NFC {device.nfc_ok ? "OK" : "ERR"}
                                       </span>
                                     )}
                                     {(device.display_ok !== null && device.display_ok !== undefined) && (
                                       <span className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium ${device.display_ok ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" : "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"}`}>
                                         <span className={`w-1.5 h-1.5 rounded-full ${device.display_ok ? "bg-green-500" : "bg-red-500"}`} />
-                                        Display {device.display_ok ? "OK" : "ERRORE"}
+                                        Display {device.display_ok ? "OK" : "ERR"}
                                       </span>
                                     )}
                                     <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                      ESP OK
+                                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> ESP OK
                                     </span>
                                   </div>
                                 ) : online ? (
-                                  <p className="text-xs text-zinc-400 italic">Componenti: FW non aggiornato</p>
+                                  <p className="text-xs text-zinc-400 italic">FW non aggiornato</p>
                                 ) : null}
                                 {device.ultimo_ping && (
                                   <p className="text-xs text-zinc-400 mt-1.5">
-                                    Ultimo ping: {new Date(device.ultimo_ping).toLocaleString("it-IT")}
+                                    Ping: {new Date(device.ultimo_ping).toLocaleString("it-IT")}
                                   </p>
                                 )}
-                                {/* OTA pending badge */}
                                 {device.ota_pending && (
-                                  <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+                                  <div className="mt-2 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
                                     <Download size={11} className="text-amber-500 shrink-0" />
                                     <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">OTA in attesa — prossimo ping</span>
                                   </div>
                                 )}
-                                {/* Bottone Aggiorna — visibile solo se c'è release attiva */}
                                 {otaRelease?.attivo && !device.ota_pending && (
                                   <button
                                     onClick={() => triggerDeviceOta(device.reader_id)}
                                     disabled={otaPendingReaders.has(device.reader_id)}
-                                    className="mt-2 w-full flex items-center justify-center gap-1.5 h-8 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-medium transition-colors disabled:opacity-50"
+                                    className="mt-2 w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-blue-500 text-white text-[11px] font-medium disabled:opacity-50"
                                   >
                                     <Download size={11} />
                                     {otaPendingReaders.has(device.reader_id) ? "..." : `Aggiorna → v${otaRelease.version}`}
