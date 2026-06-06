@@ -742,6 +742,13 @@ export default function Admin() {
                 tag: "GDPR",
                 tagColor: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
               },
+              {
+                file: "accordo_responsabile_trattamento_art28.html",
+                titolo: "Accordo Responsabile del Trattamento",
+                sottotitolo: "Art. 28 GDPR — tra azienda cliente (Titolare) e ContaOre (Responsabile)",
+                tag: "GDPR",
+                tagColor: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+              },
             ].map((doc) => (
               <div key={doc.file} className="flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
                 <div className="flex items-start gap-3 min-w-0">
