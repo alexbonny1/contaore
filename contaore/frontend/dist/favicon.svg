@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Card outline (shifted left to leave room for gap + arc) -->
-  <rect x="14" y="14" width="42" height="58" rx="8" fill="none" stroke="#0099FF" stroke-width="4"/>
-  <!-- Chip top-left -->
-  <rect x="22" y="22" width="12" height="11" rx="2.5" fill="none" stroke="#0099FF" stroke-width="3.5"/>
-  <!-- Semicircle — separated by a gap from the card right edge (56+gap=65) -->
-  <path d="M65 28 A17 17 0 0 1 65 62" fill="none" stroke="#0099FF" stroke-width="4"/>
-</svg>
