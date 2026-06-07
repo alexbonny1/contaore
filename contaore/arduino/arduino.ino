@@ -95,8 +95,8 @@
 // ── LAYOUT ───────────────────────────
 #define HDR_H     40
 #define FTR_Y     285
-#define CLK_SIZE  20
-#define CLK_X     140
+#define CLK_SIZE  8
+#define CLK_X     120
 #define CLK_Y     120
 #define CLK_W     340
 #define CLK_H     100
@@ -393,7 +393,6 @@ void drawDate() {
   char buf[16];
   snprintf(buf, sizeof(buf), "%02d/%02d/%04d",
     t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
-  tft.fillRect(0, DATE_Y, 480, 30, C_BG);
   tft.setTextColor(C_DATE_TEXT, C_BG);
   tft.setTextSize(DATE_SIZE);
   tft.setCursor(DATE_X, DATE_Y);
@@ -1197,6 +1196,9 @@ void taskResult() {
 }
 
 void taskRfidHealth() {
+  static unsigned long lastCheck = 0;
+  if (millis() - lastCheck < 5000) return;
+  lastCheck = millis();
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
   g_rfidOk = (v != 0x00 && v != 0xFF);
   if (!g_rfidOk) { Serial.println("RFID drift, reinit..."); rfidInit(); }
