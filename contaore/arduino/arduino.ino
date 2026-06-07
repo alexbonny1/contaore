@@ -379,7 +379,7 @@ void drawFooter() {
 }
 
 void drawClock() {
-  tft.fillRect(CLK_X, CLK_Y, CLK_W, CLK_H, C_BG);
+  // setTextColor con bg incluso ridisegna ogni pixel: niente fillRect, niente flickering
   tft.setTextColor(C_CLK_TEXT, C_BG);
   tft.setTextSize(CLK_SIZE);
   tft.setCursor(CLK_X, CLK_Y);
@@ -765,8 +765,10 @@ void sendHeartbeat() {
 
   String otaUrl     = "";
   String otaVersion = "";
+  int    pingCode   = -1;
 
   auto handlePingResponse = [&](HTTPClient& h, int code) {
+    pingCode = code;
     Serial.printf("PING: %d\n", code);
     if (code == 200) {
       String body = h.getString();
@@ -781,7 +783,7 @@ void sendHeartbeat() {
   if (isHttps) {
     WiFiClientSecure c; c.setInsecure(); HTTPClient h;
     if (h.begin(c, g_url)) {
-      h.setTimeout(6000); h.setReuse(false);
+      h.setTimeout(10000); h.setReuse(false);
       h.addHeader("Content-Type", "application/json");
       handlePingResponse(h, h.POST(g_payload));
       h.end();
@@ -789,11 +791,16 @@ void sendHeartbeat() {
   } else {
     WiFiClient c; HTTPClient h;
     if (h.begin(c, g_url)) {
-      h.setTimeout(6000); h.setReuse(false);
+      h.setTimeout(10000); h.setReuse(false);
       h.addHeader("Content-Type", "application/json");
       handlePingResponse(h, h.POST(g_payload));
       h.end();
     }
+  }
+
+  // Riprova dopo 10s invece di 60s se il PING è fallito
+  if (pingCode <= 0) {
+    g_lastHeartbeat = millis() - HEARTBEAT_MS + 10000UL;
   }
 
   if (otaUrl.length() > 0 && otaVersion.length() > 0 && otaVersion != FW_VERSION) {
