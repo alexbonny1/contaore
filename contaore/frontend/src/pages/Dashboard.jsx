@@ -101,6 +101,12 @@ export default function Dashboard() {
             >
               {dark ? <Sun size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-200" /> : <Moon size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-700" />}
             </button>
+            <Link
+              to="/impostazioni"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center"
+            >
+              <Settings size={16} className="sm:w-[18px] sm:h-[18px] text-zinc-500 dark:text-zinc-400" />
+            </Link>
             <button
               onClick={() => setShowChangePassword(true)}
               className="h-9 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"

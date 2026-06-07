@@ -72,51 +72,56 @@ const PIE_COLORS = {
   giustificata: "#6366f1",
 };
 
-function MiniDonut({ data }) {
+function Donut({ data, size = 96 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) return null;
-  const cx = 40, cy = 40, R = 34, ri = 20, gap = 0.05;
+  const c = size / 2, R = size * 0.43, ri = size * 0.22, gap = 0.05;
   let a = -Math.PI / 2;
   const slices = data.map(d => {
-    const sweep = (d.value / total) * 2 * Math.PI - gap;
+    const sweep = Math.max(0, (d.value / total) * 2 * Math.PI - gap);
     const a0 = a + gap / 2, a1 = a0 + sweep;
     a += (d.value / total) * 2 * Math.PI;
     const lg = sweep > Math.PI ? 1 : 0;
-    const p = [
-      `M${cx + R * Math.cos(a0)},${cy + R * Math.sin(a0)}`,
-      `A${R},${R},0,${lg},1,${cx + R * Math.cos(a1)},${cy + R * Math.sin(a1)}`,
-      `L${cx + ri * Math.cos(a1)},${cy + ri * Math.sin(a1)}`,
-      `A${ri},${ri},0,${lg},0,${cx + ri * Math.cos(a0)},${cy + ri * Math.sin(a0)}Z`,
-    ].join(" ");
+    const p = `M${c+R*Math.cos(a0)},${c+R*Math.sin(a0)} A${R},${R},0,${lg},1,${c+R*Math.cos(a1)},${c+R*Math.sin(a1)} L${c+ri*Math.cos(a1)},${c+ri*Math.sin(a1)} A${ri},${ri},0,${lg},0,${c+ri*Math.cos(a0)},${c+ri*Math.sin(a0)}Z`;
     return { ...d, p };
   });
   return (
-    <svg viewBox="0 0 80 80" className="w-16 h-16 shrink-0">
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} className="shrink-0">
       {slices.map(s => <path key={s.name} d={s.p} fill={PIE_COLORS[s.name] ?? "#94a3b8"} />)}
+      <text x={c} y={c + 1} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.16} fontWeight="600" fill="currentColor" className="text-zinc-800 dark:text-zinc-100">{total}</text>
+      <text x={c} y={c + size * 0.17} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.1} fill="rgba(161,161,170,1)">gg</text>
     </svg>
   );
 }
 
-function MiniBars({ data, keys, colors }) {
+function Bars({ data, keys, colors, unit = "" }) {
   if (!data.length) return null;
+  const W = 256, H = 80, PL = 0, PB = 14, PT = 4, PR = 0;
+  const cW = W - PL - PR, cH = H - PB - PT;
   const max = Math.max(...data.flatMap(d => keys.map(k => d[k] ?? 0)), 1);
+  const slot = cW / data.length;
+  const bW = Math.max(2, Math.min(9, slot / keys.length - 1));
+  const step = Math.max(1, Math.ceil(data.length / 10));
   return (
-    <div className="flex items-end gap-px h-12 w-full">
-      {data.map(d => (
-        <div key={d.g} className="flex-1 flex items-end gap-px min-w-0">
-          {keys.map((k, ki) => {
-            const pct = ((d[k] ?? 0) / max) * 100;
-            return (
-              <div
-                key={k}
-                className="flex-1 rounded-sm min-h-[2px]"
-                style={{ height: `${Math.max(pct, pct > 0 ? 4 : 0)}%`, background: colors[ki] }}
-              />
-            );
-          })}
-        </div>
-      ))}
-    </div>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      <line x1={0} x2={W} y1={PT + cH} y2={PT + cH} stroke="rgba(120,120,120,0.2)" strokeWidth={1} />
+      {data.map((d, i) => {
+        const sx = i * slot;
+        return (
+          <g key={d.g}>
+            {keys.map((k, ki) => {
+              const bH = ((d[k] ?? 0) / max) * cH;
+              const tot = keys.length * bW + (keys.length - 1);
+              const bx = sx + (slot - tot) / 2 + ki * (bW + 1);
+              return <rect key={k} x={bx} y={PT + cH - bH} width={bW} height={Math.max(0, bH)} fill={colors[ki]} rx={1.5} />;
+            })}
+            {(i === 0 || i === data.length - 1 || i % step === 0) && (
+              <text x={sx + slot / 2} y={H - 1} textAnchor="middle" fontSize={8} fill="rgba(120,120,120,0.8)">{d.g}</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -160,70 +165,59 @@ function ChartPanel({ historyMonths, turniAttivi }) {
   return (
     <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 space-y-4">
 
-      {/* header */}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Riepilogo</p>
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Riepilogo</h3>
         <select
           value={selectedMese}
           onChange={e => setSelectedMese(e.target.value)}
-          className="text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 outline-none"
+          className="text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1.5 outline-none focus:border-blue-500"
         >
           {historyMonths.map(m => <option key={m.mese} value={m.mese}>{m.mese}</option>)}
         </select>
       </div>
 
       {giorni.length === 0 ? (
-        <p className="text-xs text-zinc-400 text-center py-6">Nessun dato</p>
+        <p className="text-xs text-zinc-400 text-center py-6">Nessun dato per questo mese</p>
       ) : (
         <>
-          {/* donut + legenda */}
-          <div className="flex items-center gap-3">
-            <MiniDonut data={pieData} />
-            <div className="flex flex-col gap-1 min-w-0 flex-1">
+          {/* Donut + legenda affiancati */}
+          <div className="flex items-center gap-4">
+            <Donut data={pieData} size={88} />
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
               {pieData.map(d => (
-                <div key={d.name} className="flex items-center gap-1.5 min-w-0">
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 capitalize truncate">{d.name}</span>
-                  <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 ml-auto pl-1 shrink-0">{d.value}g</span>
+                <div key={d.name} className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize truncate">{d.name}</span>
+                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 ml-auto shrink-0">{d.value}g</span>
                 </div>
               ))}
             </div>
           </div>
 
           {turniAttivi && (
-            <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+            <div className="space-y-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
 
-              {/* barre ore */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[11px] font-medium text-zinc-500">Ore lavorate vs previste</p>
-                  <div className="flex gap-2">
-                    <span className="flex items-center gap-1 text-[10px] text-zinc-400">
-                      <span className="w-2 h-2 rounded-sm" style={{background:"#d4d4d8"}} />prv
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] text-zinc-400">
-                      <span className="w-2 h-2 rounded-sm" style={{background:"#22c55e"}} />lav
-                    </span>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-zinc-500">Ore lavorate vs previste</p>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-zinc-300 dark:bg-zinc-600" />prv</span>
+                    <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-green-500" />lav</span>
                   </div>
                 </div>
-                <MiniBars data={barOre} keys={["prv","lav"]} colors={["#d4d4d8","#22c55e"]} />
+                <Bars data={barOre} keys={["prv","lav"]} colors={["#a1a1aa","#22c55e"]} />
               </div>
 
-              {/* barre ritardi */}
               {barExtra.length > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-[11px] font-medium text-zinc-500">Ritardi e straordinari</p>
-                    <div className="flex gap-2">
-                      <span className="flex items-center gap-1 text-[10px] text-zinc-400">
-                        <span className="w-2 h-2 rounded-sm" style={{background:"#a855f7"}} />rit
-                      </span>
-                      <span className="flex items-center gap-1 text-[10px] text-zinc-400">
-                        <span className="w-2 h-2 rounded-sm" style={{background:"#f59e0b"}} />str
-                      </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-zinc-500">Ritardi e straordinari (min)</p>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-purple-500" />rit</span>
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-amber-500" />str</span>
                     </div>
                   </div>
-                  <MiniBars data={barExtra} keys={["rit","str"]} colors={["#a855f7","#f59e0b"]} />
+                  <Bars data={barExtra} keys={["rit","str"]} colors={["#a855f7","#f59e0b"]} />
                 </div>
               )}
 
