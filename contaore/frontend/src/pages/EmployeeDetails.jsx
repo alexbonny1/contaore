@@ -144,7 +144,7 @@ function StackedBars({ data, keys, colors }) {
             )}
             {total > 0 && (
               <text x={sx + slot / 2} y={topY - 2} textAnchor="middle"
-                fontSize={8} fontWeight="600" fill="rgba(120,120,120,0.9)">{total}</text>
+                fontSize={8} fontWeight="600" fill="rgba(120,120,120,0.9)">{total}×</text>
             )}
             <text x={sx + slot / 2} y={H - 1} textAnchor="middle" fontSize={8} fill="rgba(120,120,120,0.8)">{d.g}</text>
           </g>
@@ -298,13 +298,14 @@ function ChartPanel({ historyMonths, turniAttivi }) {
 
           {barDow.some(d => d.ass > 0 || d.rit > 0 || d.str > 0) && (
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-zinc-500">Per giorno della settimana</p>
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-red-500" />ass</span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-purple-500" />rit</span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-amber-500" />str</span>
-                </div>
+              <div className="mb-1">
+                <p className="text-xs font-medium text-zinc-500">In quali giorni succede di più</p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">quante volte nel mese quel giorno ha avuto un evento</p>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-red-500" />assenze</span>
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-purple-500" />ritardi</span>
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-amber-500" />straordinari</span>
               </div>
               <StackedBars data={barDow} keys={["ass","rit","str"]} colors={["#ef4444","#a855f7","#f59e0b"]} />
             </div>
