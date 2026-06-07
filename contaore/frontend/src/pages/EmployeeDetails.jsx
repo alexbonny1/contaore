@@ -72,28 +72,6 @@ const PIE_COLORS = {
   giustificata: "#6366f1",
 };
 
-function Donut({ data, size = 96 }) {
-  const total = data.reduce((s, d) => s + d.value, 0);
-  if (total === 0) return null;
-  const c = size / 2, R = size * 0.43, ri = size * 0.22, gap = 0.05;
-  let a = -Math.PI / 2;
-  const slices = data.map(d => {
-    const sweep = Math.max(0, (d.value / total) * 2 * Math.PI - gap);
-    const a0 = a + gap / 2, a1 = a0 + sweep;
-    a += (d.value / total) * 2 * Math.PI;
-    const lg = sweep > Math.PI ? 1 : 0;
-    const p = `M${c+R*Math.cos(a0)},${c+R*Math.sin(a0)} A${R},${R},0,${lg},1,${c+R*Math.cos(a1)},${c+R*Math.sin(a1)} L${c+ri*Math.cos(a1)},${c+ri*Math.sin(a1)} A${ri},${ri},0,${lg},0,${c+ri*Math.cos(a0)},${c+ri*Math.sin(a0)}Z`;
-    return { ...d, p };
-  });
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} className="shrink-0">
-      {slices.map(s => <path key={s.name} d={s.p} fill={PIE_COLORS[s.name] ?? "#94a3b8"} />)}
-      <text x={c} y={c + 1} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.16} fontWeight="600" fill="currentColor" className="text-zinc-800 dark:text-zinc-100">{total}</text>
-      <text x={c} y={c + size * 0.17} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.1} fill="rgba(161,161,170,1)">gg</text>
-    </svg>
-  );
-}
-
 function Bars({ data, keys, colors, unit = "" }) {
   if (!data.length) return null;
   const W = 256, H = 110, PL = 28, PB = 16, PT = 4, PR = 2;
@@ -194,41 +172,37 @@ function ChartPanel({ historyMonths, turniAttivi }) {
         <p className="text-xs text-zinc-400 text-center py-6">Nessun dato per questo mese</p>
       ) : (
         <>
-          {/* Donut + legenda affiancati */}
+          {/* Riepilogo stati — barre con ratio esplicito */}
           {(() => {
-            const pieTotal = pieData.reduce((s, x) => s + x.value, 0);
+            const totalDays = giorni.length;
             const totRitMin = giorni.reduce((s, d) => s + (d.ritardo_minuti ?? 0), 0);
             const totStrH   = giorni.reduce((s, d) => s + (d.ore_straordinario ?? 0), 0);
-            function extraLabel(name) {
-              if (name === "ritardo" && totRitMin > 0) {
-                const h = Math.floor(totRitMin / 60), m = totRitMin % 60;
-                return h > 0 ? `${h}h${m > 0 ? " " + m + "m" : ""}` : `${m}m`;
-              }
-              if (name === "straordinario" && totStrH > 0) {
-                const h = Math.floor(totStrH), m = Math.round((totStrH - h) * 60);
-                return h > 0 ? `${h}h${m > 0 ? " " + m + "m" : ""}` : `${m}m`;
-              }
-              return null;
+            function fmtMins(mins) {
+              const h = Math.floor(mins / 60), m = mins % 60;
+              return h > 0 ? `${h}h${m > 0 ? " " + m + "m" : ""}` : `${m}m`;
             }
             return (
-              <div className="flex items-center gap-4">
-                <Donut data={pieData} size={88} />
-                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                  {pieData.map(d => {
-                    const pct   = pieTotal > 0 ? Math.round((d.value / pieTotal) * 100) : 0;
-                    const extra = extraLabel(d.name);
-                    return (
-                      <div key={d.name} className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize leading-none">{d.name}</span>
-                          {extra && <span className="text-[10px] text-zinc-400 leading-none mt-0.5">tot {extra}</span>}
-                        </div>
-                        <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 ml-auto shrink-0">{d.value}g <span className="font-normal text-zinc-400">{pct}%</span></span>
+              <div className="space-y-2.5">
+                {pieData.map(d => {
+                  const pct = totalDays > 0 ? Math.round((d.value / totalDays) * 100) : 0;
+                  const color = PIE_COLORS[d.name] ?? "#94a3b8";
+                  let timeLabel = null;
+                  if (d.name === "ritardo" && totRitMin > 0) timeLabel = fmtMins(totRitMin) + " tot";
+                  if (d.name === "straordinario" && totStrH > 0) timeLabel = fmtMins(Math.round(totStrH * 60)) + " tot";
+                  return (
+                    <div key={d.name}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                        <span className="text-xs text-zinc-600 dark:text-zinc-400 capitalize flex-1">{d.name}</span>
+                        {timeLabel && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md" style={{ background: color + "22", color }}>{timeLabel}</span>}
+                        <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">{d.value} su {totalDays}g</span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: pct + "%", background: color }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}
