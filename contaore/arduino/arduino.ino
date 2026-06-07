@@ -67,6 +67,7 @@
 #include <MFRC522.h>
 #include <TFT_eSPI.h>
 #include <time.h>
+#include "esp_log.h"
 
 // ── PIN ──────────────────────────────
 #define PIN_RC522_SS    21
@@ -1115,6 +1116,7 @@ void taskSerial() {
 void setup() {
   Serial.begin(115200);
   delay(500);
+  esp_log_level_set("*", ESP_LOG_NONE);
   Serial.println("\n\ntimbry NFC ESP32 v" FW_VERSION);
 
   pinMode(TFT_BL_PIN, OUTPUT);
