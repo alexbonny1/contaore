@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   Clock, CheckCircle, XCircle, ChevronDown, ChevronUp,
   Calendar, AlertCircle, FileText, Sun, Moon,
-  LayoutDashboard, Users, CreditCard, Radio, Trash2, Bell, Pencil
+  LayoutDashboard, Users, CreditCard, Radio, Trash2, Bell, Pencil, Settings
 } from 'lucide-react'
 import { API_URL } from '../api'
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
@@ -181,7 +181,8 @@ export default function Requests() {
             { title: "Dipendenti",      icon: Users,           path: "/employees"  },
             { title: "Badge",           icon: CreditCard,      path: "/badges"     },
             { title: "Lettori NFC",     icon: Radio,           path: "/readers"    },
-            { title: "Notifiche",       icon: Bell,            path: "/notifications" }
+            { title: "Notifiche",       icon: Bell,            path: "/notifications" },
+            { title: "Impostazioni",    icon: Settings,        path: "/impostazioni"  }
           ]
             .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
             .map(item => {

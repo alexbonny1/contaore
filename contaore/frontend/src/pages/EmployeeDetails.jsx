@@ -96,17 +96,23 @@ function Donut({ data, size = 96 }) {
 
 function Bars({ data, keys, colors, unit = "" }) {
   if (!data.length) return null;
-  const W = 256, H = 80, PL = 0, PB = 14, PT = 4, PR = 0;
+  const W = 256, H = 110, PL = 28, PB = 16, PT = 4, PR = 2;
   const cW = W - PL - PR, cH = H - PB - PT;
   const max = Math.max(...data.flatMap(d => keys.map(k => d[k] ?? 0)), 1);
   const slot = cW / data.length;
-  const bW = Math.max(2, Math.min(9, slot / keys.length - 1));
-  const step = Math.max(1, Math.ceil(data.length / 10));
+  const bW = Math.max(2, Math.min(10, slot / keys.length - 1.5));
+  const step = Math.max(1, Math.ceil(data.length / 8));
+  const gridLines = [0.25, 0.5, 0.75, 1].map(f => ({ y: PT + cH * (1 - f), v: Math.round(max * f) }));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-      <line x1={0} x2={W} y1={PT + cH} y2={PT + cH} stroke="rgba(120,120,120,0.2)" strokeWidth={1} />
+      {gridLines.map(gl => (
+        <g key={gl.y}>
+          <line x1={PL} x2={W - PR} y1={gl.y} y2={gl.y} stroke="rgba(120,120,120,0.15)" strokeWidth={1} />
+          <text x={PL - 3} y={gl.y + 1} textAnchor="end" dominantBaseline="middle" fontSize={7.5} fill="rgba(120,120,120,0.7)">{gl.v}</text>
+        </g>
+      ))}
       {data.map((d, i) => {
-        const sx = i * slot;
+        const sx = PL + i * slot;
         return (
           <g key={d.g}>
             {keys.map((k, ki) => {
@@ -192,13 +198,17 @@ function ChartPanel({ historyMonths, turniAttivi }) {
           <div className="flex items-center gap-4">
             <Donut data={pieData} size={88} />
             <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-              {pieData.map(d => (
-                <div key={d.name} className="flex items-center gap-2 min-w-0">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize truncate">{d.name}</span>
-                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 ml-auto shrink-0">{d.value}g</span>
-                </div>
-              ))}
+              {pieData.map(d => {
+                const total = pieData.reduce((s, x) => s + x.value, 0);
+                const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                return (
+                  <div key={d.name} className="flex items-center gap-2 min-w-0">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize truncate">{d.name}</span>
+                    <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 ml-auto shrink-0">{d.value}g <span className="font-normal text-zinc-400">{pct}%</span></span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

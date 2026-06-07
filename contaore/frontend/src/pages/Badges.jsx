@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard,
   Radio, Sun, Moon, CheckCircle2, XCircle, Mail,
-  FileText, Calendar, Bell, Pencil, X
+  FileText, Calendar, Bell, Pencil, X, Settings
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
@@ -16,6 +16,7 @@ const NAV_TABS = [
   { title: "Badge",           icon: CreditCard,      path: "/badges"    },
   { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
   { title: "Notifiche",       icon: Bell,            path: "/notifications" },
+  { title: "Impostazioni",    icon: Settings,        path: "/impostazioni"  },
 ];
 
 function Toast({ message, type, onClose }) {

@@ -14,7 +14,8 @@ import {
   Moon,
   FileText,
   Calendar,
-  Bell
+  Bell,
+  Settings
 } from "lucide-react";
 
 import { API_URL } from "../api";
@@ -226,7 +227,8 @@ export default function Readers() {
             { title: "Dipendenti",      icon: Users,           path: "/employees" },
             { title: "Badge",           icon: CreditCard,      path: "/badges"    },
             { title: "Lettori NFC",     icon: Radio,           path: "/readers"   },
-            { title: "Notifiche",       icon: Bell,            path: "/notifications" }
+            { title: "Notifiche",       icon: Bell,            path: "/notifications" },
+            { title: "Impostazioni",    icon: Settings,        path: "/impostazioni"  }
           ]
             .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
             .map((item) => {

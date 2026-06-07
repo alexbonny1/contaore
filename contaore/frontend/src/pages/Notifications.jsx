@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, CreditCard, Radio, Sun, Moon,
   FileText, Calendar, Bell, UserX, Clock, TrendingUp,
-  WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle
+  WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle, Settings
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
@@ -402,7 +402,8 @@ export default function Notifications() {
     { title: "Dipendenti",      icon: Users,           path: "/employees" },
     { title: "Badge",           icon: CreditCard,      path: "/badges" },
     { title: "Lettori NFC",     icon: Radio,           path: "/readers" },
-    { title: "Notifiche",       icon: Bell,            path: "/notifications" }
+    { title: "Notifiche",       icon: Bell,            path: "/notifications" },
+    { title: "Impostazioni",    icon: Settings,        path: "/impostazioni"  }
   ].filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo));
 
   return (
