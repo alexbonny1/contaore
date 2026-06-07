@@ -1,35 +1,29 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// timbry NFC Reader — TFT_eSPI User_Setup.h
-// Target: ESP32-WROOM + ILI9488 480x320 (SPI)
-//
-// PIN MAP:
-//   MOSI → GPIO 23   SCK  → GPIO 18
-//   CS   → GPIO 15   DC   → GPIO 2
-//   RST  → GPIO 4    BL   → GPIO 32  (gestito dal firmware, non da TFT_eSPI)
-//
-// ISTRUZIONI:
-//   Copia questo file in:
-//   <Arduino>/libraries/TFT_eSPI/User_Setup.h
-//   (sovrascrive quello esistente)
-// ─────────────────────────────────────────────────────────────────────────────
+#define USER_SETUP_INFO "User_Setup"
 
-#define USER_SETUP_INFO "timbry_ILI9488_ESP32"
+// ##################################################################################
+// Section 1. Driver
+// ##################################################################################
 
-// ── Driver ───────────────────────────────────────────────────────────────────
-// Se schermo bianco con ILI9488_DRIVER prova ILI9486_DRIVER (alcuni cloni)
 #define ILI9488_DRIVER
-//#define ILI9486_DRIVER
 
-// ── Pin SPI (ESP32) ──────────────────────────────────────────────────────────
+// ##################################################################################
+// Section 2. Pins ESP32
+// ##################################################################################
+
+#define TFT_MISO 19
 #define TFT_MOSI 23
 #define TFT_SCLK 18
 #define TFT_CS   15
 #define TFT_DC    2
 #define TFT_RST   4
-// TFT_MISO non definito: non necessario per scrittura
-// TFT_BL non definito:   il backlight (GPIO 32) è controllato dal firmware
 
-// ── Font ─────────────────────────────────────────────────────────────────────
+#define TFT_BL   32
+#define TFT_BACKLIGHT_ON HIGH
+
+// ##################################################################################
+// Section 3. Fonts
+// ##################################################################################
+
 #define LOAD_GLCD
 #define LOAD_FONT2
 #define LOAD_FONT4
@@ -39,7 +33,10 @@
 #define LOAD_GFXFF
 #define SMOOTH_FONT
 
-// ── SPI frequency ────────────────────────────────────────────────────────────
-// ILI9488 max affidabile ~20MHz; abbassare se schermo bianco/corrotto
-#define SPI_FREQUENCY      20000000
-#define SPI_READ_FREQUENCY 16000000
+// ##################################################################################
+// Section 4. SPI frequency
+// ##################################################################################
+
+#define SPI_FREQUENCY  27000000
+#define SPI_READ_FREQUENCY  20000000
+#define SPI_TOUCH_FREQUENCY  2500000
