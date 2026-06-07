@@ -16,9 +16,9 @@
 #define USER_SETUP_INFO "timbry_ILI9488_ESP32"
 
 // ── Driver ───────────────────────────────────────────────────────────────────
+// Se schermo bianco con ILI9488_DRIVER prova ILI9486_DRIVER (alcuni cloni)
 #define ILI9488_DRIVER
-// NOTA: non connettere SDO/MISO dell'ILI9488 se sul bus SPI ci sono altri
-// dispositivi — il pin non va in alta impedenza quando CS è HIGH.
+//#define ILI9486_DRIVER
 
 // ── Pin SPI (ESP32) ──────────────────────────────────────────────────────────
 #define TFT_MOSI 23
@@ -40,5 +40,6 @@
 #define SMOOTH_FONT
 
 // ── SPI frequency ────────────────────────────────────────────────────────────
-#define SPI_FREQUENCY      27000000
-#define SPI_READ_FREQUENCY 20000000
+// ILI9488 max affidabile ~20MHz; abbassare se schermo bianco/corrotto
+#define SPI_FREQUENCY      20000000
+#define SPI_READ_FREQUENCY 16000000
