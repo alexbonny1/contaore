@@ -72,61 +72,51 @@ const PIE_COLORS = {
   giustificata: "#6366f1",
 };
 
-function SvgDonut({ data }) {
+function MiniDonut({ data }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) return null;
-  const cx = 60, cy = 60, R = 50, ri = 30, gap = 0.04;
+  const cx = 40, cy = 40, R = 34, ri = 20, gap = 0.05;
   let a = -Math.PI / 2;
   const slices = data.map(d => {
     const sweep = (d.value / total) * 2 * Math.PI - gap;
     const a0 = a + gap / 2, a1 = a0 + sweep;
     a += (d.value / total) * 2 * Math.PI;
     const lg = sweep > Math.PI ? 1 : 0;
-    const path = `M${cx+R*Math.cos(a0)},${cy+R*Math.sin(a0)} A${R},${R},0,${lg},1,${cx+R*Math.cos(a1)},${cy+R*Math.sin(a1)} L${cx+ri*Math.cos(a1)},${cy+ri*Math.sin(a1)} A${ri},${ri},0,${lg},0,${cx+ri*Math.cos(a0)},${cy+ri*Math.sin(a0)}Z`;
-    return { ...d, path };
+    const p = [
+      `M${cx + R * Math.cos(a0)},${cy + R * Math.sin(a0)}`,
+      `A${R},${R},0,${lg},1,${cx + R * Math.cos(a1)},${cy + R * Math.sin(a1)}`,
+      `L${cx + ri * Math.cos(a1)},${cy + ri * Math.sin(a1)}`,
+      `A${ri},${ri},0,${lg},0,${cx + ri * Math.cos(a0)},${cy + ri * Math.sin(a0)}Z`,
+    ].join(" ");
+    return { ...d, p };
   });
   return (
-    <svg viewBox="0 0 120 120" className="w-28 h-28 shrink-0">
-      {slices.map(s => <path key={s.name} d={s.path} fill={PIE_COLORS[s.name] ?? "#94a3b8"} />)}
+    <svg viewBox="0 0 80 80" className="w-16 h-16 shrink-0">
+      {slices.map(s => <path key={s.name} d={s.p} fill={PIE_COLORS[s.name] ?? "#94a3b8"} />)}
     </svg>
   );
 }
 
-function SvgBars({ data, keys, colors }) {
+function MiniBars({ data, keys, colors }) {
   if (!data.length) return null;
-  const W = 240, H = 80, PL = 26, PB = 16, PT = 2, PR = 2;
-  const cW = W - PL - PR, cH = H - PB - PT;
-  const maxVal = Math.max(...data.flatMap(d => keys.map(k => d[k] ?? 0)), 1);
-  const slotW = cW / data.length;
-  const bW = Math.max(2, Math.min(10, slotW / keys.length - 1));
-  const everyN = Math.max(1, Math.ceil(data.length / 8));
+  const max = Math.max(...data.flatMap(d => keys.map(k => d[k] ?? 0)), 1);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-      {[0, 0.5, 1].map(t => {
-        const y = PT + cH * (1 - t);
-        return (
-          <g key={t}>
-            <line x1={PL} x2={W - PR} y1={y} y2={y} stroke="#52525b" strokeWidth={0.5} />
-            <text x={PL - 3} y={y + 3} textAnchor="end" fontSize={8} fill="#71717a">{Math.round(maxVal * t)}</text>
-          </g>
-        );
-      })}
-      {data.map((d, i) => {
-        const sx = PL + i * slotW;
-        return (
-          <g key={d.g}>
-            {keys.map((k, ki) => {
-              const bH = ((d[k] ?? 0) / maxVal) * cH;
-              const bx = sx + (slotW - keys.length * (bW + 1)) / 2 + ki * (bW + 1);
-              return <rect key={k} x={bx} y={PT + cH - bH} width={bW} height={Math.max(bH, 0)} fill={colors[ki]} rx={1} />;
-            })}
-            {(i === 0 || i === data.length - 1 || i % everyN === 0) && (
-              <text x={sx + slotW / 2} y={H - 2} textAnchor="middle" fontSize={8} fill="#71717a">{d.g}</text>
-            )}
-          </g>
-        );
-      })}
-    </svg>
+    <div className="flex items-end gap-px h-12 w-full">
+      {data.map(d => (
+        <div key={d.g} className="flex-1 flex items-end gap-px min-w-0">
+          {keys.map((k, ki) => {
+            const pct = ((d[k] ?? 0) / max) * 100;
+            return (
+              <div
+                key={k}
+                className="flex-1 rounded-sm min-h-[2px]"
+                style={{ height: `${Math.max(pct, pct > 0 ? 4 : 0)}%`, background: colors[ki] }}
+              />
+            );
+          })}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -168,64 +158,75 @@ function ChartPanel({ historyMonths, turniAttivi }) {
   if (!historyMonths.length) return null;
 
   return (
-    <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 space-y-5">
+    <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 space-y-4">
+
+      {/* header */}
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Riepilogo</h3>
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Riepilogo</p>
         <select
           value={selectedMese}
           onChange={e => setSelectedMese(e.target.value)}
-          className="text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1.5 outline-none focus:border-blue-500"
+          className="text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 outline-none"
         >
           {historyMonths.map(m => <option key={m.mese} value={m.mese}>{m.mese}</option>)}
         </select>
       </div>
 
       {giorni.length === 0 ? (
-        <p className="text-xs text-zinc-400 text-center py-4">Nessun dato per questo mese</p>
+        <p className="text-xs text-zinc-400 text-center py-6">Nessun dato</p>
       ) : (
         <>
-          {/* Torta stati */}
-          <div>
-            <p className="text-xs font-medium text-zinc-500 mb-2">Distribuzione giorni</p>
-            <div className="flex items-center gap-3">
-              <SvgDonut data={pieData} />
-              <div className="flex flex-col gap-1">
-                {pieData.map(d => (
-                  <div key={d.name} className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
-                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 capitalize">{d.name}</span>
-                    <span className="text-[10px] font-medium text-zinc-700 dark:text-zinc-300 ml-auto pl-2">{d.value}g</span>
-                  </div>
-                ))}
-              </div>
+          {/* donut + legenda */}
+          <div className="flex items-center gap-3">
+            <MiniDonut data={pieData} />
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
+              {pieData.map(d => (
+                <div key={d.name} className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 capitalize truncate">{d.name}</span>
+                  <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 ml-auto pl-1 shrink-0">{d.value}g</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Barre ore */}
           {turniAttivi && (
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <p className="text-xs font-medium text-zinc-500">Ore lavorate vs previste</p>
-                <div className="flex items-center gap-2 ml-auto">
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-2 rounded-sm inline-block" style={{background:"#94a3b8"}} />prev.</span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-2 rounded-sm inline-block" style={{background:"#22c55e"}} />lav.</span>
-                </div>
-              </div>
-              <SvgBars data={barOre} keys={["prv", "lav"]} colors={["#94a3b8", "#22c55e"]} />
-            </div>
-          )}
+            <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
 
-          {/* Barre ritardi */}
-          {turniAttivi && barExtra.length > 0 && (
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <p className="text-xs font-medium text-zinc-500">Ritardi e straordinari (min)</p>
-                <div className="flex items-center gap-2 ml-auto">
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-2 rounded-sm inline-block" style={{background:"#a855f7"}} />rit.</span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-2 rounded-sm inline-block" style={{background:"#f59e0b"}} />str.</span>
+              {/* barre ore */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[11px] font-medium text-zinc-500">Ore lavorate vs previste</p>
+                  <div className="flex gap-2">
+                    <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                      <span className="w-2 h-2 rounded-sm" style={{background:"#d4d4d8"}} />prv
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                      <span className="w-2 h-2 rounded-sm" style={{background:"#22c55e"}} />lav
+                    </span>
+                  </div>
                 </div>
+                <MiniBars data={barOre} keys={["prv","lav"]} colors={["#d4d4d8","#22c55e"]} />
               </div>
-              <SvgBars data={barExtra} keys={["rit", "str"]} colors={["#a855f7", "#f59e0b"]} />
+
+              {/* barre ritardi */}
+              {barExtra.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[11px] font-medium text-zinc-500">Ritardi e straordinari</p>
+                    <div className="flex gap-2">
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                        <span className="w-2 h-2 rounded-sm" style={{background:"#a855f7"}} />rit
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                        <span className="w-2 h-2 rounded-sm" style={{background:"#f59e0b"}} />str
+                      </span>
+                    </div>
+                  </div>
+                  <MiniBars data={barExtra} keys={["rit","str"]} colors={["#a855f7","#f59e0b"]} />
+                </div>
+              )}
+
             </div>
           )}
         </>

@@ -231,14 +231,15 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
           const actStart = eIn.getHours()  * 60 + eIn.getMinutes()
           const actEnd   = eOut.getHours() * 60 + eOut.getMinutes()
           const shift    = dayShifts
-            .filter(s => s.ingresso_1)
+            .filter(s => s.ingresso_1 && (s.uscita_2 || s.uscita_1))
             .sort((a, b) =>
               Math.abs(timeToMinutes(a.ingresso_1) - actStart) -
               Math.abs(timeToMinutes(b.ingresso_1) - actStart)
             )[0]
           if (!shift) continue
+          const shiftEnd  = shift.uscita_2 || shift.uscita_1
           const earlyMins = Math.max(0, timeToMinutes(shift.ingresso_1) - actStart)
-          const lateMins  = Math.max(0, actEnd - timeToMinutes(shift.uscita_1))
+          const lateMins  = Math.max(0, actEnd - timeToMinutes(shiftEnd))
           if (earlyMins >= toleranceMins) extraMins += earlyMins
           if (lateMins  >= toleranceMins) extraMins += lateMins
         }
