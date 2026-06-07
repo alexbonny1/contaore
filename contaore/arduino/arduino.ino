@@ -898,7 +898,10 @@ void taskWifi() {
     if (g_wifiOffline) {
       g_wifiOffline = false;
       Serial.println("WIFI RESTORED");
-      rfidInit(); queueFlush();
+      rfidInit();
+      g_lastHeartbeat = millis() - HEARTBEAT_MS; // forza PING immediato per scaldare Railway
+      sendHeartbeat();
+      queueFlush();
       if (syncNTP()) { g_ntpSynced = true; showIdle(); }
       else showWaitingNtp();
     }
@@ -1166,7 +1169,10 @@ WiFi.begin();
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("WIFI OK - IP: %s\n", WiFi.localIP().toString().c_str());
-    rfidInit(); beepOk(); queueFlush();
+    rfidInit(); beepOk();
+    g_lastHeartbeat = millis() - HEARTBEAT_MS; // forza PING immediato per scaldare Railway
+    sendHeartbeat();
+    queueFlush();
     if (syncNTP()) { g_ntpSynced = true; showIdle(); }
     else showWaitingNtp();
   } else {
