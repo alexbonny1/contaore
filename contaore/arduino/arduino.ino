@@ -1197,8 +1197,11 @@ void taskResult() {
 }
 
 void taskRfidHealth() {
+  static unsigned long lastCheck = 0;
+  if (millis() - lastCheck < 5000) return;
+  lastCheck = millis();
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  g_rfidOk = (v == 0x91 || v == 0x92);
+  g_rfidOk = (v != 0x00 && v != 0xFF); // accetta tutti i cloni (es. 0x82, 0x88, 0x12)
   if (!g_rfidOk) { Serial.println("RFID drift, reinit..."); rfidInit(); }
 }
 
