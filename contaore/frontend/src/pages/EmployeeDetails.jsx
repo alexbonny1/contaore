@@ -152,6 +152,20 @@ function ChartPanel({ historyMonths, turniAttivi }) {
       })),
   [giorni]);
 
+  const barDow = useMemo(() => {
+    const LABELS = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
+    return LABELS.map((label, i) => {
+      const jsDay = i < 6 ? i + 1 : 0;
+      const week = giorni.filter(d => new Date(d.giorno + "T12:00:00").getDay() === jsDay);
+      return {
+        g: label,
+        ass: week.filter(d => d.assente || d.stato === "assente").length,
+        rit: week.filter(d => (d.ritardo_minuti ?? 0) > 0 || d.stato === "ritardo").length,
+        str: week.filter(d => (d.ore_straordinario ?? 0) > 0 || d.stato === "straordinario").length,
+      };
+    });
+  }, [giorni]);
+
   if (!historyMonths.length) return null;
 
   return (
@@ -234,6 +248,20 @@ function ChartPanel({ historyMonths, turniAttivi }) {
                 </div>
               )}
 
+            </div>
+          )}
+
+          {barDow.some(d => d.ass > 0 || d.rit > 0 || d.str > 0) && (
+            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-zinc-500">Per giorno della settimana</p>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-red-500" />ass</span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-purple-500" />rit</span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-amber-500" />str</span>
+                </div>
+              </div>
+              <Bars data={barDow} keys={["ass","rit","str"]} colors={["#ef4444","#a855f7","#f59e0b"]} />
             </div>
           )}
         </>
