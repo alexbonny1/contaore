@@ -1,20 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon, CheckCircle2, XCircle, ArrowLeft,
-  Bell, BarChart2, UserX, Clock, TrendingUp, LogOut, ShieldAlert
+  BarChart2
 } from "lucide-react";
 import { API_URL } from "../api";
-
-// ─── costanti ────────────────────────────────────────────────────────────────
-
-const NOTIF_TYPES = [
-  { tipo: "assente",               icon: UserX,        label: "Assenze",              desc: "Dipendente non timbra all'inizio del turno", paramKey: "minuti_tolleranza", unit: "min", min: 5,  max: 120 },
-  { tipo: "ritardo",               icon: Clock,        label: "Ritardi",              desc: "Timbra dopo l'orario previsto",               paramKey: "minuti_tolleranza", unit: "min", min: 0,  max: 60  },
-  { tipo: "straordinario_mensile", icon: TrendingUp,   label: "Straordinario mensile",desc: "Soglia ore mensili superata",                 paramKey: "ore_soglia",        unit: "h",   min: 1,  max: 100 },
-  { tipo: "timbratura_mancante",   icon: LogOut,       label: "Uscita mancante",      desc: "Ancora dentro dopo N ore",                    paramKey: "ore_soglia",        unit: "h",   min: 1,  max: 24  },
-  { tipo: "badge_non_riconosciuto",icon: ShieldAlert,  label: "Badge sconosciuto",    desc: "Badge non registrato nel sistema",             paramKey: null,                unit: null,  min: 0,  max: 0   },
-];
 
 const STATI_GRAFICO = [
   { key: "presente",     label: "Presente",      color: "#22c55e" },
@@ -70,10 +60,6 @@ export default function Settings() {
   const [tolleranza, setTolleranza] = useState(10);
   const [savingToll, setSavingToll] = useState(false);
 
-  // ── Notifiche
-  const [notifMap, setNotifMap]     = useState({});
-  const [emailGlobal, setEmailGlobal] = useState("");
-
   // ── Grafici
   const [chartPrefs, setChartPrefs] = useState(loadChartPrefs);
 
@@ -89,20 +75,9 @@ export default function Settings() {
   async function loadAll() {
     const token = localStorage.getItem("token");
     try {
-      const [r1, r2] = await Promise.all([
-        fetch(API_URL + "/api/company/settings",       { headers: { Authorization: "Bearer " + token } }),
-        fetch(API_URL + "/api/notifications/settings", { headers: { Authorization: "Bearer " + token } }),
-      ]);
-      const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
-      if (d1.success) setTolleranza(d1.tolleranza_straordinario_minuti ?? 10);
-      if (d2.success) {
-        const map = {};
-        d2.settings.forEach(s => { map[s.tipo] = s; });
-        setNotifMap(map);
-        // Usa la prima email trovata come email globale
-        const anyEmail = d2.settings.find(s => s.email_destinatario)?.email_destinatario || "";
-        setEmailGlobal(anyEmail);
-      }
+      const res  = await fetch(API_URL + "/api/company/settings", { headers: { Authorization: "Bearer " + token } });
+      const data = await res.json();
+      if (data.success) setTolleranza(data.tolleranza_straordinario_minuti ?? 10);
     } catch (_) {}
     finally { setLoading(false); }
   }
@@ -124,21 +99,6 @@ export default function Settings() {
     } catch (_) { showToast("Errore di connessione", "error"); }
     finally { setSavingToll(false); }
   }
-
-  // ── Salva singola notifica (auto-save su toggle/blur)
-  const saveNotif = useCallback(async (tipo, patch) => {
-    const token = localStorage.getItem("token");
-    const current = notifMap[tipo] || { attiva: false, parametri: {}, email_destinatario: null };
-    const updated  = { ...current, ...patch, email_destinatario: emailGlobal || null };
-    setNotifMap(prev => ({ ...prev, [tipo]: updated }));
-    try {
-      await fetch(API_URL + "/api/notifications/settings/" + tipo, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify(updated),
-      });
-    } catch (_) {}
-  }, [notifMap, emailGlobal]);
 
   // ── Salva preferenze grafici (localStorage)
   function updateChartPrefs(patch) {
@@ -225,79 +185,7 @@ export default function Settings() {
           </div>
         </form>
 
-        {/* ── Sezione 2: Notifiche ─────────────────────────────────────────── */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 space-y-5">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-              <Bell size={13} className="text-blue-500" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Notifiche email</h2>
-              <p className="text-xs text-zinc-500">Ricevi alert automatici via email</p>
-            </div>
-          </div>
-
-          {/* Email globale */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Email destinatario</label>
-            <input
-              type="email"
-              value={emailGlobal}
-              onChange={e => setEmailGlobal(e.target.value)}
-              onBlur={() => {
-                // aggiorna tutte le notifiche attive con la nuova email
-                Object.keys(notifMap).forEach(tipo => {
-                  if (notifMap[tipo]?.attiva) saveNotif(tipo, {});
-                });
-              }}
-              placeholder="tuaemail@esempio.com"
-              className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          {/* Lista notifiche */}
-          <div className="space-y-3">
-            {NOTIF_TYPES.map(({ tipo, icon: Icon, label, desc, paramKey, unit, min, max }) => {
-              const s         = notifMap[tipo] || {};
-              const attiva    = s.attiva ?? false;
-              const paramVal  = s.parametri?.[paramKey] ?? (paramKey === "minuti_tolleranza" ? 5 : 10);
-              return (
-                <div key={tipo} className="rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2.5 min-w-0">
-                      <Icon size={15} className="text-zinc-400 mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{label}</p>
-                        <p className="text-xs text-zinc-400 mt-0.5 leading-snug">{desc}</p>
-                      </div>
-                    </div>
-                    <Toggle value={attiva} onChange={val => saveNotif(tipo, { attiva: val })} />
-                  </div>
-                  {attiva && paramKey && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <label className="text-xs text-zinc-500 shrink-0">Soglia</label>
-                      <input
-                        type="number" min={min} max={max} value={paramVal}
-                        onChange={e => {
-                          const v = Math.max(min, Math.min(max, Number(e.target.value)));
-                          setNotifMap(prev => ({
-                            ...prev,
-                            [tipo]: { ...prev[tipo], parametri: { ...prev[tipo]?.parametri, [paramKey]: v } }
-                          }));
-                        }}
-                        onBlur={() => saveNotif(tipo, {})}
-                        className="w-20 h-8 px-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500"
-                      />
-                      <span className="text-xs text-zinc-400">{unit}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Sezione 3: Grafici ───────────────────────────────────────────── */}
+        {/* ── Sezione 2: Grafici ───────────────────────────────────────────── */}
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 space-y-5">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">

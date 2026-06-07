@@ -195,22 +195,43 @@ function ChartPanel({ historyMonths, turniAttivi }) {
       ) : (
         <>
           {/* Donut + legenda affiancati */}
-          <div className="flex items-center gap-4">
-            <Donut data={pieData} size={88} />
-            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-              {pieData.map(d => {
-                const total = pieData.reduce((s, x) => s + x.value, 0);
-                const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
-                return (
-                  <div key={d.name} className="flex items-center gap-2 min-w-0">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize truncate">{d.name}</span>
-                    <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 ml-auto shrink-0">{d.value}g <span className="font-normal text-zinc-400">{pct}%</span></span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {(() => {
+            const pieTotal = pieData.reduce((s, x) => s + x.value, 0);
+            const totRitMin = giorni.reduce((s, d) => s + (d.ritardo_minuti ?? 0), 0);
+            const totStrH   = giorni.reduce((s, d) => s + (d.ore_straordinario ?? 0), 0);
+            function extraLabel(name) {
+              if (name === "ritardo" && totRitMin > 0) {
+                const h = Math.floor(totRitMin / 60), m = totRitMin % 60;
+                return h > 0 ? `${h}h${m > 0 ? " " + m + "m" : ""}` : `${m}m`;
+              }
+              if (name === "straordinario" && totStrH > 0) {
+                const h = Math.floor(totStrH), m = Math.round((totStrH - h) * 60);
+                return h > 0 ? `${h}h${m > 0 ? " " + m + "m" : ""}` : `${m}m`;
+              }
+              return null;
+            }
+            return (
+              <div className="flex items-center gap-4">
+                <Donut data={pieData} size={88} />
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  {pieData.map(d => {
+                    const pct   = pieTotal > 0 ? Math.round((d.value / pieTotal) * 100) : 0;
+                    const extra = extraLabel(d.name);
+                    return (
+                      <div key={d.name} className="flex items-center gap-2 min-w-0">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize leading-none">{d.name}</span>
+                          {extra && <span className="text-[10px] text-zinc-400 leading-none mt-0.5">tot {extra}</span>}
+                        </div>
+                        <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 ml-auto shrink-0">{d.value}g <span className="font-normal text-zinc-400">{pct}%</span></span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {turniAttivi && (chartPrefs.showOre || chartPrefs.showExtra) && (
             <div className="space-y-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
