@@ -650,13 +650,13 @@ int httpPost(const char* path, const char* payload) {
   if (isHttps) {
     WiFiClientSecure client; client.setInsecure(); HTTPClient http;
     if (!http.begin(client, g_url)) return -1;
-    http.setTimeout(8000); http.setReuse(false);
+    http.setTimeout(15000); http.setReuse(false);
     http.addHeader("Content-Type", "application/json");
     code = http.POST(payload); body = http.getString(); http.end();
   } else {
     WiFiClient client; HTTPClient http;
     if (!http.begin(client, g_url)) return -1;
-    http.setTimeout(8000); http.setReuse(false);
+    http.setTimeout(15000); http.setReuse(false);
     http.addHeader("Content-Type", "application/json");
     code = http.POST(payload); body = http.getString(); http.end();
   }
@@ -692,11 +692,11 @@ void queueFlush() {
     int rc = -1;
     if (isHttps) {
       WiFiClientSecure c; c.setInsecure(); HTTPClient h;
-      if (h.begin(c, g_url)) { h.setTimeout(8000); h.setReuse(false);
+      if (h.begin(c, g_url)) { h.setTimeout(15000); h.setReuse(false);
         h.addHeader("Content-Type","application/json"); rc = h.POST(g_payload); h.end(); }
     } else {
       WiFiClient c; HTTPClient h;
-      if (h.begin(c, g_url)) { h.setTimeout(8000); h.setReuse(false);
+      if (h.begin(c, g_url)) { h.setTimeout(15000); h.setReuse(false);
         h.addHeader("Content-Type","application/json"); rc = h.POST(g_payload); h.end(); }
     }
     if (rc == 200 || rc == 201) sent++;
@@ -781,7 +781,7 @@ void sendHeartbeat() {
   if (isHttps) {
     WiFiClientSecure c; c.setInsecure(); HTTPClient h;
     if (h.begin(c, g_url)) {
-      h.setTimeout(6000); h.setReuse(false);
+      h.setTimeout(10000); h.setReuse(false);
       h.addHeader("Content-Type", "application/json");
       handlePingResponse(h, h.POST(g_payload));
       h.end();
@@ -789,7 +789,7 @@ void sendHeartbeat() {
   } else {
     WiFiClient c; HTTPClient h;
     if (h.begin(c, g_url)) {
-      h.setTimeout(6000); h.setReuse(false);
+      h.setTimeout(10000); h.setReuse(false);
       h.addHeader("Content-Type", "application/json");
       handlePingResponse(h, h.POST(g_payload));
       h.end();
