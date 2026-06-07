@@ -132,15 +132,23 @@ function ChartPanel({ historyMonths, turniAttivi }) {
     if (!selectedMese && historyMonths.length > 0) setSelectedMese(historyMonths[0].mese);
   }, [historyMonths]);
 
+  const chartPrefs = useMemo(() => {
+    try { return { showOre: true, showExtra: true, hiddenStati: [], ...JSON.parse(localStorage.getItem("timbry_chart_prefs") || "{}") }; }
+    catch (_) { return { showOre: true, showExtra: true, hiddenStati: [] }; }
+  }, []);
+
   const giorni = useMemo(() =>
     historyMonths.find(m => m.mese === selectedMese)?.giorni ?? [],
   [historyMonths, selectedMese]);
 
   const pieData = useMemo(() => {
     const counts = {};
-    giorni.forEach(d => { const k = d.assente ? "assente" : d.stato; counts[k] = (counts[k] ?? 0) + 1; });
+    giorni.forEach(d => {
+      const k = d.assente ? "assente" : d.stato;
+      if (!chartPrefs.hiddenStati.includes(k)) counts[k] = (counts[k] ?? 0) + 1;
+    });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [giorni]);
+  }, [giorni, chartPrefs.hiddenStati]);
 
   const barOre = useMemo(() =>
     giorni.map(d => ({
@@ -194,10 +202,10 @@ function ChartPanel({ historyMonths, turniAttivi }) {
             </div>
           </div>
 
-          {turniAttivi && (
+          {turniAttivi && (chartPrefs.showOre || chartPrefs.showExtra) && (
             <div className="space-y-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
 
-              <div>
+              {chartPrefs.showOre && <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-medium text-zinc-500">Ore lavorate vs previste</p>
                   <div className="flex items-center gap-2">
@@ -206,9 +214,9 @@ function ChartPanel({ historyMonths, turniAttivi }) {
                   </div>
                 </div>
                 <Bars data={barOre} keys={["prv","lav"]} colors={["#a1a1aa","#22c55e"]} />
-              </div>
+              </div>}
 
-              {barExtra.length > 0 && (
+              {chartPrefs.showExtra && barExtra.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-medium text-zinc-500">Ritardi e straordinari (min)</p>
