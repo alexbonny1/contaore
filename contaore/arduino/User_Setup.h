@@ -10,12 +10,13 @@
 // Section 2. Pins ESP32
 // ##################################################################################
 
-#define TFT_MISO 19
 #define TFT_MOSI 23
 #define TFT_SCLK 18
 #define TFT_CS   15
 #define TFT_DC    2
 #define TFT_RST   4
+// TFT_MISO NON definito: ILI9488 non tri-statea SDO quando CS=HIGH,
+// causando corruzione del bus SPI condiviso con RC522 (GPIO 19)
 
 #define TFT_BL   32
 #define TFT_BACKLIGHT_ON HIGH
