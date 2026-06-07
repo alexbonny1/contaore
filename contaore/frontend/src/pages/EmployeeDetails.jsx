@@ -3,11 +3,6 @@ import {
   useState,
   useMemo
 } from "react";
-import {
-  PieChart, Pie, Cell,
-  BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Legend
-} from "recharts";
 
 import {
   useParams,
@@ -77,6 +72,64 @@ const PIE_COLORS = {
   giustificata: "#6366f1",
 };
 
+function SvgDonut({ data }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return null;
+  const cx = 60, cy = 60, R = 50, ri = 30, gap = 0.04;
+  let a = -Math.PI / 2;
+  const slices = data.map(d => {
+    const sweep = (d.value / total) * 2 * Math.PI - gap;
+    const a0 = a + gap / 2, a1 = a0 + sweep;
+    a += (d.value / total) * 2 * Math.PI;
+    const lg = sweep > Math.PI ? 1 : 0;
+    const path = `M${cx+R*Math.cos(a0)},${cy+R*Math.sin(a0)} A${R},${R},0,${lg},1,${cx+R*Math.cos(a1)},${cy+R*Math.sin(a1)} L${cx+ri*Math.cos(a1)},${cy+ri*Math.sin(a1)} A${ri},${ri},0,${lg},0,${cx+ri*Math.cos(a0)},${cy+ri*Math.sin(a0)}Z`;
+    return { ...d, path };
+  });
+  return (
+    <svg viewBox="0 0 120 120" className="w-28 h-28 shrink-0">
+      {slices.map(s => <path key={s.name} d={s.path} fill={PIE_COLORS[s.name] ?? "#94a3b8"} />)}
+    </svg>
+  );
+}
+
+function SvgBars({ data, keys, colors }) {
+  if (!data.length) return null;
+  const W = 240, H = 80, PL = 26, PB = 16, PT = 2, PR = 2;
+  const cW = W - PL - PR, cH = H - PB - PT;
+  const maxVal = Math.max(...data.flatMap(d => keys.map(k => d[k] ?? 0)), 1);
+  const slotW = cW / data.length;
+  const bW = Math.max(2, Math.min(10, slotW / keys.length - 1));
+  const everyN = Math.max(1, Math.ceil(data.length / 8));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      {[0, 0.5, 1].map(t => {
+        const y = PT + cH * (1 - t);
+        return (
+          <g key={t}>
+            <line x1={PL} x2={W - PR} y1={y} y2={y} stroke="#52525b" strokeWidth={0.5} />
+            <text x={PL - 3} y={y + 3} textAnchor="end" fontSize={8} fill="#71717a">{Math.round(maxVal * t)}</text>
+          </g>
+        );
+      })}
+      {data.map((d, i) => {
+        const sx = PL + i * slotW;
+        return (
+          <g key={d.g}>
+            {keys.map((k, ki) => {
+              const bH = ((d[k] ?? 0) / maxVal) * cH;
+              const bx = sx + (slotW - keys.length * (bW + 1)) / 2 + ki * (bW + 1);
+              return <rect key={k} x={bx} y={PT + cH - bH} width={bW} height={Math.max(bH, 0)} fill={colors[ki]} rx={1} />;
+            })}
+            {(i === 0 || i === data.length - 1 || i % everyN === 0) && (
+              <text x={sx + slotW / 2} y={H - 2} textAnchor="middle" fontSize={8} fill="#71717a">{d.g}</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 function ChartPanel({ historyMonths, turniAttivi }) {
   const [selectedMese, setSelectedMese] = useState(historyMonths[0]?.mese ?? "");
 
@@ -84,23 +137,20 @@ function ChartPanel({ historyMonths, turniAttivi }) {
     if (!selectedMese && historyMonths.length > 0) setSelectedMese(historyMonths[0].mese);
   }, [historyMonths]);
 
-  const giorni = useMemo(() => {
-    return historyMonths.find(m => m.mese === selectedMese)?.giorni ?? [];
-  }, [historyMonths, selectedMese]);
+  const giorni = useMemo(() =>
+    historyMonths.find(m => m.mese === selectedMese)?.giorni ?? [],
+  [historyMonths, selectedMese]);
 
   const pieData = useMemo(() => {
     const counts = {};
-    giorni.forEach(d => {
-      const k = d.assente ? "assente" : d.stato;
-      counts[k] = (counts[k] ?? 0) + 1;
-    });
+    giorni.forEach(d => { const k = d.assente ? "assente" : d.stato; counts[k] = (counts[k] ?? 0) + 1; });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
   }, [giorni]);
 
   const barOre = useMemo(() =>
     giorni.map(d => ({
       g: new Date(d.giorno + "T12:00:00").getDate(),
-      lav: Number((d.ore_totali   ?? 0).toFixed(1)),
+      lav: Number((d.ore_totali ?? 0).toFixed(1)),
       prv: Number((d.ore_previste ?? 0).toFixed(1)),
     })),
   [giorni]);
@@ -109,7 +159,7 @@ function ChartPanel({ historyMonths, turniAttivi }) {
     giorni
       .filter(d => (d.ritardo_minuti ?? 0) > 0 || (d.ore_straordinario ?? 0) > 0)
       .map(d => ({
-        g:   new Date(d.giorno + "T12:00:00").getDate(),
+        g: new Date(d.giorno + "T12:00:00").getDate(),
         rit: d.ritardo_minuti ?? 0,
         str: Number(((d.ore_straordinario ?? 0) * 60).toFixed(0)),
       })),
@@ -134,55 +184,48 @@ function ChartPanel({ historyMonths, turniAttivi }) {
         <p className="text-xs text-zinc-400 text-center py-4">Nessun dato per questo mese</p>
       ) : (
         <>
-          {/* Torta distribuzione stati */}
+          {/* Torta stati */}
           <div>
-            <p className="text-xs font-medium text-zinc-500 mb-1">Distribuzione giorni</p>
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie data={pieData} dataKey="value" innerRadius={44} outerRadius={70} paddingAngle={2}>
-                  {pieData.map(entry => (
-                    <Cell key={entry.name} fill={PIE_COLORS[entry.name] ?? "#94a3b8"} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v, n) => [v + " gg", n]} />
-                <Legend
-                  iconType="circle"
-                  iconSize={7}
-                  formatter={v => <span style={{ fontSize: 10 }}>{v}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <p className="text-xs font-medium text-zinc-500 mb-2">Distribuzione giorni</p>
+            <div className="flex items-center gap-3">
+              <SvgDonut data={pieData} />
+              <div className="flex flex-col gap-1">
+                {pieData.map(d => (
+                  <div key={d.name} className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[d.name] ?? "#94a3b8" }} />
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 capitalize">{d.name}</span>
+                    <span className="text-[10px] font-medium text-zinc-700 dark:text-zinc-300 ml-auto pl-2">{d.value}g</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Colonne ore lavorate vs previste */}
+          {/* Barre ore */}
           {turniAttivi && (
             <div>
-              <p className="text-xs font-medium text-zinc-500 mb-1">Ore lavorate vs previste</p>
-              <ResponsiveContainer width="100%" height={110}>
-                <BarChart data={barOre} barSize={5} barGap={1} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
-                  <XAxis dataKey="g" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-                  <YAxis tick={{ fontSize: 9 }} />
-                  <Tooltip formatter={(v, n) => [v + "h", n === "prv" ? "previste" : "lavorate"]} />
-                  <Bar dataKey="prv" fill="#94a3b8" radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="lav" fill="#22c55e" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="flex items-center gap-3 mb-1">
+                <p className="text-xs font-medium text-zinc-500">Ore lavorate vs previste</p>
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-2 rounded-sm inline-block" style={{background:"#94a3b8"}} />prev.</span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-2 rounded-sm inline-block" style={{background:"#22c55e"}} />lav.</span>
+                </div>
+              </div>
+              <SvgBars data={barOre} keys={["prv", "lav"]} colors={["#94a3b8", "#22c55e"]} />
             </div>
           )}
 
-          {/* Colonne ritardi + straordinari */}
+          {/* Barre ritardi */}
           {turniAttivi && barExtra.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-zinc-500 mb-1">Ritardi e straordinari (min)</p>
-              <ResponsiveContainer width="100%" height={110}>
-                <BarChart data={barExtra} barSize={7} barGap={2} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
-                  <XAxis dataKey="g" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-                  <YAxis tick={{ fontSize: 9 }} />
-                  <Tooltip formatter={(v, n) => [v + " min", n === "rit" ? "ritardo" : "straordinario"]} />
-                  <Bar dataKey="rit" fill="#a855f7" radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="str" fill="#f59e0b" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="flex items-center gap-3 mb-1">
+                <p className="text-xs font-medium text-zinc-500">Ritardi e straordinari (min)</p>
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-2 rounded-sm inline-block" style={{background:"#a855f7"}} />rit.</span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-2 rounded-sm inline-block" style={{background:"#f59e0b"}} />str.</span>
+                </div>
+              </div>
+              <SvgBars data={barExtra} keys={["rit", "str"]} colors={["#a855f7", "#f59e0b"]} />
             </div>
           )}
         </>
