@@ -111,25 +111,20 @@ function Bars({ data, keys, colors, unit = "" }) {
 
 function StackedBars({ data, keys, colors }) {
   if (!data.length) return null;
-  const W = 256, H = 110, PL = 28, PB = 16, PT = 4, PR = 2;
+  const W = 256, H = 116, PL = 4, PB = 16, PT = 14, PR = 4;
   const cW = W - PL - PR, cH = H - PB - PT;
   const max = Math.max(...data.map(d => keys.reduce((s, k) => s + (d[k] ?? 0), 0)), 1);
   const slot = cW / data.length;
   const bW = Math.max(5, Math.min(20, slot - 6));
-  const gridLines = [0.25, 0.5, 0.75, 1].map(f => ({ y: PT + cH * (1 - f), v: Math.round(max * f) }));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-      {gridLines.map(gl => (
-        <g key={gl.v}>
-          <line x1={PL} x2={W - PR} y1={gl.y} y2={gl.y} stroke="rgba(120,120,120,0.15)" strokeWidth={1} />
-          <text x={PL - 3} y={gl.y + 1} textAnchor="end" dominantBaseline="middle" fontSize={7.5} fill="rgba(120,120,120,0.7)">{gl.v}</text>
-        </g>
-      ))}
+      <line x1={PL} x2={W - PR} y1={PT + cH} y2={PT + cH} stroke="rgba(120,120,120,0.15)" strokeWidth={1} />
       {data.map((d, i) => {
         const sx = PL + i * slot;
         const bx = sx + (slot - bW) / 2;
         const baseline = PT + cH;
         let cumH = 0;
+        const total = keys.reduce((s, k) => s + (d[k] ?? 0), 0);
         const rects = keys.map((k, ki) => {
           const val = d[k] ?? 0;
           const bH = (val / max) * cH;
@@ -138,6 +133,7 @@ function StackedBars({ data, keys, colors }) {
           return { k, ki, val, bH, rectY };
         });
         const lastNonZeroIdx = rects.reduce((best, r, idx) => r.val > 0 ? idx : best, -1);
+        const topY = lastNonZeroIdx >= 0 ? rects[lastNonZeroIdx].rectY : baseline;
         return (
           <g key={d.g}>
             {rects.map(({ k, ki, val, bH, rectY }, idx) =>
@@ -145,6 +141,10 @@ function StackedBars({ data, keys, colors }) {
                 <rect key={k} x={bx} y={rectY} width={bW} height={bH}
                   fill={colors[ki]} rx={idx === lastNonZeroIdx ? 2 : 0} />
               ) : null
+            )}
+            {total > 0 && (
+              <text x={sx + slot / 2} y={topY - 2} textAnchor="middle"
+                fontSize={8} fontWeight="600" fill="rgba(120,120,120,0.9)">{total}</text>
             )}
             <text x={sx + slot / 2} y={H - 1} textAnchor="middle" fontSize={8} fill="rgba(120,120,120,0.8)">{d.g}</text>
           </g>
