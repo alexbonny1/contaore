@@ -329,7 +329,7 @@ void rfidInit() {
   rfid.PCD_Init();
   delay(50);
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  g_rfidOk = (v == 0x91 || v == 0x92);
+  g_rfidOk = (v != 0x00 && v != 0xFF); // accetta tutti i cloni (es. 0x82, 0x88, 0x12)
   Serial.printf("RC522 version: 0x%02X %s\n", v, g_rfidOk ? "OK" : "WARN");
 }
 
@@ -1185,7 +1185,7 @@ void taskResult() {
 
 void taskRfidHealth() {
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  g_rfidOk = (v == 0x91 || v == 0x92);
+  g_rfidOk = (v != 0x00 && v != 0xFF);
   if (!g_rfidOk) { Serial.println("RFID drift, reinit..."); rfidInit(); }
 }
 
