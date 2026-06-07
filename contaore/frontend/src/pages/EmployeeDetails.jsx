@@ -109,6 +109,51 @@ function Bars({ data, keys, colors, unit = "" }) {
   );
 }
 
+function StackedBars({ data, keys, colors }) {
+  if (!data.length) return null;
+  const W = 256, H = 110, PL = 28, PB = 16, PT = 4, PR = 2;
+  const cW = W - PL - PR, cH = H - PB - PT;
+  const max = Math.max(...data.map(d => keys.reduce((s, k) => s + (d[k] ?? 0), 0)), 1);
+  const slot = cW / data.length;
+  const bW = Math.max(5, Math.min(20, slot - 6));
+  const gridLines = [0.25, 0.5, 0.75, 1].map(f => ({ y: PT + cH * (1 - f), v: Math.round(max * f) }));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      {gridLines.map(gl => (
+        <g key={gl.v}>
+          <line x1={PL} x2={W - PR} y1={gl.y} y2={gl.y} stroke="rgba(120,120,120,0.15)" strokeWidth={1} />
+          <text x={PL - 3} y={gl.y + 1} textAnchor="end" dominantBaseline="middle" fontSize={7.5} fill="rgba(120,120,120,0.7)">{gl.v}</text>
+        </g>
+      ))}
+      {data.map((d, i) => {
+        const sx = PL + i * slot;
+        const bx = sx + (slot - bW) / 2;
+        const baseline = PT + cH;
+        let cumH = 0;
+        const rects = keys.map((k, ki) => {
+          const val = d[k] ?? 0;
+          const bH = (val / max) * cH;
+          const rectY = baseline - cumH - bH;
+          cumH += bH;
+          return { k, ki, val, bH, rectY };
+        });
+        const lastNonZeroIdx = rects.reduce((best, r, idx) => r.val > 0 ? idx : best, -1);
+        return (
+          <g key={d.g}>
+            {rects.map(({ k, ki, val, bH, rectY }, idx) =>
+              val > 0 ? (
+                <rect key={k} x={bx} y={rectY} width={bW} height={bH}
+                  fill={colors[ki]} rx={idx === lastNonZeroIdx ? 2 : 0} />
+              ) : null
+            )}
+            <text x={sx + slot / 2} y={H - 1} textAnchor="middle" fontSize={8} fill="rgba(120,120,120,0.8)">{d.g}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 function ChartPanel({ historyMonths, turniAttivi }) {
   const [selectedMese, setSelectedMese] = useState(historyMonths[0]?.mese ?? "");
 
@@ -261,7 +306,7 @@ function ChartPanel({ historyMonths, turniAttivi }) {
                   <span className="flex items-center gap-1 text-[10px] text-zinc-400"><span className="w-2 h-1.5 rounded-sm inline-block bg-amber-500" />str</span>
                 </div>
               </div>
-              <Bars data={barDow} keys={["ass","rit","str"]} colors={["#ef4444","#a855f7","#f59e0b"]} />
+              <StackedBars data={barDow} keys={["ass","rit","str"]} colors={["#ef4444","#a855f7","#f59e0b"]} />
             </div>
           )}
         </>
