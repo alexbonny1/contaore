@@ -97,10 +97,10 @@
 #define HDR_H     40
 #define FTR_Y     285
 #define CLK_SIZE  8
-#define CLK_X     120
+#define CLK_SPR_W 240   // 5 chars × 6px × size 8
+#define CLK_SPR_H 64    // 8px × size 8
+#define CLK_SPR_X 120   // (480 - 240) / 2
 #define CLK_Y     120
-#define CLK_W     340
-#define CLK_H     100
 #define DATE_SIZE 3
 #define DATE_X    150
 #define DATE_Y    235
@@ -156,6 +156,7 @@ bool     g_themeLight = false;
 // ── OGGETTI ──────────────────────────
 MFRC522     rfid(PIN_RC522_SS, PIN_RC522_RST);
 TFT_eSPI    tft = TFT_eSPI();
+TFT_eSprite g_clockSprite = TFT_eSprite(&tft);
 Preferences prefs;
 
 // ── STRUTTURE ────────────────────────
@@ -380,11 +381,13 @@ void drawFooter() {
 }
 
 void drawClock() {
-  // setTextColor con bg incluso ridisegna ogni pixel: niente fillRect, niente flickering
-  tft.setTextColor(C_CLK_TEXT, C_BG);
-  tft.setTextSize(CLK_SIZE);
-  tft.setCursor(CLK_X, CLK_Y);
-  tft.print(ds.oraCorrente);
+  g_clockSprite.fillSprite(C_BG);
+  g_clockSprite.setTextColor(C_CLK_TEXT, C_BG);
+  g_clockSprite.setTextSize(CLK_SIZE);
+  int16_t tw = g_clockSprite.textWidth(ds.oraCorrente.length() > 0 ? ds.oraCorrente : "00:00");
+  g_clockSprite.setCursor((CLK_SPR_W - tw) / 2, 0);
+  if (ds.oraCorrente.length() > 0) g_clockSprite.print(ds.oraCorrente);
+  g_clockSprite.pushSprite(CLK_SPR_X, CLK_Y);
 }
 
 void drawDate() {
@@ -1124,6 +1127,7 @@ void setup() {
 
   tft.init();
   tft.setRotation(1);
+  g_clockSprite.createSprite(CLK_SPR_W, CLK_SPR_H);
   g_displayOk = true;  // se siamo qui il display ha risposto correttamente
 
   // Carica config (e tema) prima della splash
