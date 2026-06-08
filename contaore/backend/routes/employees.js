@@ -993,25 +993,36 @@ export default async function employeeRoutes(fastify) {
         // Auto-insert missing break timbrature when a final USCITA is saved
         if (tipo === 'USCITA') {
           try {
-            const { data: empFull } = await supabase.from('dipendenti').select('id, turni_attivi').eq('id', id).single()
+            console.log('[AUTO-INSERT] USCITA salvata, avvio controllo...')
+            const { data: empFull, error: empErr } = await supabase.from('dipendenti').select('id, turni_attivi').eq('id', id).single()
+            console.log('[AUTO-INSERT] dipendente:', empFull, 'errore:', empErr)
             if (empFull?.turni_attivi) {
               const dateStr   = ts.split('T')[0]
               const newMins   = new Date(ts).getHours() * 60 + new Date(ts).getMinutes()
-              const { data: shifts } = await supabase.from('turni').select('*').eq('dipendente_id', id)
               const dayName   = getDayName(dateStr)
+              console.log('[AUTO-INSERT] dateStr:', dateStr, 'dayName:', dayName, 'newMins:', newMins)
+              const { data: shifts, error: shiftsErr } = await supabase.from('turni').select('*').eq('dipendente_id', id)
+              console.log('[AUTO-INSERT] turni trovati:', shifts?.length, 'errore:', shiftsErr)
+              console.log('[AUTO-INSERT] turni:', JSON.stringify(shifts?.map(s => ({ g: s.giorno_settimana, u1: s.uscita_1, i2: s.ingresso_2 }))))
               const dayShift  = (shifts || []).find(s => s.giorno_settimana === dayName && s.uscita_1 && s.ingresso_2)
+              console.log('[AUTO-INSERT] turno doppio trovato:', dayShift ? `${dayShift.uscita_1}-${dayShift.ingresso_2}` : 'NO')
               if (dayShift && newMins >= timeToMinutes(dayShift.ingresso_2)) {
-                const { data: todayReads } = await supabase.from('presenza')
+                const { data: todayReads, error: readsErr } = await supabase.from('presenza')
                   .select('tipo, created_at')
                   .eq('tag_uid', employee.badge_uid)
                   .eq('company_id', companyId)
                   .gte('created_at', `${dateStr}T00:00:00`)
                   .lte('created_at', `${dateStr}T23:59:59`)
                   .order('created_at', { ascending: true })
+                console.log('[AUTO-INSERT] reads oggi:', todayReads?.map(r => r.tipo), 'errore:', readsErr)
                 await autoInsertBreakTimbrature(supabase, id, companyId, employee.badge_uid, todayReads || [], dayShift, dateStr)
+              } else {
+                console.log('[AUTO-INSERT] condizione non soddisfatta — dayShift:', !!dayShift, 'newMins >= ingresso_2:', newMins, '>=', dayShift ? timeToMinutes(dayShift.ingresso_2) : 'N/A')
               }
+            } else {
+              console.log('[AUTO-INSERT] turni_attivi non abilitato, skip')
             }
-          } catch (_) {}
+          } catch (err) { console.log('[AUTO-INSERT] ERRORE:', err) }
         }
 
         return reply.send({ success: true, presenza: data })
