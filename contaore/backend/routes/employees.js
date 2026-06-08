@@ -316,7 +316,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
   if (turniAttivi && shifts.length > 0) {
 
     const now     = new Date()
-    const today   = now.toISOString().split('T')[0]
+    const today   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
     const nowMins = now.getHours() * 60 + now.getMinutes()
 
     const start = dataInizio ? new Date(dataInizio) : new Date()
