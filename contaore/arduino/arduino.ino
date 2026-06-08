@@ -718,6 +718,34 @@ void queueFlush() {
 }
 
 // ── OTA UPDATE ───────────────────────
+// GitHub releases rispondono 302 → CDN; HTTPUpdate non può seguire redirect
+// autonomamente in questa versione, quindi lo risolviamo prima con HTTPClient.
+static String resolveOtaUrl(const String& url) {
+  const char* hdrKeys[] = {"Location"};
+  String loc = "";
+  if (url.startsWith("https")) {
+    WiFiClientSecure c; c.setInsecure(); HTTPClient h;
+    h.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
+    h.collectHeaders(hdrKeys, 1);
+    if (h.begin(c, url)) {
+      int code = h.GET();
+      if (code >= 300 && code < 400) loc = h.header("Location");
+      h.end();
+    }
+  } else {
+    WiFiClient c; HTTPClient h;
+    h.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
+    h.collectHeaders(hdrKeys, 1);
+    if (h.begin(c, url)) {
+      int code = h.GET();
+      if (code >= 300 && code < 400) loc = h.header("Location");
+      h.end();
+    }
+  }
+  Serial.printf("OTA URL risolto: %s\n", loc.length() > 8 ? loc.c_str() : "(nessun redirect)");
+  return (loc.length() > 8) ? loc : url;
+}
+
 void doOTA(String url, String newVersion) {
   Serial.printf("OTA: aggiornamento v%s → v%s\n", FW_VERSION, newVersion.c_str());
 
@@ -735,17 +763,15 @@ void doOTA(String url, String newVersion) {
   tft.print("Non spegnere il dispositivo...");
   drawHeader(); drawFooter();
 
+  String finalUrl = resolveOtaUrl(url);
   httpUpdate.rebootOnUpdate(true);
-  httpUpdate.followRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-
-  bool isHttps = url.startsWith("https");
   t_httpUpdate_return ret;
-  if (isHttps) {
+  if (finalUrl.startsWith("https")) {
     WiFiClientSecure client; client.setInsecure();
-    ret = httpUpdate.update(client, url);
+    ret = httpUpdate.update(client, finalUrl);
   } else {
     WiFiClient client;
-    ret = httpUpdate.update(client, url);
+    ret = httpUpdate.update(client, finalUrl);
   }
 
   // Arriva qui solo se OTA non è andata a buon fine (altrimenti si riavvia)
