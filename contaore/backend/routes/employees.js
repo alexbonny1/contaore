@@ -347,14 +347,12 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
         const ore_previste = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
 
         if (isToday) {
-          const turnoFinito = dayShifts.some(s => {
-            if (!s.uscita_1) return false
-            // Cross-midnight shift ends the next calendar day — never "finished" on today's cursor
-            if (s.ingresso_1 && timeToMinutes(s.uscita_1) < timeToMinutes(s.ingresso_1)) return false
-            const fine = timeToMinutes(s.uscita_1)
-            return fine !== null && nowMins > fine
+          // mostra assente oggi solo se l'orario di ingresso è già passato
+          const turnoIniziato = dayShifts.some(s => {
+            if (!s.ingresso_1) return false
+            return nowMins > timeToMinutes(s.ingresso_1)
           })
-          if (!turnoFinito) {
+          if (!turnoIniziato) {
             cursor.setDate(cursor.getDate() + 1)
             continue
           }
