@@ -499,21 +499,13 @@ export default async function employeeRoutes(fastify) {
             }
           }
 
+          // assente solo se non ha timbrato affatto oggi e il turno è già iniziato
           let assente = false
-
-          if (emp.turni_attivi && !presente) {
-
-            if (todayShifts.length > 0) {
-
-              assente = todayShifts.some(s => {
-                if (!s.ingresso_1 || !s.uscita_1) return false
-                const inizio = timeToMinutes(s.ingresso_1)
-                const fine   = timeToMinutes(s.uscita_1)
-                return nowMins >= inizio && nowMins <= fine
-              })
-
-            }
-
+          if (emp.turni_attivi && !inPausa && todayReads.length === 0 && todayShifts.length > 0) {
+            assente = todayShifts.some(s => {
+              if (!s.ingresso_1) return false
+              return nowMins >= timeToMinutes(s.ingresso_1)
+            })
           }
 
           return {
