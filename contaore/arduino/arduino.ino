@@ -736,6 +736,7 @@ void doOTA(String url, String newVersion) {
   drawHeader(); drawFooter();
 
   httpUpdate.rebootOnUpdate(true);
+  httpUpdate.followRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
   bool isHttps = url.startsWith("https");
   t_httpUpdate_return ret;
@@ -1124,6 +1125,7 @@ void taskSerial() {
 void setup() {
   Serial.begin(115200);
   delay(500);
+  Serial.setDebugOutput(false);
   esp_log_level_set("*", ESP_LOG_NONE);
   Serial.println("\n\ntimbry NFC ESP32 v" FW_VERSION);
 
