@@ -422,12 +422,14 @@ export default async function dipendenteRoutes(fastify) {
           history_days:   days,
           giustificazioni: giustificazioni || [],
           stats: {
-            ore_mese_corrente:  employee.turni_attivi
-              ? calculateHoursWithBreaks(monthReads, shifts || [])
-              : calculateHours(monthReads),
-            giorni_assenti:     days.filter(d => d.assente).length,
-            giorni_ferie:       days.filter(d => d.stato === 'ferie').length,
-            ore_straordinario:  (() => {
+            ore_mese_corrente: (() => {
+              const currentMonth = new Date().toISOString().slice(0, 7)
+              return Number(days.filter(d => d.giorno.slice(0, 7) === currentMonth)
+                .reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali), 0).toFixed(2))
+            })(),
+            giorni_assenti:    days.filter(d => d.assente).length,
+            giorni_ferie:      days.filter(d => d.stato === 'ferie').length,
+            ore_straordinario: (() => {
               const totLav  = days.reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali), 0)
               const totPrev = days.reduce((s, d) => s + d.ore_previste, 0)
               return Number(Math.max(0, totLav - totPrev).toFixed(2))

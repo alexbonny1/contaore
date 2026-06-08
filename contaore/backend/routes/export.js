@@ -288,21 +288,27 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
         giorni: [],
         oreTotali: 0,
         orePreviste: 0,
-        straordinario: 0,
         assenze: 0,
         ritardi: 0
       }
     }
     const m = monthsMap[day.meseName]
     m.giorni.push(day)
-    m.oreTotali     += day.oreEffettive ?? day.oreLavorate
-    m.orePreviste   += day.orePreviste
-    m.straordinario += day.straordinarioOre
-    if (day.assente)           m.assenze++
-    if (day.ritardoMin > 5)    m.ritardi++
+    m.oreTotali   += day.oreEffettive ?? day.oreLavorate
+    m.orePreviste += day.orePreviste
+    if (day.assente)        m.assenze++
+    if (day.ritardoMin > 5) m.ritardi++
   })
 
-  let months = Object.values(monthsMap)
+  // straordinario calcolato a livello mensile come in employees.js:
+  // MAX(0, totOreEffettive - totOrePreviste) — così i giorni in deficit bilanciano quelli in surplus
+  let months = Object.values(monthsMap).map(m => ({
+    ...m,
+    oreTotali:    Number(m.oreTotali.toFixed(2)),
+    orePreviste:  Number(m.orePreviste.toFixed(2)),
+    straordinario: Number(Math.max(0, m.oreTotali - m.orePreviste).toFixed(2))
+  }))
+
   if (selectedMonth && selectedMonth !== 'tutti') {
     months = months.filter(m => m.name === selectedMonth)
   }
