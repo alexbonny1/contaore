@@ -166,14 +166,16 @@ function buildSessions(scans) {
 
 function buildCoppie(sessions) {
   return sessions.map(s => ({
-    entrata:            s.entrata ? new Date(s.entrata.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null,
-    uscita:             s.uscita  ? new Date(s.uscita.created_at).toLocaleTimeString('it-IT',  { hour: '2-digit', minute: '2-digit' }) : null,
-    entrata_id:         s.entrata?.id || null,
-    uscita_id:          s.uscita?.id  || null,
-    entrata_manuale:    s.entrata ? !!s.entrata.manuale : false,
-    uscita_manuale:     s.uscita  ? !!s.uscita.manuale  : false,
-    uscita_giorno_dopo: !!s.uscita_giorno_dopo,
-    incomplete:         !!s.incomplete
+    entrata:             s.entrata ? new Date(s.entrata.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null,
+    uscita:              s.uscita  ? new Date(s.uscita.created_at).toLocaleTimeString('it-IT',  { hour: '2-digit', minute: '2-digit' }) : null,
+    entrata_id:          s.entrata?.id || null,
+    uscita_id:           s.uscita?.id  || null,
+    entrata_manuale:     s.entrata ? !!s.entrata.manuale    : false,
+    uscita_manuale:      s.uscita  ? !!s.uscita.manuale     : false,
+    entrata_automatica:  s.entrata ? !!s.entrata.automatica : false,
+    uscita_automatica:   s.uscita  ? !!s.uscita.automatica  : false,
+    uscita_giorno_dopo:  !!s.uscita_giorno_dopo,
+    incomplete:          !!s.incomplete
   }))
 }
 
@@ -181,7 +183,38 @@ function isInFerie(dateStr, ferie = []) {
   return ferie.some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
 }
 
-function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10) {
+async function autoInsertBreakTimbrature(supabase, dipendenteId, companyId, tagUid, todayReads, shift, dateStr) {
+  if (!shift?.uscita_1 || !shift?.ingresso_2) return
+  const sorted = [...todayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const tipos  = sorted.map(r => r.tipo)
+  const inserts = []
+  const u1Time  = shift.uscita_1
+  const i2Time  = shift.ingresso_2
+
+  if (tipos.length === 2 && tipos[0] === 'ENTRATA' && tipos[1] === 'USCITA') {
+    inserts.push({ tipo: 'USCITA',  created_at: `${dateStr}T${u1Time}:00` })
+    inserts.push({ tipo: 'ENTRATA', created_at: `${dateStr}T${i2Time}:00` })
+  } else if (tipos.length === 3 && tipos[0] === 'ENTRATA' && tipos[1] === 'USCITA' && tipos[2] === 'USCITA') {
+    inserts.push({ tipo: 'ENTRATA', created_at: `${dateStr}T${i2Time}:00` })
+  } else if (tipos.length === 3 && tipos[0] === 'ENTRATA' && tipos[1] === 'ENTRATA' && tipos[2] === 'USCITA') {
+    inserts.push({ tipo: 'USCITA',  created_at: `${dateStr}T${u1Time}:00` })
+  }
+
+  for (const ins of inserts) {
+    await supabase.from('presenza').insert({
+      company_id:    companyId,
+      dipendente_id: dipendenteId,
+      tag_uid:       tagUid,
+      reader_id:     null,
+      manuale:       false,
+      automatica:    true,
+      timestamp:     ins.created_at,
+      ...ins
+    })
+  }
+}
+
+function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, snapToShift = false) {
 
   const sessions = buildSessions(reads)
 
@@ -230,6 +263,12 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
         ore_straordinario = Number(oreLavorate.toFixed(2))
       }
 
+      var ore_effettive = oreLavorate
+      if (snapToShift && ore_previste > 0) {
+        const diffMins = Math.abs(oreLavorate - ore_previste) * 60
+        if (diffMins < toleranceMins) ore_effettive = ore_previste
+      }
+
       // stato hierarchy
       if (ore_straordinario > 0) {
         stato = 'straordinario'
@@ -263,6 +302,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       giorno,
       coppie:           buildCoppie(daySessions),
       ore_totali:       oreLavorate,
+      ore_effettive:    ore_effettive ?? oreLavorate,
       ore_previste,
       ore_straordinario,
       stato,
@@ -365,7 +405,7 @@ function groupByMonth(days = []) {
     }
 
     grouped[monthKey].giorni.push(day)
-    grouped[monthKey].ore_totali  += day.ore_totali
+    grouped[monthKey].ore_totali  += day.ore_effettive ?? day.ore_totali
     grouped[monthKey].ore_previste += day.ore_previste
     if (day.assente) grouped[monthKey].giorni_assenti++
 
@@ -435,15 +475,28 @@ export default async function employeeRoutes(fastify) {
           const empShifts = (allShifts || []).filter(s => s.dipendente_id === emp.id)
           const todayShifts = empShifts.filter(s => s.giorno_settimana === todayName)
 
-          // Employee is in their scheduled break window right now
+          // Employee is in pausa: either inside during break window, OR clocked out near uscita_1 and still before ingresso_2
           let inPausa = false
-          if (presente && emp.turni_attivi) {
-            inPausa = todayShifts.some(s => {
-              if (!s.uscita_1 || !s.ingresso_2) return false
-              const pausaStart = timeToMinutes(s.uscita_1)
-              const pausaEnd   = timeToMinutes(s.ingresso_2)
-              return nowMins >= pausaStart && nowMins < pausaEnd
-            })
+          if (emp.turni_attivi) {
+            const doubleShifts = todayShifts.filter(s => s.uscita_1 && s.ingresso_2)
+            if (presente) {
+              inPausa = doubleShifts.some(s => {
+                const pausaStart = timeToMinutes(s.uscita_1)
+                const pausaEnd   = timeToMinutes(s.ingresso_2)
+                return nowMins >= pausaStart && nowMins < pausaEnd
+              })
+            } else if (doubleShifts.length > 0) {
+              const todaySorted = todayReads.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+              const lastTodayRead = todaySorted[todaySorted.length - 1]
+              if (lastTodayRead?.tipo === 'USCITA') {
+                const lastMins = new Date(lastTodayRead.created_at).getHours() * 60 + new Date(lastTodayRead.created_at).getMinutes()
+                inPausa = doubleShifts.some(s => {
+                  const u1 = timeToMinutes(s.uscita_1)
+                  const i2 = timeToMinutes(s.ingresso_2)
+                  return Math.abs(lastMins - u1) <= 30 && nowMins < i2
+                })
+              }
+            }
           }
 
           let assente = false
@@ -566,10 +619,11 @@ export default async function employeeRoutes(fastify) {
         // tolleranza straordinari configurabile per azienda
         const { data: companySettings } = await supabase
           .from('company')
-          .select('tolleranza_straordinario_minuti')
+          .select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno')
           .eq('id', companyId)
           .single()
         const toleranceMins = companySettings?.tolleranza_straordinario_minuti ?? 10
+        const snapToShift   = companySettings?.arrotonda_ore_al_turno ?? false
 
         const days   = groupByDay(
           reads,
@@ -579,7 +633,8 @@ export default async function employeeRoutes(fastify) {
           ferieApprovate || [],
           giustificazioni || [],
           pausaAziendale || null,
-          toleranceMins
+          toleranceMins,
+          snapToShift
         )
 
         const months = groupByMonth(days)
@@ -596,11 +651,11 @@ export default async function employeeRoutes(fastify) {
             stats: {
               total_hours:       (() => {
                 const currentMonth = new Date().toISOString().slice(0, 7)
-                return Number(days.filter(d => d.giorno.slice(0, 7) === currentMonth).reduce((s, d) => s + d.ore_totali, 0).toFixed(2))
+                return Number(days.filter(d => d.giorno.slice(0, 7) === currentMonth).reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali), 0).toFixed(2))
               })(),
               total_reads:       reads.length,
               ore_straordinario: (() => {
-                const totLav  = days.reduce((s, d) => s + d.ore_totali, 0)
+                const totLav  = days.reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali), 0)
                 const totPrev = days.reduce((s, d) => s + d.ore_previste, 0)
                 return (Math.max(0, totLav - totPrev)).toFixed(2)
               })(),
@@ -944,6 +999,30 @@ export default async function employeeRoutes(fastify) {
           return reply.send({ success: false, error: error.message })
         }
 
+        // Auto-insert missing break timbrature when a final USCITA is saved
+        if (tipo === 'USCITA') {
+          try {
+            const { data: empFull } = await supabase.from('dipendenti').select('id, turni_attivi').eq('id', id).single()
+            if (empFull?.turni_attivi) {
+              const dateStr   = ts.split('T')[0]
+              const newMins   = new Date(ts).getHours() * 60 + new Date(ts).getMinutes()
+              const { data: shifts } = await supabase.from('turni').select('*').eq('dipendente_id', id)
+              const dayName   = getDayName(dateStr)
+              const dayShift  = (shifts || []).find(s => s.giorno_settimana === dayName && s.uscita_1 && s.ingresso_2)
+              if (dayShift && newMins >= timeToMinutes(dayShift.ingresso_2)) {
+                const { data: todayReads } = await supabase.from('presenza')
+                  .select('tipo, created_at')
+                  .eq('tag_uid', employee.badge_uid)
+                  .eq('company_id', companyId)
+                  .gte('created_at', `${dateStr}T00:00:00`)
+                  .lte('created_at', `${dateStr}T23:59:59`)
+                  .neq('automatica', true)
+                await autoInsertBreakTimbrature(supabase, id, companyId, employee.badge_uid, todayReads || [], dayShift, dateStr)
+              }
+            }
+          } catch (_) {}
+        }
+
         return reply.send({ success: true, presenza: data })
       } catch (err) {
         console.log(err)
@@ -1087,12 +1166,13 @@ export default async function employeeRoutes(fastify) {
     try {
       const { data } = await supabase
         .from('company')
-        .select('tolleranza_straordinario_minuti')
+        .select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno')
         .eq('id', req.user.company_id)
         .single()
       return reply.send({
         success: true,
-        tolleranza_straordinario_minuti: data?.tolleranza_straordinario_minuti ?? 10
+        tolleranza_straordinario_minuti: data?.tolleranza_straordinario_minuti ?? 10,
+        arrotonda_ore_al_turno:          data?.arrotonda_ore_al_turno ?? false
       })
     } catch (err) {
       console.log(err)
@@ -1103,11 +1183,12 @@ export default async function employeeRoutes(fastify) {
   /* PUT /api/company/settings — aggiorna impostazioni aziendali */
   fastify.put('/api/company/settings', { preHandler: authenticate }, async (req, reply) => {
     try {
-      const raw = parseInt(req.body?.tolleranza_straordinario_minuti)
-      const val = isNaN(raw) ? 10 : Math.max(0, Math.min(60, raw))
+      const raw  = parseInt(req.body?.tolleranza_straordinario_minuti)
+      const val  = isNaN(raw) ? 10 : Math.max(0, Math.min(60, raw))
+      const snap = !!req.body?.arrotonda_ore_al_turno
       const { error } = await supabase
         .from('company')
-        .update({ tolleranza_straordinario_minuti: val })
+        .update({ tolleranza_straordinario_minuti: val, arrotonda_ore_al_turno: snap })
         .eq('id', req.user.company_id)
       if (error) return reply.send({ success: false, error: error.message })
       return reply.send({ success: true })

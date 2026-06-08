@@ -57,8 +57,9 @@ export default function Settings() {
   const [toast, setToast]           = useState(null);
 
   // ── Tolleranza
-  const [tolleranza, setTolleranza] = useState(10);
-  const [savingToll, setSavingToll] = useState(false);
+  const [tolleranza,   setTolleranza]   = useState(10);
+  const [snapToShift,  setSnapToShift]  = useState(false);
+  const [savingToll,   setSavingToll]   = useState(false);
 
   // ── Grafici
   const [chartPrefs, setChartPrefs] = useState(loadChartPrefs);
@@ -77,7 +78,10 @@ export default function Settings() {
     try {
       const res  = await fetch(API_URL + "/api/company/settings", { headers: { Authorization: "Bearer " + token } });
       const data = await res.json();
-      if (data.success) setTolleranza(data.tolleranza_straordinario_minuti ?? 10);
+      if (data.success) {
+        setTolleranza(data.tolleranza_straordinario_minuti ?? 10);
+        setSnapToShift(data.arrotonda_ore_al_turno ?? false);
+      }
     } catch (_) {}
     finally { setLoading(false); }
   }
@@ -91,7 +95,7 @@ export default function Settings() {
       const res = await fetch(API_URL + "/api/company/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ tolleranza_straordinario_minuti: tolleranza }),
+        body: JSON.stringify({ tolleranza_straordinario_minuti: tolleranza, arrotonda_ore_al_turno: snapToShift }),
       });
       const data = await res.json();
       if (data.success) showToast("Tolleranza salvata");
@@ -176,6 +180,14 @@ export default function Settings() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between py-1">
+              <div>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Arrotonda ore al turno</p>
+                <p className="text-xs text-zinc-400 leading-relaxed mt-0.5">Entro la tolleranza, il giorno conta come ore previste nel totale mensile</p>
+              </div>
+              <Toggle value={snapToShift} onChange={setSnapToShift} />
             </div>
 
             <button type="submit" disabled={savingToll}

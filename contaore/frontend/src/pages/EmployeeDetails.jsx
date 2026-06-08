@@ -1235,16 +1235,17 @@ export default function EmployeeDetails() {
                                     ? <span className="text-zinc-400">—</span>
                                     : (day.coppie || []).map((coppia, i) => (
                                         <div key={i} className="flex items-center gap-1">
-                                          <span className={coppia.entrata_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-green-600 dark:text-green-400 font-medium"}>
+                                          <span className={coppia.entrata_automatica ? "text-purple-600 dark:text-purple-400 font-medium" : coppia.entrata_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-green-600 dark:text-green-400 font-medium"}>
                                             {coppia.entrata || "—"}
                                           </span>
+                                          {coppia.entrata_automatica && <span className="text-[9px] text-purple-500 font-bold leading-none">A</span>}
                                           {canManagePresence && coppia.entrata_id && (
                                             <button onClick={(e) => { e.stopPropagation(); startEditPresence(coppia.entrata_id, "ENTRATA", day.giorno, coppia.entrata); }}
                                               className={`transition-colors flex-shrink-0 ${coppia.entrata_manuale ? "text-amber-400 hover:text-blue-500" : "text-zinc-300 hover:text-blue-500"}`}>
                                               <Pencil size={10} />
                                             </button>
                                           )}
-                                          {canManagePresence && coppia.entrata_manuale && coppia.entrata_id && (
+                                          {canManagePresence && (coppia.entrata_manuale || coppia.entrata_automatica) && coppia.entrata_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.entrata_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
                                             </button>
@@ -1261,9 +1262,10 @@ export default function EmployeeDetails() {
                                     ? <span className="text-zinc-400">—</span>
                                     : (day.coppie || []).map((coppia, i) => (
                                         <div key={i} className="flex items-center gap-1">
-                                          <span className={coppia.uscita_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-red-500 dark:text-red-400 font-medium"}>
+                                          <span className={coppia.uscita_automatica ? "text-purple-600 dark:text-purple-400 font-medium" : coppia.uscita_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-red-500 dark:text-red-400 font-medium"}>
                                             {coppia.uscita || "—"}
                                           </span>
+                                          {coppia.uscita_automatica && <span className="text-[9px] text-purple-500 font-bold leading-none">A</span>}
                                           {coppia.uscita && coppia.uscita_giorno_dopo && (
                                             <span className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
                                           )}
@@ -1273,7 +1275,7 @@ export default function EmployeeDetails() {
                                               <Pencil size={10} />
                                             </button>
                                           )}
-                                          {canManagePresence && coppia.uscita_manuale && coppia.uscita_id && (
+                                          {canManagePresence && (coppia.uscita_manuale || coppia.uscita_automatica) && coppia.uscita_id && (
                                             <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.uscita_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
                                               <X size={10} />
                                             </button>

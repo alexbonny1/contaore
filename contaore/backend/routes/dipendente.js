@@ -161,7 +161,7 @@ function isInFerie(dateStr, ferie = []) {
   return ferie.some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
 }
 
-function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10) {
+function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, snapToShift = false) {
 
   const sessions = buildSessions(reads)
 
@@ -210,6 +210,12 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
         ore_straordinario = Number(oreLavorate.toFixed(2))
       }
 
+      var ore_effettive = oreLavorate
+      if (snapToShift && ore_previste > 0) {
+        const diffMins = Math.abs(oreLavorate - ore_previste) * 60
+        if (diffMins < toleranceMins) ore_effettive = ore_previste
+      }
+
       // stato hierarchy
       if (ore_straordinario > 0) {
         stato = 'straordinario'
@@ -239,7 +245,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       }
     }
 
-    return { giorno, coppie: buildCoppie(daySessions), ore_totali: oreLavorate, ore_previste, ore_straordinario, stato, ritardo_minuti, assente: false }
+    return { giorno, coppie: buildCoppie(daySessions), ore_totali: oreLavorate, ore_effettive: ore_effettive ?? oreLavorate, ore_previste, ore_straordinario, stato, ritardo_minuti, assente: false }
   })
 
   const absentDays = []
@@ -365,10 +371,11 @@ export default async function dipendenteRoutes(fastify) {
         // tolleranza straordinari configurabile
         const { data: companySettings } = await supabase
           .from('company')
-          .select('tolleranza_straordinario_minuti')
+          .select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno')
           .eq('id', company_id)
           .single()
         const toleranceMins = companySettings?.tolleranza_straordinario_minuti ?? 10
+        const snapToShift   = companySettings?.arrotonda_ore_al_turno ?? false
 
         const days = groupByDay(
           reads || [],
@@ -378,7 +385,8 @@ export default async function dipendenteRoutes(fastify) {
           ferieApprovate || [],
           giustificazioni || [],
           pausaAziendale || null,
-          toleranceMins
+          toleranceMins,
+          snapToShift
         )
 
         const now       = new Date()
@@ -422,7 +430,7 @@ export default async function dipendenteRoutes(fastify) {
             giorni_assenti:     days.filter(d => d.assente).length,
             giorni_ferie:       days.filter(d => d.stato === 'ferie').length,
             ore_straordinario:  (() => {
-              const totLav  = days.reduce((s, d) => s + d.ore_totali, 0)
+              const totLav  = days.reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali), 0)
               const totPrev = days.reduce((s, d) => s + d.ore_previste, 0)
               return Number(Math.max(0, totLav - totPrev).toFixed(2))
             })()

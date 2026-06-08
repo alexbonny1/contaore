@@ -19,6 +19,37 @@ function nowMinutes() {
   return now.getHours() * 60 + now.getMinutes()
 }
 
+async function autoInsertBreakTimbrature(dipendenteId, companyId, tagUid, todayReads, shift, dateStr) {
+  if (!shift?.uscita_1 || !shift?.ingresso_2) return
+  const sorted = [...todayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const tipos  = sorted.map(r => r.tipo)
+  const inserts = []
+  const u1Time  = shift.uscita_1
+  const i2Time  = shift.ingresso_2
+
+  if (tipos.length === 2 && tipos[0] === 'ENTRATA' && tipos[1] === 'USCITA') {
+    inserts.push({ tipo: 'USCITA',  created_at: `${dateStr}T${u1Time}:00` })
+    inserts.push({ tipo: 'ENTRATA', created_at: `${dateStr}T${i2Time}:00` })
+  } else if (tipos.length === 3 && tipos[0] === 'ENTRATA' && tipos[1] === 'USCITA' && tipos[2] === 'USCITA') {
+    inserts.push({ tipo: 'ENTRATA', created_at: `${dateStr}T${i2Time}:00` })
+  } else if (tipos.length === 3 && tipos[0] === 'ENTRATA' && tipos[1] === 'ENTRATA' && tipos[2] === 'USCITA') {
+    inserts.push({ tipo: 'USCITA',  created_at: `${dateStr}T${u1Time}:00` })
+  }
+
+  for (const ins of inserts) {
+    await supabase.from('presenza').insert({
+      company_id:    companyId,
+      dipendente_id: dipendenteId,
+      tag_uid:       tagUid,
+      reader_id:     null,
+      manuale:       false,
+      automatica:    true,
+      timestamp:     ins.created_at,
+      ...ins
+    })
+  }
+}
+
 function getFasciaAttiva(fasce, refDate = null) {
   const d   = refDate ? new Date(refDate) : new Date()
   const now = d.getHours() * 60 + d.getMinutes()
@@ -357,6 +388,27 @@ export default async function hardwareRoutes(fastify) {
         }
 
         console.log('SALVATO:', insertedPresence)
+
+        // Auto-insert missing break timbrature when a final USCITA is saved
+        if (tipo === 'USCITA' && dipendente) {
+          try {
+            const dateStr = readDate.toISOString().split('T')[0]
+            const readMins = readDate.getHours() * 60 + readDate.getMinutes()
+            const { data: dip } = await supabase.from('dipendenti').select('id, turni_attivi').eq('badge_uid', uid).eq('company_id', readerCompanyId).maybeSingle()
+            if (dip?.turni_attivi) {
+              const { data: shifts } = await supabase.from('turni').select('*').eq('dipendente_id', dip.id)
+              const dow = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'][readDate.getDay()]
+              const dayShift = (shifts || []).find(s => s.giorno_settimana === dow && s.uscita_1 && s.ingresso_2)
+              if (dayShift && readMins >= timeToMinutes(dayShift.ingresso_2)) {
+                const { data: todayReads } = await supabase.from('presenza').select('tipo, created_at')
+                  .eq('tag_uid', uid).eq('company_id', readerCompanyId)
+                  .gte('created_at', `${dateStr}T00:00:00`).lte('created_at', `${dateStr}T23:59:59`)
+                  .neq('automatica', true)
+                await autoInsertBreakTimbrature(dip.id, readerCompanyId, uid, todayReads || [], dayShift, dateStr)
+              }
+            }
+          } catch (_) {}
+        }
 
         /*
           UPDATE READER ULTIMO PING
