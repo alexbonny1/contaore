@@ -1,43 +1,22 @@
-#define USER_SETUP_INFO "User_Setup"
-
-// ##################################################################################
-// Section 1. Driver
-// ##################################################################################
+// User_Setup.h — Timbry NFC Reader
+// Driver: ILI9488 480x320 SPI
+// Board:  ESP32-WROOM-32
 
 #define ILI9488_DRIVER
 
-// ##################################################################################
-// Section 2. Pins ESP32
-// ##################################################################################
+// Pin SPI display (condivide bus con RC522, CS separati)
+#define TFT_MOSI  23
+#define TFT_SCLK  18
+#define TFT_CS    15
+#define TFT_DC     2
+#define TFT_RST    4
+// TFT_MISO non definito: GPIO19 e' riservato a RC522
 
-#define TFT_MOSI 23
-#define TFT_SCLK 18
-#define TFT_CS   15
-#define TFT_DC    2
-#define TFT_RST   4
-// TFT_MISO NON definito: ILI9488 non tri-statea SDO quando CS=HIGH,
-// causando corruzione del bus SPI condiviso con RC522 (GPIO 19)
+// Font caricati
+#define LOAD_GLCD   // Adafruit GLCD 5x7, usato da setTextSize()
+#define LOAD_GFXFF  // FreeFonts
 
-#define TFT_BL   32
-#define TFT_BACKLIGHT_ON HIGH
-
-// ##################################################################################
-// Section 3. Fonts
-// ##################################################################################
-
-#define LOAD_GLCD
-#define LOAD_FONT2
-#define LOAD_FONT4
-#define LOAD_FONT6
-#define LOAD_FONT7
-#define LOAD_FONT8
-#define LOAD_GFXFF
-#define SMOOTH_FONT
-
-// ##################################################################################
-// Section 4. SPI frequency
-// ##################################################################################
-
-#define SPI_FREQUENCY  27000000
-#define SPI_READ_FREQUENCY  20000000
-#define SPI_TOUCH_FREQUENCY  2500000
+// Velocita' SPI
+#define SPI_FREQUENCY        27000000
+#define SPI_READ_FREQUENCY   20000000
+#define SPI_TOUCH_FREQUENCY   2500000
