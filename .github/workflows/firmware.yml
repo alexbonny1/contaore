@@ -58,7 +58,7 @@ jobs:
       - name: Prepare release
         id: vars
         run: |
-          VERSION=$(grep '#define FW_VERSION' contaore/arduino/arduino.ino | sed 's/.*"\(.*\)"/\1/')
+          VERSION=$(grep '#define FW_VERSION' contaore/arduino/arduino.ino | sed 's/.*"\(.*\)"/\1/' | tr -d '[:space:]')
           BIN=$(find build/ -name "*.bin" | grep -v bootloader | grep -v partitions | head -1)
           cp "$BIN" "build/timbry-${VERSION}.bin"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
