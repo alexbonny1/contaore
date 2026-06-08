@@ -24,13 +24,52 @@ function timeToMinutes(t) {
   return parseInt(parts[0]) * 60 + parseInt(parts[1])
 }
 
+function shiftDurationMins(ingresso, uscita) {
+  const start = timeToMinutes(ingresso)
+  const end   = timeToMinutes(uscita)
+  return end > start ? end - start : (1440 - start) + end
+}
+
+function shiftExpectedHours(shift) {
+  let mins = 0
+  if (shift.ingresso_1 && shift.uscita_1) mins += shiftDurationMins(shift.ingresso_1, shift.uscita_1)
+  if (shift.ingresso_2 && shift.uscita_2) mins += shiftDurationMins(shift.ingresso_2, shift.uscita_2)
+  return Number((mins / 60).toFixed(2))
+}
+
+function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
+  let deduction = 0
+  let lastEntrataMins = null
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
+  for (const r of sortedReads) {
+    const d    = new Date(r.created_at)
+    const mins = d.getHours() * 60 + d.getMinutes()
+    if (r.tipo === 'ENTRATA') {
+      lastEntrataMins = mins
+    } else if (r.tipo === 'USCITA' && lastEntrataMins !== null) {
+      const sessionStart = lastEntrataMins
+      const sessionEnd   = mins
+      const overlapStart = Math.max(sessionStart, breakStartMins)
+      const overlapEnd   = Math.min(sessionEnd,   breakEndMins)
+      if (overlapEnd > overlapStart) deduction += overlapEnd - overlapStart
+      lastEntrataMins = null
+    }
+  }
+  if (lastEntrataMins !== null) {
+    const overlapStart = Math.max(lastEntrataMins, breakStartMins)
+    const overlapEnd   = Math.min(nowMins,          breakEndMins)
+    if (overlapEnd > overlapStart) deduction += overlapEnd - overlapStart
+  }
+  return deduction
+}
+
 const GIORNI = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
 
 function getDayName(dateStr) {
   return GIORNI[new Date(dateStr).getDay()]
 }
 
-function calcOreGiorno(sorted) {
+function calcOreGiorno(sorted, dayShifts = []) {
   let ore = 0
   let lastE = null
   sorted.forEach(r => {
@@ -40,7 +79,18 @@ function calcOreGiorno(sorted) {
       lastE = null
     }
   })
-  return ore
+  // detra la pausa aziendale non timbratura per turni doppi
+  for (const s of dayShifts) {
+    if (s.uscita_1 && s.ingresso_2) {
+      const bStart = timeToMinutes(s.uscita_1)
+      const bEnd   = timeToMinutes(s.ingresso_2)
+      if (bEnd > bStart) {
+        const deductMins = computeBreakDeductionMins(sorted, bStart, bEnd)
+        ore -= deductMins / 60
+      }
+    }
+  }
+  return Math.max(0, ore)
 }
 
 function buildCoppie(sorted) {
@@ -72,7 +122,7 @@ function buildCoppie(sorted) {
   Calcola stato giornaliero rispetto ai turni
   Ritorna: { stato, ritardoMin, straordinarioOre, orePreviste }
 */
-function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi) {
+function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 10) {
   if (!turniAttivi || !shifts.length) {
     return { stato: 'presente', ritardoMin: 0, straordinarioOre: 0, orePreviste: 0 }
   }
@@ -84,38 +134,41 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi) {
     return { stato: 'presente', ritardoMin: 0, straordinarioOre: 0, orePreviste: 0 }
   }
 
-  const orePreviste = dayShifts.reduce((sum, s) => {
-    let m = 0
-    if (s.ingresso_1 && s.uscita_1) m += timeToMinutes(s.uscita_1) - timeToMinutes(s.ingresso_1)
-    if (s.ingresso_2 && s.uscita_2) m += timeToMinutes(s.uscita_2) - timeToMinutes(s.ingresso_2)
-    return sum + Math.max(0, m) / 60
-  }, 0)
+  const orePreviste  = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
+  const oreLavorate  = calcOreGiorno(sorted, dayShifts)
 
-  const oreLavorate = calcOreGiorno(sorted)
+  // straordinario con tolleranza (stessa logica di employees.js)
+  let straordinarioOre = 0
+  if (orePreviste > 0) {
+    const extraMins = (oreLavorate - orePreviste) * 60
+    straordinarioOre = extraMins >= toleranceMins ? Number((extraMins / 60).toFixed(2)) : 0
+  } else {
+    straordinarioOre = Number(oreLavorate.toFixed(2))
+  }
+
+  // stato hierarchy: parziale → straordinario → ritardo può sovrascrivere solo presente/parziale
+  let stato = 'presente'
+  if (straordinarioOre > 0) {
+    stato = 'straordinario'
+  } else if (orePreviste > 0 && oreLavorate > 0 && oreLavorate < orePreviste) {
+    stato = 'parziale'
+  }
 
   // ritardo: prima entrata vs ingresso_1 del primo turno
   let ritardoMin = 0
-  const primoTurno = dayShifts[0]
-  const inizio1 = timeToMinutes(primoTurno?.ingresso_1)
-  if (inizio1 !== null && sorted.length > 0) {
+  const firstShift = dayShifts.filter(s => s.ingresso_1).sort((a, b) => timeToMinutes(a.ingresso_1) - timeToMinutes(b.ingresso_1))[0]
+  if (firstShift) {
     const primaEntrata = sorted.find(r => r.tipo === 'ENTRATA')
     if (primaEntrata) {
       const d = new Date(primaEntrata.created_at)
       const entrataMin = d.getHours() * 60 + d.getMinutes()
-      ritardoMin = Math.max(0, entrataMin - inizio1)
+      const delay = entrataMin - timeToMinutes(firstShift.ingresso_1)
+      if (delay > 5) {
+        ritardoMin = delay
+        if (stato === 'presente' || stato === 'parziale') stato = 'ritardo'
+      }
     }
   }
-
-  // straordinario
-  // - giorno con turno: ore in più rispetto al previsto
-  // - giorno SENZA turno (ore_previste=0): tutte le ore sono straordinario
-  const straordinarioOre = orePreviste > 0
-    ? Math.max(0, oreLavorate - orePreviste)
-    : oreLavorate
-
-  let stato = 'presente'
-  if (ritardoMin > 5) stato = 'ritardo'
-  if (straordinarioOre > 0) stato = 'straordinario'
 
   return { stato, ritardoMin, straordinarioOre, orePreviste }
 }
@@ -124,7 +177,7 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi) {
   Costruisce dati strutturati per dipendente:
   { months: [{ name, giorni: [...], totali }] }
 */
-function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedMonth, ferieApprovate = [], giustificazioni = [], pausaAziendale = null) {
+function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedMonth, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10) {
 
   const isInFerie = (dateStr) => (ferieApprovate || []).some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
   const giustSet  = new Set((giustificazioni || []).filter(g => g.stato === 'approvata').map(g => g.data))
@@ -143,7 +196,7 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
     const sorted = [...dayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
     const coppie     = buildCoppie(sorted)
     const oreLavorate = calcOreGiorno(sorted)
-    const { stato, ritardoMin, straordinarioOre, orePreviste } = calcStatoGiorno(dateStr, sorted, shifts, turniAttivi)
+    const { stato, ritardoMin, straordinarioOre, orePreviste } = calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins)
 
     const meseName = new Date(dateStr + 'T00:00:00').toLocaleDateString('it-IT', {
       month: 'long', year: 'numeric'
@@ -158,7 +211,7 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
     const start     = turniAttivatIl ? new Date(turniAttivatIl) : new Date()
     const now       = new Date()
     const nowMins   = now.getHours() * 60 + now.getMinutes()
-    const today     = now.toISOString().split('T')[0]
+    const today     = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
     const shiftDays = new Set(shifts.map(s => s.giorno_settimana))
 
     const cursor = new Date(start)
@@ -186,11 +239,11 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
         }, 0)
 
         if (isToday) {
-          const turnoFinito = dayShifts.some(s => {
-            const fine = timeToMinutes(s.uscita_1)
-            return fine !== null && nowMins > fine
+          const turnoIniziato = dayShifts.some(s => {
+            if (!s.ingresso_1) return false
+            return nowMins > timeToMinutes(s.ingresso_1)
           })
-          if (!turnoFinito) { cursor.setDate(cursor.getDate() + 1); continue }
+          if (!turnoIniziato) { cursor.setDate(cursor.getDate() + 1); continue }
         }
 
         const meseName = new Date(dateStr + 'T00:00:00').toLocaleDateString('it-IT', {
@@ -296,6 +349,9 @@ export default async function exportRoutes(fastify) {
 
     if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
 
+    const { data: companySettings } = await supabase.from('company').select('tolleranza_straordinario_minuti').eq('id', companyId).single()
+    const toleranceMins = companySettings?.tolleranza_straordinario_minuti ?? 10
+
     const employeesData = []
     for (const id of employee_ids) {
       const d = await loadEmployeeFullData(id, companyId)
@@ -321,7 +377,7 @@ export default async function exportRoutes(fastify) {
         const turniAttivi   = !!employee.turni_attivi
         const turniAttivatIl = employee.turni_attivati_il || null
 
-        const months = buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, month, ferieApprovate, giustificazioni, pausaAziendale)
+        const months = buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins)
 
         // header dipendente
         doc.rect(40, 40, 515, 50).fill('#111827')
@@ -465,6 +521,9 @@ export default async function exportRoutes(fastify) {
     const companyId = request.user.company_id
 
     if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
+
+    const { data: companySettingsXls } = await supabase.from('company').select('tolleranza_straordinario_minuti').eq('id', companyId).single()
+    const toleranceMins = companySettingsXls?.tolleranza_straordinario_minuti ?? 10
 
     const employeesData = []
     for (const id of employee_ids) {
