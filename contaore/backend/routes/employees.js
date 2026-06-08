@@ -357,17 +357,13 @@ function groupByMonth(days = []) {
         ore_totali:        0,
         ore_previste:      0,
         ore_straordinario: 0,
-        giorni_assenti:    0,
-        _ot_raw_mins:      0,
-        _delay_mins:       0
+        giorni_assenti:    0
       }
     }
 
     grouped[monthKey].giorni.push(day)
-    grouped[monthKey].ore_totali           += day.ore_totali
-    grouped[monthKey].ore_previste         += day.ore_previste
-    grouped[monthKey]._ot_raw_mins         += Math.round(day.ore_straordinario * 60)
-    grouped[monthKey]._delay_mins          += (day.ritardo_minuti || 0)
+    grouped[monthKey].ore_totali  += day.ore_totali
+    grouped[monthKey].ore_previste += day.ore_previste
     if (day.assente) grouped[monthKey].giorni_assenti++
 
   })
@@ -376,9 +372,7 @@ function groupByMonth(days = []) {
     ...m,
     ore_totali:        Number(m.ore_totali.toFixed(2)),
     ore_previste:      Number(m.ore_previste.toFixed(2)),
-    ore_straordinario: Number(Math.max(0, (m._ot_raw_mins - m._delay_mins) / 60).toFixed(2)),
-    _ot_raw_mins:      undefined,
-    _delay_mins:       undefined
+    ore_straordinario: Number(Math.max(0, m.ore_totali - m.ore_previste).toFixed(2))
   }))
 
 }
@@ -603,9 +597,9 @@ export default async function employeeRoutes(fastify) {
               })(),
               total_reads:       reads.length,
               ore_straordinario: (() => {
-                const otMins  = days.reduce((s, d) => s + Math.round(d.ore_straordinario * 60), 0)
-                const delMins = days.reduce((s, d) => s + (d.ritardo_minuti || 0), 0)
-                return (Math.max(0, otMins - delMins) / 60).toFixed(2)
+                const totLav  = days.reduce((s, d) => s + d.ore_totali, 0)
+                const totPrev = days.reduce((s, d) => s + d.ore_previste, 0)
+                return (Math.max(0, totLav - totPrev)).toFixed(2)
               })(),
               giorni_assenti:    days.filter(d => d.assente).length
             }
