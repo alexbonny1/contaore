@@ -101,9 +101,11 @@
 #define CLK_SPR_H 64    // 8px × size 8
 #define CLK_SPR_X 120   // (480 - 240) / 2
 #define CLK_Y     120
-#define DATE_SIZE 3
-#define DATE_X    150
-#define DATE_Y    235
+#define DATE_SIZE  3
+#define DATE_SPR_W 180  // 10 chars × 6px × size 3
+#define DATE_SPR_H 24   // 8px × size 3
+#define DATE_X     150  // (480 - 180) / 2
+#define DATE_Y     235
 
 // ── COLORI FISSI ─────────────────────
 #define C_WHITE    0xFFFF
@@ -157,6 +159,7 @@ bool     g_themeLight = false;
 MFRC522     rfid(PIN_RC522_SS, PIN_RC522_RST);
 TFT_eSPI    tft = TFT_eSPI();
 TFT_eSprite g_clockSprite = TFT_eSprite(&tft);
+TFT_eSprite g_dateSprite  = TFT_eSprite(&tft);
 Preferences prefs;
 
 // ── STRUTTURE ────────────────────────
@@ -397,10 +400,12 @@ void drawDate() {
   char buf[16];
   snprintf(buf, sizeof(buf), "%02d/%02d/%04d",
     t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
-  tft.setTextColor(C_DATE_TEXT, C_BG);
-  tft.setTextSize(DATE_SIZE);
-  tft.setCursor(DATE_X, DATE_Y);
-  tft.print(buf);
+  g_dateSprite.fillSprite(C_BG);
+  g_dateSprite.setTextColor(C_DATE_TEXT, C_BG);
+  g_dateSprite.setTextSize(DATE_SIZE);
+  g_dateSprite.setCursor(0, 0);
+  g_dateSprite.print(buf);
+  g_dateSprite.pushSprite(DATE_X, DATE_Y);
 }
 
 void showIdle() {
@@ -1128,6 +1133,7 @@ void setup() {
   tft.init();
   tft.setRotation(1);
   g_clockSprite.createSprite(CLK_SPR_W, CLK_SPR_H);
+  g_dateSprite.createSprite(DATE_SPR_W, DATE_SPR_H);
   g_displayOk = true;  // se siamo qui il display ha risposto correttamente
 
   // Carica config (e tema) prima della splash
@@ -1229,5 +1235,5 @@ void loop() {
   taskRfid();
   sendHeartbeat();
   taskRfidHealth();
-  delay(10);
+  delay(50);
 }
