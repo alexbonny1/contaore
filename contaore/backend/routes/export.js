@@ -128,7 +128,8 @@ function buildCoppie(sorted) {
 */
 function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 10, snapToShift = false) {
   if (!turniAttivi || !shifts.length) {
-    return { stato: 'presente', ritardoMin: 0, straordinarioOre: 0, orePreviste: 0, oreEffettive: calcOreGiorno(sorted) }
+    const ore = calcOreGiorno(sorted)
+    return { stato: 'presente', ritardoMin: 0, straordinarioOre: 0, orePreviste: 0, oreEffettive: ore, oreLavorate: ore }
   }
 
   const dayName   = getDayName(dateStr)
@@ -136,7 +137,7 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 1
 
   if (!dayShifts.length) {
     const ore = calcOreGiorno(sorted)
-    return { stato: 'presente', ritardoMin: 0, straordinarioOre: 0, orePreviste: 0, oreEffettive: ore }
+    return { stato: 'presente', ritardoMin: 0, straordinarioOre: 0, orePreviste: 0, oreEffettive: ore, oreLavorate: ore }
   }
 
   const orePreviste = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
@@ -182,7 +183,7 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 1
     }
   }
 
-  return { stato, ritardoMin, straordinarioOre, orePreviste, oreEffettive }
+  return { stato, ritardoMin, straordinarioOre, orePreviste, oreEffettive, oreLavorate }
 }
 
 /*
@@ -206,9 +207,8 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
   const presentDays = {}
   Object.entries(byDay).forEach(([dateStr, dayReads]) => {
     const sorted = [...dayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    const coppie     = buildCoppie(sorted)
-    const oreLavorate = calcOreGiorno(sorted)
-    const { stato, ritardoMin, straordinarioOre, orePreviste, oreEffettive } = calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins, snapToShift)
+    const coppie = buildCoppie(sorted)
+    const { stato, ritardoMin, straordinarioOre, orePreviste, oreEffettive, oreLavorate } = calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins, snapToShift)
 
     const meseName = new Date(dateStr + 'T00:00:00').toLocaleDateString('it-IT', {
       month: 'long', year: 'numeric'
