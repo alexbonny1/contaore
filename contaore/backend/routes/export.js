@@ -101,19 +101,23 @@ function buildCoppie(sorted) {
       lastE = r
     } else if (r.tipo === 'USCITA') {
       coppie.push({
-        entrata:         lastE ? new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—',
-        uscita:          new Date(r.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-        entrata_manuale: lastE ? !!lastE.manuale : false,
-        uscita_manuale:  !!r.manuale
+        entrata:            lastE ? new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—',
+        uscita:             new Date(r.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+        entrata_manuale:    lastE ? !!lastE.manuale : false,
+        uscita_manuale:     !!r.manuale,
+        entrata_automatica: lastE ? !!lastE.automatica : false,
+        uscita_automatica:  !!r.automatica
       })
       lastE = null
     }
   })
   if (lastE) coppie.push({
-    entrata:         new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-    uscita:          '—',
-    entrata_manuale: !!lastE.manuale,
-    uscita_manuale:  false
+    entrata:            new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+    uscita:             '—',
+    entrata_manuale:    !!lastE.manuale,
+    uscita_manuale:     false,
+    entrata_automatica: !!lastE.automatica,
+    uscita_automatica:  false
   })
   return coppie
 }
@@ -468,11 +472,14 @@ export default async function exportRoutes(fastify) {
               doc.fillColor(color).font('Helvetica-Bold').text(label, 455, y + 4)
             } else {
               day.coppie.forEach((c, i) => {
-                const entrataStr = c.entrata + (c.entrata_manuale ? ' (M)' : '')
-                const uscitaStr  = c.uscita  + (c.uscita_manuale  ? ' (M)' : '')
-                doc.fillColor('#111').font('Helvetica')
-                  .text(entrataStr, 155, y + 4 + i * 12)
-                  .text(uscitaStr,  255, y + 4 + i * 12)
+                const entrataLabel = c.entrata_automatica ? ' (A)' : c.entrata_manuale ? ' (M)' : ''
+                const uscitaLabel  = c.uscita_automatica  ? ' (A)' : c.uscita_manuale  ? ' (M)' : ''
+                const entrataColor = c.entrata_automatica ? '#7c3aed' : c.entrata_manuale ? '#d97706' : '#111'
+                const uscitaColor  = c.uscita_automatica  ? '#7c3aed' : c.uscita_manuale  ? '#d97706' : '#111'
+                doc.fillColor(entrataColor).font('Helvetica')
+                  .text(c.entrata + entrataLabel, 155, y + 4 + i * 12)
+                doc.fillColor(uscitaColor).font('Helvetica')
+                  .text(c.uscita + uscitaLabel, 255, y + 4 + i * 12)
               })
               doc.fillColor('#111').text(formatOre(day.oreLavorate), 350, y + 4)
               doc.fillColor('#6b7280').text(formatOre(day.orePreviste), 400, y + 4)
@@ -484,14 +491,18 @@ export default async function exportRoutes(fastify) {
                 doc.fillColor('#0369a1').font('Helvetica-Bold').text('FERIE', 455, y + 4)
               } else if (day.stato === 'giustificata') {
                 doc.fillColor('#7c3aed').font('Helvetica-Bold').text('GIUSTIF.', 455, y + 4)
-              } else if (day.stato === 'straordinario') {
-                doc.fillColor('#d97706').font('Helvetica-Bold')
-                  .text(`+${formatOre(day.straordinarioOre)}`, 455, y + 4)
+              } else if (day.stato === 'parziale') {
+                doc.fillColor('#ea580c').font('Helvetica-Bold').text('Parziale', 455, y + 4)
               } else if (day.stato === 'ritardo') {
-                doc.fillColor('#7c3aed').font('Helvetica-Bold')
-                  .text(`RIT ${day.ritardoMin}m`, 455, y + 4)
+                doc.fillColor('#a855f7').font('Helvetica-Bold')
+                  .text(`Rit. ${day.ritardoMin}m`, 455, y + 4)
               } else {
+                // presente o straordinario: mostra sempre "Presente" + eventuale overtime
                 doc.fillColor('#15803d').font('Helvetica').text('Presente', 455, y + 4)
+                if (day.straordinarioOre > 0) {
+                  doc.fillColor('#d97706').font('Helvetica-Bold')
+                    .text(` +${formatOre(day.straordinarioOre)}`, 455, y + 4 + 10)
+                }
               }
             }
 
@@ -538,7 +549,7 @@ export default async function exportRoutes(fastify) {
     // Sheet riepilogo
     const riepilogoRows = [['Nome', 'Cognome', 'Ore totali', 'Ore previste', 'Straordinari', 'Assenze', 'Ritardi']]
     for (const { employee, reads, shifts, ferieApprovate, giustificazioni, pausaAziendale } of employeesData) {
-      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale)
+      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins)
       const totOre    = months.reduce((s, m) => s + m.oreTotali, 0)
       const totPrev   = months.reduce((s, m) => s + m.orePreviste, 0)
       const totStraord = months.reduce((s, m) => s + m.straordinario, 0)
@@ -556,11 +567,12 @@ export default async function exportRoutes(fastify) {
 
     // Sheet per dipendente
     for (const { employee, reads, shifts, ferieApprovate, giustificazioni, pausaAziendale } of employeesData) {
-      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale)
+      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins)
 
       const rows = [
         [`${employee.nome} ${employee.cognome || ''}`, '', '', '', '', '', ''],
         [`Periodo: ${periodoLabel}`, '', '', '', '', '', ''],
+        ['Legenda: (M) = Manuale  (A) = Automatica', '', '', '', '', '', ''],
         [''],
         ['Data', 'Entrate', 'Uscite', 'Ore lavorate', 'Ore previste', 'Straordinari', 'Stato']
       ]
@@ -569,14 +581,21 @@ export default async function exportRoutes(fastify) {
         rows.push([mese.name.toUpperCase(), '', '', '', '', '', ''])
         for (const day of mese.giorni) {
           const dataStr = new Date(day.dateStr + 'T00:00:00').toLocaleDateString('it-IT')
-          const entrate = day.coppie.map(c => c.entrata + (c.entrata_manuale ? ' (M)' : '')).join('  ') || '—'
-          const uscite  = day.coppie.map(c => c.uscita  + (c.uscita_manuale  ? ' (M)' : '')).join('  ') || '—'
+          const entrate = day.coppie.map(c => {
+            const label = c.entrata_automatica ? ' (A)' : c.entrata_manuale ? ' (M)' : ''
+            return c.entrata + label
+          }).join('  ') || '—'
+          const uscite = day.coppie.map(c => {
+            const label = c.uscita_automatica ? ' (A)' : c.uscita_manuale ? ' (M)' : ''
+            return c.uscita + label
+          }).join('  ') || '—'
           let stato = 'Presente'
-          if (day.stato === 'ferie')        stato = 'Ferie'
+          if (day.stato === 'ferie')             stato = 'Ferie'
           else if (day.stato === 'giustificata') stato = 'Giustificata'
-          else if (day.assente)              stato = 'Assente'
-          else if (day.stato === 'straordinario') stato = `+${formatOre(day.straordinarioOre)}`
-          else if (day.stato === 'ritardo')       stato = `Ritardo ${day.ritardoMin}m`
+          else if (day.assente)                  stato = 'Assente'
+          else if (day.stato === 'parziale')     stato = 'Parziale'
+          else if (day.stato === 'ritardo')      stato = `Ritardo ${day.ritardoMin}m`
+          if (day.straordinarioOre > 0)          stato += ` +${formatOre(day.straordinarioOre)}`
 
           rows.push([
             dataStr, entrate, uscite,
