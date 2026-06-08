@@ -202,13 +202,12 @@ async function autoInsertBreakTimbrature(supabase, dipendenteId, companyId, tagU
 
   for (const ins of inserts) {
     await supabase.from('presenza').insert({
-      company_id:    companyId,
-      dipendente_id: dipendenteId,
-      tag_uid:       tagUid,
-      reader_id:     null,
-      manuale:       false,
-      automatica:    true,
-      timestamp:     ins.created_at,
+      company_id: companyId,
+      tag_uid:    tagUid,
+      reader_id:  null,
+      manuale:    false,
+      automatica: true,
+      timestamp:  ins.created_at,
       ...ins
     })
   }
