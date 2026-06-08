@@ -27,13 +27,15 @@ async function autoInsertBreakTimbrature(dipendenteId, companyId, tagUid, todayR
   const u1Time  = shift.uscita_1.slice(0, 5)
   const i2Time  = shift.ingresso_2.slice(0, 5)
 
+  const toTs = (time) => new Date(`${dateStr}T${time}:00`).toISOString()
+
   if (tipos.length === 2 && tipos[0] === 'ENTRATA' && tipos[1] === 'USCITA') {
-    inserts.push({ tipo: 'USCITA',  created_at: `${dateStr}T${u1Time}:00` })
-    inserts.push({ tipo: 'ENTRATA', created_at: `${dateStr}T${i2Time}:00` })
+    inserts.push({ tipo: 'USCITA',  created_at: toTs(u1Time) })
+    inserts.push({ tipo: 'ENTRATA', created_at: toTs(i2Time) })
   } else if (tipos.length === 3 && tipos[0] === 'ENTRATA' && tipos[1] === 'USCITA' && tipos[2] === 'USCITA') {
-    inserts.push({ tipo: 'ENTRATA', created_at: `${dateStr}T${i2Time}:00` })
+    inserts.push({ tipo: 'ENTRATA', created_at: toTs(i2Time) })
   } else if (tipos.length === 3 && tipos[0] === 'ENTRATA' && tipos[1] === 'ENTRATA' && tipos[2] === 'USCITA') {
-    inserts.push({ tipo: 'USCITA',  created_at: `${dateStr}T${u1Time}:00` })
+    inserts.push({ tipo: 'USCITA',  created_at: toTs(u1Time) })
   }
 
   for (const ins of inserts) {
