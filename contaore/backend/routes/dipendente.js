@@ -202,7 +202,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       }
 
       if (ore_previste > 0) {
-        ore_straordinario = Number(Math.max(0, oreLavorate - ore_previste).toFixed(2))
+        ore_straordinario = Number(Math.max(0, oreLavorate - ore_previste - toleranceMins / 60).toFixed(2))
       } else {
         ore_straordinario = Number(oreLavorate.toFixed(2))
       }
