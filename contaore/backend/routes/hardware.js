@@ -24,8 +24,8 @@ async function autoInsertBreakTimbrature(dipendenteId, companyId, tagUid, todayR
   const sorted = [...todayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
   const tipos  = sorted.map(r => r.tipo)
   const inserts = []
-  const u1Time  = shift.uscita_1
-  const i2Time  = shift.ingresso_2
+  const u1Time  = shift.uscita_1.slice(0, 5)
+  const i2Time  = shift.ingresso_2.slice(0, 5)
 
   if (tipos.length === 2 && tipos[0] === 'ENTRATA' && tipos[1] === 'USCITA') {
     inserts.push({ tipo: 'USCITA',  created_at: `${dateStr}T${u1Time}:00` })
