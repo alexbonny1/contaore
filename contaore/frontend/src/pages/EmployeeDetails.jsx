@@ -1316,19 +1316,19 @@ export default function EmployeeDetails() {
                                       Giustificata
                                     </span>
                                   )}
-                                  {day.stato === 'straordinario' && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-                                      +{formatOre(day.ore_straordinario)}
-                                    </span>
-                                  )}
                                   {day.stato === 'parziale' && (
                                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
                                       Parziale
                                     </span>
                                   )}
-                                  {day.stato === 'presente' && !day.assente && (
+                                  {(day.stato === 'presente' || day.stato === 'straordinario') && !day.assente && (
                                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
                                       Presente
+                                    </span>
+                                  )}
+                                  {day.ore_straordinario > 0 && (
+                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                                      +{formatOre(day.ore_straordinario)}
                                     </span>
                                   )}
                                   {day.ritardo_minuti > 0 && day.stato === 'ritardo' && (
