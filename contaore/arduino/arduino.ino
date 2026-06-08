@@ -1222,15 +1222,14 @@ void setup() {
   tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(2);
   tft.setCursor(20, 100); tft.print("Connessione WiFi...");
 
-WiFi.mode(WIFI_STA);
-WiFi.setAutoReconnect(true);
-WiFi.persistent(true);
-// Forza pulizia stack WiFi prima di riconnettersi
-WiFi.disconnect(false);
-delay(100);
-WiFi.begin();
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);        // disabilita modem sleep: alcuni router domestici
+                               // droppano client che entrano/escono dal sleep
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
+  WiFi.begin();
   unsigned long s = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - s < 15000) {
+  while (WiFi.status() != WL_CONNECTED && millis() - s < 30000) {
     delay(500); Serial.print(".");
   }
   Serial.println();
