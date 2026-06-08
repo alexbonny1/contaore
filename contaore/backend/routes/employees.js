@@ -1007,7 +1007,7 @@ export default async function employeeRoutes(fastify) {
                   .eq('company_id', companyId)
                   .gte('created_at', `${dateStr}T00:00:00`)
                   .lte('created_at', `${dateStr}T23:59:59`)
-                  .neq('automatica', true)
+                  .order('created_at', { ascending: true })
                 await autoInsertBreakTimbrature(supabase, id, companyId, employee.badge_uid, todayReads || [], dayShift, dateStr)
               }
             }

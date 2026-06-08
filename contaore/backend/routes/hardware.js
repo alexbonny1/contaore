@@ -402,6 +402,8 @@ export default async function hardwareRoutes(fastify) {
                 const { data: todayReads } = await supabase.from('presenza').select('tipo, created_at')
                   .eq('tag_uid', uid).eq('company_id', readerCompanyId)
                   .gte('created_at', `${dateStr}T00:00:00`).lte('created_at', `${dateStr}T23:59:59`)
+                  .order('created_at', { ascending: true })
+                console.log('AUTO-INSERT CHECK:', dow, dayShift.uscita_1, dayShift.ingresso_2, 'reads:', todayReads?.map(r=>r.tipo))
                 await autoInsertBreakTimbrature(dip.id, readerCompanyId, uid, todayReads || [], dayShift, dateStr)
               }
             }
