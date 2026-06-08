@@ -68,6 +68,7 @@
 #include <TFT_eSPI.h>
 #include <time.h>
 #include "esp_log.h"
+#include "esp_wifi.h"
 
 // ── PIN ──────────────────────────────
 #define PIN_RC522_SS    21
@@ -963,8 +964,10 @@ void taskWifi() {
   }
   if (millis() - g_lastReconnect > RECONNECT_MS) {
     g_lastReconnect = millis();
-    Serial.println("WiFi reconnect...");
-    if (!WiFi.reconnect()) WiFi.begin();
+    String ssid = WiFi.SSID(), psk = WiFi.psk();
+    Serial.printf("WiFi reconnect... SSID='%s'\n", ssid.c_str());
+    if (ssid.length() > 0) WiFi.begin(ssid.c_str(), psk.c_str());
+    else WiFi.begin();
   }
 }
 
@@ -1223,16 +1226,26 @@ void setup() {
   tft.setCursor(20, 100); tft.print("Connessione WiFi...");
 
   WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false);        // disabilita modem sleep: alcuni router domestici
-                               // droppano client che entrano/escono dal sleep
+  WiFi.setSleep(false);
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
-  WiFi.begin();
+  // Imposta country code IT: abilita canali 1-13 (router italiani usano
+  // spesso ch 12-13 in "auto" che l'ESP32 con country USA non vede)
+  wifi_country_t country = {"IT", 1, 13, 20, WIFI_COUNTRY_POLICY_MANUAL};
+  esp_wifi_set_country(&country);
+  // Usa SSID+PSK espliciti invece di WiFi.begin() per evitare il BSSID
+  // lock salvato da WiFiManager (causa problemi con mesh e router che
+  // cambiano canale)
+  { String ssid = WiFi.SSID(), psk = WiFi.psk();
+    Serial.printf("WiFi SSID: '%s'\n", ssid.c_str());
+    if (ssid.length() > 0) WiFi.begin(ssid.c_str(), psk.c_str());
+    else WiFi.begin(); }
   unsigned long s = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - s < 30000) {
     delay(500); Serial.print(".");
   }
-  Serial.println();
+  Serial.printf("\nWiFi status: %d\n", WiFi.status());
+  // status: 3=OK 1=SSID non trovato 4=password sbagliata 6=disconnesso
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("WIFI OK - IP: %s\n", WiFi.localIP().toString().c_str());
