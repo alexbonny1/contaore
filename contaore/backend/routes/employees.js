@@ -222,28 +222,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       }
 
       if (ore_previste > 0) {
-        // Per-side tolerance: count early entry / late exit only if >= toleranceMins
-        let extraMins = 0
-        for (const sess of daySessions) {
-          if (!sess.entrata || !sess.uscita) continue
-          const eIn      = new Date(sess.entrata.created_at)
-          const eOut     = new Date(sess.uscita.created_at)
-          const actStart = eIn.getHours()  * 60 + eIn.getMinutes()
-          const actEnd   = eOut.getHours() * 60 + eOut.getMinutes()
-          const shift    = dayShifts
-            .filter(s => s.ingresso_1 && (s.uscita_2 || s.uscita_1))
-            .sort((a, b) =>
-              Math.abs(timeToMinutes(a.ingresso_1) - actStart) -
-              Math.abs(timeToMinutes(b.ingresso_1) - actStart)
-            )[0]
-          if (!shift) continue
-          const shiftEnd  = shift.uscita_2 || shift.uscita_1
-          const earlyMins = Math.max(0, timeToMinutes(shift.ingresso_1) - actStart)
-          const lateMins  = Math.max(0, actEnd - timeToMinutes(shiftEnd))
-          if (earlyMins >= toleranceMins) extraMins += earlyMins
-          if (lateMins  >= toleranceMins) extraMins += lateMins
-        }
-        ore_straordinario = Number((extraMins / 60).toFixed(2))
+        ore_straordinario = Number(Math.max(0, oreLavorate - ore_previste).toFixed(2))
       } else {
         ore_straordinario = Number(oreLavorate.toFixed(2))
       }
