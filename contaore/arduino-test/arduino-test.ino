@@ -67,9 +67,11 @@ Preferences prefs;
 // ── STATO GLOBALE ────────────────────
 char          g_uid[64];
 unsigned long g_lastHeartbeat  = 0;
-unsigned long g_lastOtaTick    = 0;   // aggiorna footer OTA ogni secondo
+unsigned long g_lastOtaTick    = 0;
 String        g_backendUrl     = "";
 String        g_readerId       = "";
+String        g_companyId      = "";
+String        g_sede           = "";
 bool          g_rfidOk         = false;
 
 // ── TEST COLORI ──────────────────────
@@ -121,8 +123,10 @@ static uint16_t contrastColor(uint16_t bg) {
 
 void loadConfig() {
   prefs.begin(PREF_NAMESPACE, true);
-  g_backendUrl = prefs.getString("backend", "");
-  g_readerId   = prefs.getString("readerId", "");
+  g_backendUrl = prefs.getString("backend",   "");
+  g_readerId   = prefs.getString("readerId",  "");
+  g_companyId  = prefs.getString("companyId", "");
+  g_sede       = prefs.getString("sede",      "");
   prefs.end();
 }
 
@@ -220,11 +224,22 @@ void taskHeartbeat() {
   g_lastHeartbeat = millis();
   if (g_backendUrl.length() == 0 || WiFi.status() != WL_CONNECTED) return;
 
+  // Stesso payload POST del firmware principale
+  char payload[256];
+  snprintf(payload, sizeof(payload),
+    "{\"reader_id\":\"%s\",\"company_id\":\"%s\",\"firmware\":\"%s\","
+    "\"queue\":0,\"sede\":\"%s\",\"nfc_ok\":%s,\"display_ok\":true}",
+    g_readerId.c_str(), g_companyId.c_str(), FW_VERSION,
+    g_sede.c_str(), g_rfidOk ? "true" : "false");
+
   char url[256];
   snprintf(url, sizeof(url), "%s/api/hardware/ping", g_backendUrl.c_str());
   String otaUrl = "", otaVersion = "";
+  int pingCode = -1;
 
-  auto extract = [&](HTTPClient& h, int code) {
+  auto handleResp = [&](HTTPClient& h, int code) {
+    pingCode = code;
+    Serial.printf("PING: %d\n", code);
     if (code == 200) {
       StaticJsonDocument<256> doc;
       if (!deserializeJson(doc, h.getString())) {
@@ -235,19 +250,24 @@ void taskHeartbeat() {
   };
 
   if (g_backendUrl.startsWith("https")) {
-    WiFiClientSecure c; c.setInsecure();
-    HTTPClient h;
+    WiFiClientSecure c; c.setInsecure(); HTTPClient h;
     if (h.begin(c, url)) {
-      if (g_readerId.length() > 0) h.addHeader("X-Reader-Id", g_readerId);
-      extract(h, h.GET()); h.end();
+      h.setTimeout(10000); h.setReuse(false);
+      h.addHeader("Content-Type", "application/json");
+      handleResp(h, h.POST(payload)); h.end();
     }
   } else {
-    HTTPClient h;
-    if (h.begin(url)) {
-      if (g_readerId.length() > 0) h.addHeader("X-Reader-Id", g_readerId);
-      extract(h, h.GET()); h.end();
+    WiFiClient c; HTTPClient h;
+    if (h.begin(c, url)) {
+      h.setTimeout(10000); h.setReuse(false);
+      h.addHeader("Content-Type", "application/json");
+      handleResp(h, h.POST(payload)); h.end();
     }
   }
+
+  // Se ping fallisce, riprova prima (10s)
+  if (pingCode <= 0)
+    g_lastHeartbeat = millis() - HEARTBEAT_MS + 10000UL;
 
   if (otaUrl.length() > 0 && otaVersion.length() > 0 && otaVersion != FW_VERSION)
     doOTA(otaUrl, otaVersion);
