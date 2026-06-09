@@ -690,7 +690,6 @@ void queueFlush() {
   if (WiFi.status() != WL_CONNECTED || g_queueSize == 0) return;
   Serial.printf("FLUSH QUEUE (%d)...\n", g_queueSize);
   int sent = 0, failed = 0;
-  QueueEntry rem[QUEUE_MAX];
   bool isHttps = strncmp(cfg.backend, "https", 5) == 0;
   snprintf(g_url, sizeof(g_url), "%s/api/hardware/tag", cfg.backend);
   for (int i = 0; i < g_queueSize; i++) {
@@ -712,12 +711,11 @@ void queueFlush() {
       if (h.begin(c, g_url)) { h.setTimeout(15000); h.setReuse(false);
         h.addHeader("Content-Type","application/json"); rc = h.POST(g_payload); h.end(); }
     }
-    if (rc == 200 || rc == 201) sent++;
-    else rem[failed++] = g_queue[i];
+    if (rc == 200 || rc == 201) { sent++; }
+    else { if (failed != i) g_queue[failed] = g_queue[i]; failed++; }
     delay(300);
   }
   g_queueSize = failed;
-  for (int i = 0; i < failed; i++) g_queue[i] = rem[i];
   saveQueue();
   Serial.printf("FLUSH: sent=%d failed=%d\n", sent, failed);
 }
