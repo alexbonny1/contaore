@@ -42,7 +42,7 @@
 // ── CONFIG ───────────────────────────
 #define FW_VERSION     "test-1.0"
 #define PREF_NAMESPACE "timrbry"
-#define HEARTBEAT_MS   60000UL
+#define HEARTBEAT_MS   30000UL
 
 // ── COSTANTI COLORI ──────────────────
 #define C_BLACK   0x0000
@@ -66,10 +66,11 @@ Preferences prefs;
 
 // ── STATO GLOBALE ────────────────────
 char          g_uid[64];
-unsigned long g_lastHeartbeat = 0;
-String        g_backendUrl    = "";
-String        g_readerId      = "";
-bool          g_rfidOk        = false;
+unsigned long g_lastHeartbeat  = 0;
+unsigned long g_lastOtaTick    = 0;   // aggiorna footer OTA ogni secondo
+String        g_backendUrl     = "";
+String        g_readerId       = "";
+bool          g_rfidOk         = false;
 
 // ── TEST COLORI ──────────────────────
 struct ColorEntry { uint16_t color; const char* name; };
@@ -343,6 +344,8 @@ void runBuzzerTest() {
 // ─────────────────────────────────────
 // TEST: RFID READER
 // ─────────────────────────────────────
+void updateOtaFooter();  // forward declaration
+
 void startRfidTest() {
   tft.fillScreen(C_BLACK);
 
@@ -358,21 +361,44 @@ void startRfidTest() {
   tft.setCursor(50, 165);
   tft.print("(qualsiasi tessera/tag)");
 
-  // Icona pulsante
+  // Rettangolo stato lettore
   tft.drawRoundRect(170, 215, 140, 50, 8, C_TIMBRY);
   tft.setTextColor(C_TIMBRY, C_BLACK); tft.setTextSize(2);
   tft.setCursor(193, 232);
   tft.print("IN ATTESA");
 
+  // Riga versione RC522
   tft.setTextSize(1);
-  if (g_rfidOk) {
-    tft.setTextColor(C_GREEN, C_BLACK);
-    tft.setCursor(50, 290);
-    tft.printf("RC522 v=0x%02X  pronto", g_rfidVersion);
+  uint16_t rcCol = g_rfidOk ? C_GREEN : C_YELLOW;
+  tft.setTextColor(rcCol, C_BLACK);
+  tft.setCursor(50, 285);
+  tft.printf("RC522 v=0x%02X", g_rfidVersion);
+
+  // Footer OTA (aggiornato ogni secondo da updateOtaFooter)
+  g_lastOtaTick = millis();
+  updateOtaFooter();
+}
+
+// Aggiorna la riga OTA in fondo allo schermo senza ridisegnare tutto
+void updateOtaFooter() {
+  unsigned long secToNext = (HEARTBEAT_MS - (millis() - g_lastHeartbeat)) / 1000;
+  if (secToNext > HEARTBEAT_MS / 1000) secToNext = HEARTBEAT_MS / 1000;
+
+  tft.fillRect(0, 298, 480, 22, C_BLACK);
+  tft.setTextSize(1);
+
+  if (g_backendUrl.length() == 0) {
+    tft.setTextColor(C_GRAY, C_BLACK);
+    tft.setCursor(50, 303);
+    tft.print("OTA: backend non configurato");
+  } else if (WiFi.status() != WL_CONNECTED) {
+    tft.setTextColor(C_GRAY, C_BLACK);
+    tft.setCursor(50, 303);
+    tft.print("OTA: WiFi non connesso");
   } else {
-    tft.setTextColor(C_YELLOW, C_BLACK);
-    tft.setCursor(50, 290);
-    tft.printf("RC522 v=0x%02X  prova lo stesso", g_rfidVersion);
+    tft.setTextColor(C_CYAN, C_BLACK);
+    tft.setCursor(50, 303);
+    tft.printf("OTA check in %lus  (v=%s)", secToNext, FW_VERSION);
   }
 }
 
@@ -521,5 +547,12 @@ void loop() {
     case PHASE_BUZZER: runBuzzerTest(); break;
     case PHASE_RFID:   runRfidTest();   break;
   }
+
+  // Aggiorna footer OTA ogni secondo (solo nella fase RFID)
+  if (g_phase == PHASE_RFID && millis() - g_lastOtaTick >= 1000) {
+    g_lastOtaTick = millis();
+    updateOtaFooter();
+  }
+
   taskHeartbeat();
 }
