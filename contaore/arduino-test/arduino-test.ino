@@ -60,7 +60,9 @@
 #define C_TEAL    0x0410
 
 // ── OGGETTI ──────────────────────────
-MFRC522  rfid(PIN_RC522_SS, PIN_RC522_RST);
+// HSPI separato per RC522: TFT_eSPI usa VSPI, così non si sovrascrivono
+SPIClass g_rfidSpi(HSPI);
+MFRC522  rfid(PIN_RC522_SS, PIN_RC522_RST, &g_rfidSpi);
 TFT_eSPI tft = TFT_eSPI();
 Preferences prefs;
 
@@ -133,7 +135,9 @@ byte g_rfidVersion = 0x00;
 // RFID
 // ─────────────────────────────────────
 void rfidInit() {
-  SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
+  // HSPI su stessi pin fisici di VSPI: i due controller condividono
+  // il bus hardware ma non si sovrascrivono perché gestiti separatamente.
+  g_rfidSpi.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
 
   pinMode(PIN_RC522_RST, OUTPUT);
   digitalWrite(PIN_RC522_RST, LOW);
@@ -450,16 +454,10 @@ void setup() {
   Serial.begin(115200);
   Serial.printf("\n=== TIMBRY TEST v%s ===\n", FW_VERSION);
 
-  // Buzzer pin idle
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
-  // RFID prima del TFT: bus SPI vergine, nessuna interferenza da TFT_eSPI.
-  // Se il chip risponde qui, significa che TFT_eSPI altera il bus dopo.
-  rfidInit();
-  Serial.printf("RC522 pre-TFT: v=0x%02X\n", g_rfidVersion);
-
-  // TFT
+  // TFT su VSPI (gestito da TFT_eSPI)
   pinMode(TFT_BL_PIN, OUTPUT);
   digitalWrite(TFT_BL_PIN, HIGH);
   tft.init();
@@ -479,35 +477,23 @@ void setup() {
   tft.print("Display • Buzzer • RFID");
   delay(1500);
 
-  // Mostra risultato RFID (init già fatto prima del TFT)
+  // RC522 su HSPI — bus separato da TFT_eSPI, nessuna interferenza
   tft.fillScreen(C_BLACK);
   tft.setTextColor(C_WHITE, C_BLACK); tft.setTextSize(2);
-  tft.setCursor(60, 110);
-  tft.print("RC522:");
+  tft.setCursor(60, 130);
+  tft.print("Inizializzo RC522 (HSPI)...");
+  rfidInit();
+
   if (g_rfidOk) {
-    tft.setTextColor(C_GREEN, C_BLACK); tft.setTextSize(2);
-    tft.setCursor(60, 160);
-    tft.printf("RC522 OK  (v=0x%02X)", g_rfidVersion);
-  } else if (g_rfidVersion == 0xFF) {
-    tft.setTextColor(C_RED, C_BLACK); tft.setTextSize(2);
-    tft.setCursor(60, 160);
-    tft.print("v=0xFF  MISO scollegato?");
-    tft.setCursor(60, 185);
-    tft.print("Verifica pin MISO GPIO19");
-  } else if (g_rfidVersion == 0x00) {
-    tft.setTextColor(C_RED, C_BLACK); tft.setTextSize(2);
-    tft.setCursor(60, 160);
-    tft.print("v=0x00  SPI non comunica");
-    tft.setCursor(60, 185);
-    tft.print("Verifica MOSI/SCK/SS/3.3V");
+    tft.setTextColor(C_GREEN, C_BLACK);
+    tft.setCursor(60, 165);
+    tft.printf("OK  v=0x%02X", g_rfidVersion);
   } else {
-    tft.setTextColor(C_YELLOW, C_BLACK); tft.setTextSize(2);
-    tft.setCursor(60, 160);
-    tft.printf("v=0x%02X  clone RC522", g_rfidVersion);
-    tft.setCursor(60, 185);
-    tft.print("Potrebbe funzionare ugualmente");
+    tft.setTextColor(C_YELLOW, C_BLACK);
+    tft.setCursor(60, 165);
+    tft.printf("v=0x%02X — prova ugualmente", g_rfidVersion);
   }
-  delay(3000);
+  delay(1500);
 
   // WiFi
   tft.fillScreen(C_BLACK);
