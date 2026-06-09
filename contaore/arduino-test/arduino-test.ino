@@ -125,39 +125,29 @@ void loadConfig() {
   prefs.end();
 }
 
+// versionReg letto durante l'init — mostrato sul display per diagnosi
+byte g_rfidVersion = 0x00;
+
 // ─────────────────────────────────────
 // RFID
 // ─────────────────────────────────────
 void rfidInit() {
-  // TFT_eSPI ha già chiamato SPI.begin() — end+begin forza la
-  // reinizializzazione completa includendo MISO (GPIO 19).
-  SPI.end();
-  delay(20);
+  // Identica al firmware principale: SPI.begin (no-op se già inizializzato da
+  // TFT_eSPI va bene, i pin sono gli stessi), RST LOW→HIGH, poi PCD_Init.
   SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
 
-  // Tieni RST LOW: PCD_Init() lo alza da sola e aspetta 50ms (hard reset).
-  // Se RST è già HIGH, la libreria fa solo soft-reset che è meno affidabile.
   pinMode(PIN_RC522_RST, OUTPUT);
   digitalWrite(PIN_RC522_RST, LOW);
   delay(10);
+  digitalWrite(PIN_RC522_RST, HIGH);
+  delay(50);
 
-  // Fino a 3 tentativi: alcuni cloni RC522 hanno bisogno di più tempo
-  for (int attempt = 1; attempt <= 3; attempt++) {
-    rfid.PCD_Init();   // alza RST, aspetta 50ms, configura i registri
-    delay(150);
-    byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-    Serial.printf("RC522 tentativo %d: v=0x%02X\n", attempt, v);
-    if (v != 0x00 && v != 0xFF) {
-      g_rfidOk = true;
-      Serial.println("RC522 OK");
-      return;
-    }
-    // Resetta RST LOW per il prossimo tentativo
-    digitalWrite(PIN_RC522_RST, LOW);
-    delay(10);
-  }
-  Serial.println("RC522 WARN: non rilevato");
-  g_rfidOk = false;
+  rfid.PCD_Init();
+  delay(50);
+
+  g_rfidVersion = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+  g_rfidOk = (g_rfidVersion != 0x00 && g_rfidVersion != 0xFF);
+  Serial.printf("RC522 v=0x%02X %s\n", g_rfidVersion, g_rfidOk ? "OK" : "WARN");
 }
 
 // ─────────────────────────────────────
@@ -376,10 +366,15 @@ void startRfidTest() {
   tft.setCursor(193, 232);
   tft.print("IN ATTESA");
 
-  if (!g_rfidOk) {
-    tft.setTextColor(C_RED, C_BLACK); tft.setTextSize(1);
+  tft.setTextSize(1);
+  if (g_rfidOk) {
+    tft.setTextColor(C_GREEN, C_BLACK);
     tft.setCursor(50, 290);
-    tft.print("ATTENZIONE: RC522 non rilevato");
+    tft.printf("RC522 v=0x%02X  pronto", g_rfidVersion);
+  } else {
+    tft.setTextColor(C_YELLOW, C_BLACK);
+    tft.setCursor(50, 290);
+    tft.printf("RC522 v=0x%02X  prova lo stesso", g_rfidVersion);
   }
 }
 
@@ -455,22 +450,38 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
-  // RFID — feedback visivo durante i tentativi
+  // RFID
   tft.fillScreen(C_BLACK);
   tft.setTextColor(C_WHITE, C_BLACK); tft.setTextSize(2);
   tft.setCursor(60, 130);
   tft.print("Inizializzo RC522...");
   rfidInit();
+
+  // Mostra sempre il valore raw per diagnosi
   if (g_rfidOk) {
-    tft.setTextColor(C_GREEN, C_BLACK);
+    tft.setTextColor(C_GREEN, C_BLACK); tft.setTextSize(2);
     tft.setCursor(60, 160);
-    tft.print("RC522 OK");
+    tft.printf("RC522 OK  (v=0x%02X)", g_rfidVersion);
+  } else if (g_rfidVersion == 0xFF) {
+    tft.setTextColor(C_RED, C_BLACK); tft.setTextSize(2);
+    tft.setCursor(60, 160);
+    tft.print("v=0xFF  MISO scollegato?");
+    tft.setCursor(60, 185);
+    tft.print("Verifica pin MISO GPIO19");
+  } else if (g_rfidVersion == 0x00) {
+    tft.setTextColor(C_RED, C_BLACK); tft.setTextSize(2);
+    tft.setCursor(60, 160);
+    tft.print("v=0x00  SPI non comunica");
+    tft.setCursor(60, 185);
+    tft.print("Verifica MOSI/SCK/SS/3.3V");
   } else {
-    tft.setTextColor(C_YELLOW, C_BLACK);
+    tft.setTextColor(C_YELLOW, C_BLACK); tft.setTextSize(2);
     tft.setCursor(60, 160);
-    tft.print("RC522 non risponde — controlla cablaggio");
+    tft.printf("v=0x%02X  clone RC522", g_rfidVersion);
+    tft.setCursor(60, 185);
+    tft.print("Potrebbe funzionare ugualmente");
   }
-  delay(1500);
+  delay(3000);
 
   // WiFi
   tft.fillScreen(C_BLACK);
