@@ -129,17 +129,33 @@ void loadConfig() {
 // RFID
 // ─────────────────────────────────────
 void rfidInit() {
+  // TFT_eSPI ha già chiamato SPI.begin() — end+begin forza la
+  // reinizializzazione completa includendo MISO (GPIO 19).
+  SPI.end();
+  delay(20);
   SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
+
   pinMode(PIN_RC522_RST, OUTPUT);
   digitalWrite(PIN_RC522_RST, LOW);
   delay(10);
   digitalWrite(PIN_RC522_RST, HIGH);
   delay(50);
-  rfid.PCD_Init();
-  delay(50);
-  byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  g_rfidOk = (v != 0x00 && v != 0xFF);
-  Serial.printf("RC522 v=0x%02X %s\n", v, g_rfidOk ? "OK" : "WARN");
+
+  // Fino a 3 tentativi: alcuni cloni RC522 hanno bisogno di più tempo
+  for (int attempt = 1; attempt <= 3; attempt++) {
+    rfid.PCD_Init();
+    delay(100);
+    byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+    Serial.printf("RC522 tentativo %d: v=0x%02X\n", attempt, v);
+    if (v != 0x00 && v != 0xFF) {
+      g_rfidOk = true;
+      Serial.println("RC522 OK");
+      return;
+    }
+    delay(200);
+  }
+  Serial.println("RC522 WARN: non rilevato");
+  g_rfidOk = false;
 }
 
 // ─────────────────────────────────────
@@ -433,8 +449,26 @@ void setup() {
   tft.print("Display • Buzzer • RFID");
   delay(1800);
 
-  // RFID
+  // Buzzer pin idle (come nel firmware principale)
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  // RFID — feedback visivo durante i tentativi
+  tft.fillScreen(C_BLACK);
+  tft.setTextColor(C_WHITE, C_BLACK); tft.setTextSize(2);
+  tft.setCursor(60, 130);
+  tft.print("Inizializzo RC522...");
   rfidInit();
+  if (g_rfidOk) {
+    tft.setTextColor(C_GREEN, C_BLACK);
+    tft.setCursor(60, 160);
+    tft.print("RC522 OK");
+  } else {
+    tft.setTextColor(C_YELLOW, C_BLACK);
+    tft.setCursor(60, 160);
+    tft.print("RC522 non risponde — controlla cablaggio");
+  }
+  delay(1500);
 
   // WiFi
   tft.fillScreen(C_BLACK);
