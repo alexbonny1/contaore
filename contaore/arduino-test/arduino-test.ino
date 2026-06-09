@@ -132,8 +132,11 @@ byte g_rfidVersion = 0x00;
 // RFID
 // ─────────────────────────────────────
 void rfidInit() {
-  // Identica al firmware principale: SPI.begin (no-op se già inizializzato da
-  // TFT_eSPI va bene, i pin sono gli stessi), RST LOW→HIGH, poi PCD_Init.
+  // SPI.end() forza la reinizializzazione: TFT_eSPI su alcune versioni
+  // non chiama SPI.begin() dell'Arduino (usa driver nativo ESP-IDF) e
+  // lascia MISO (GPIO 19) non configurato come ingresso SPI → legge 0x00.
+  SPI.end();
+  delay(10);
   SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
 
   pinMode(PIN_RC522_RST, OUTPUT);
