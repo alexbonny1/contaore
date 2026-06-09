@@ -135,16 +135,16 @@ void rfidInit() {
   delay(20);
   SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
 
+  // Tieni RST LOW: PCD_Init() lo alza da sola e aspetta 50ms (hard reset).
+  // Se RST è già HIGH, la libreria fa solo soft-reset che è meno affidabile.
   pinMode(PIN_RC522_RST, OUTPUT);
   digitalWrite(PIN_RC522_RST, LOW);
   delay(10);
-  digitalWrite(PIN_RC522_RST, HIGH);
-  delay(50);
 
   // Fino a 3 tentativi: alcuni cloni RC522 hanno bisogno di più tempo
   for (int attempt = 1; attempt <= 3; attempt++) {
-    rfid.PCD_Init();
-    delay(100);
+    rfid.PCD_Init();   // alza RST, aspetta 50ms, configura i registri
+    delay(150);
     byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
     Serial.printf("RC522 tentativo %d: v=0x%02X\n", attempt, v);
     if (v != 0x00 && v != 0xFF) {
@@ -152,7 +152,9 @@ void rfidInit() {
       Serial.println("RC522 OK");
       return;
     }
-    delay(200);
+    // Resetta RST LOW per il prossimo tentativo
+    digitalWrite(PIN_RC522_RST, LOW);
+    delay(10);
   }
   Serial.println("RC522 WARN: non rilevato");
   g_rfidOk = false;
