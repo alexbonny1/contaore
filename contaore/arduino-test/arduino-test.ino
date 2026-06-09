@@ -132,11 +132,6 @@ byte g_rfidVersion = 0x00;
 // RFID
 // ─────────────────────────────────────
 void rfidInit() {
-  // SPI.end() forza la reinizializzazione: TFT_eSPI su alcune versioni
-  // non chiama SPI.begin() dell'Arduino (usa driver nativo ESP-IDF) e
-  // lascia MISO (GPIO 19) non configurato come ingresso SPI → legge 0x00.
-  SPI.end();
-  delay(10);
   SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
 
   pinMode(PIN_RC522_RST, OUTPUT);
@@ -429,9 +424,18 @@ void setup() {
   Serial.begin(115200);
   Serial.printf("\n=== TIMBRY TEST v%s ===\n", FW_VERSION);
 
+  // Buzzer pin idle
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  // RFID prima del TFT: bus SPI vergine, nessuna interferenza da TFT_eSPI.
+  // Se il chip risponde qui, significa che TFT_eSPI altera il bus dopo.
+  rfidInit();
+  Serial.printf("RC522 pre-TFT: v=0x%02X\n", g_rfidVersion);
+
+  // TFT
   pinMode(TFT_BL_PIN, OUTPUT);
   digitalWrite(TFT_BL_PIN, HIGH);
-
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(C_BLACK);
@@ -447,20 +451,13 @@ void setup() {
   tft.setTextColor(C_GRAY, C_BLACK); tft.setTextSize(1);
   tft.setCursor(100, 175);
   tft.print("Display • Buzzer • RFID");
-  delay(1800);
+  delay(1500);
 
-  // Buzzer pin idle (come nel firmware principale)
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
-
-  // RFID
+  // Mostra risultato RFID (init già fatto prima del TFT)
   tft.fillScreen(C_BLACK);
   tft.setTextColor(C_WHITE, C_BLACK); tft.setTextSize(2);
-  tft.setCursor(60, 130);
-  tft.print("Inizializzo RC522...");
-  rfidInit();
-
-  // Mostra sempre il valore raw per diagnosi
+  tft.setCursor(60, 110);
+  tft.print("RC522:");
   if (g_rfidOk) {
     tft.setTextColor(C_GREEN, C_BLACK); tft.setTextSize(2);
     tft.setCursor(60, 160);
