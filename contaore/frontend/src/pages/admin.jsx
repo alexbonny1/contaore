@@ -848,6 +848,13 @@ export default function Admin() {
                 tagColor: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
               },
               {
+                file: "etichetta_ce_dispositivo.html",
+                titolo: "Etichetta CE dispositivo",
+                sottotitolo: "80×50 mm (retro dispositivo) + A7 packaging — RED 2014/53/UE",
+                tag: "DISPOSITIVO",
+                tagColor: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+              },
+              {
                 file: "guida_documenti.html",
                 titolo: "Guida ai documenti legali",
                 sottotitolo: "Spiega a cosa serve ogni documento, quando usarlo e come compilarlo",
