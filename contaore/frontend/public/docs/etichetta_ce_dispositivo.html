@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etichetta CE — Lettore NFC ContaOre</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #e8e8e8; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; }
+
+    .no-print { font-family: Arial, sans-serif; }
+    .print-btn { background: #1a1a2e; color: #fff; border: none; padding: 10px 22px; font-size: 11pt; cursor: pointer; border-radius: 4px; margin-bottom: 18px; }
+    .print-note { font-size: 9pt; color: #555; margin-bottom: 24px; text-align: center; max-width: 500px; line-height: 1.5; }
+
+    /* ── ETICHETTA PRINCIPALE (80mm × 50mm) ── */
+    .label-wrap {
+      background: #fff;
+      border: 1px solid #aaa;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      margin-bottom: 30px;
+    }
+    .label {
+      width: 302px;   /* 80 mm @ 96 dpi */
+      min-height: 189px; /* 50 mm */
+      padding: 8px 9px 7px 9px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 6.5pt;
+      color: #000;
+      position: relative;
+    }
+
+    /* header prodotto */
+    .lbl-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid #000;
+      padding-bottom: 5px;
+      margin-bottom: 5px;
+    }
+    .lbl-brand { font-size: 9.5pt; font-weight: bold; letter-spacing: 0.3px; line-height: 1.1; }
+    .lbl-model { font-size: 6.5pt; color: #333; }
+
+    /* simbolo CE grande */
+    .ce-symbol {
+      font-size: 20pt;
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+      letter-spacing: -2.5px;
+      line-height: 1;
+      border: 1.5px solid #000;
+      padding: 1px 5px 0 5px;
+      display: inline-block;
+    }
+
+    /* corpo etichetta: due colonne */
+    .lbl-body {
+      display: flex;
+      gap: 7px;
+      flex: 1;
+    }
+    .lbl-col { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+    .lbl-row { display: flex; flex-direction: column; }
+    .lbl-key {
+      font-size: 5.5pt;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      line-height: 1.2;
+    }
+    .lbl-val {
+      font-size: 7pt;
+      font-weight: bold;
+      color: #000;
+      line-height: 1.25;
+    }
+    .fill { border-bottom: 0.5px solid #888; min-width: 60px; display: inline-block; height: 1em; vertical-align: bottom; }
+    .fill-sm { min-width: 35px; }
+
+    /* barra bassa */
+    .lbl-footer {
+      border-top: 1px solid #000;
+      margin-top: 5px;
+      padding-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 5.5pt;
+      color: #333;
+    }
+
+    /* simboli obbligatori */
+    .symbols { display: flex; align-items: center; gap: 5px; }
+
+    /* WEEE crossed-bin (unicode approx) */
+    .weee {
+      font-size: 13pt;
+      line-height: 1;
+      display: inline-block;
+      position: relative;
+    }
+    .weee::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -1px;
+      transform: translateX(-50%);
+      width: 100%;
+      height: 1.5px;
+      background: #000;
+    }
+
+    /* direttive / frequenze */
+    .lbl-directives {
+      font-size: 5.5pt;
+      color: #000;
+      line-height: 1.5;
+      text-align: right;
+    }
+
+    /* ── ETICHETTA PACKAGING (105mm × 74mm, A7) ── */
+    .label-lg {
+      width: 397px;  /* 105mm */
+      min-height: 280px; /* 74mm */
+      padding: 11px 12px;
+      background: #fff;
+      font-size: 7pt;
+      color: #000;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .pkg-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
+    }
+    .pkg-brand { font-size: 13pt; font-weight: bold; letter-spacing: 0.5px; }
+    .pkg-product { font-size: 8.5pt; color: #222; }
+    .pkg-code { font-size: 7pt; color: #444; }
+    .pkg-ce {
+      font-size: 24pt;
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+      letter-spacing: -3px;
+      border: 2px solid #000;
+      padding: 1px 7px 0 7px;
+      line-height: 1;
+      display: inline-block;
+    }
+
+    .pkg-body {
+      display: flex;
+      gap: 12px;
+      flex: 1;
+    }
+    .pkg-col { flex: 1; }
+    .pkg-row { margin-bottom: 5px; }
+    .pkg-key { font-size: 6pt; color: #555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 1px; }
+    .pkg-val { font-size: 7.5pt; font-weight: bold; line-height: 1.3; }
+    .pkg-fill { border-bottom: 0.5px solid #888; min-width: 80px; display: inline-block; height: 1em; vertical-align: bottom; }
+    .pkg-fill-sm { min-width: 45px; }
+
+    .pkg-footer {
+      border-top: 1px solid #000;
+      margin-top: 6px;
+      padding-top: 5px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      font-size: 5.5pt;
+      color: #333;
+    }
+    .pkg-directives { font-size: 6pt; line-height: 1.5; }
+    .pkg-symbols { display: flex; align-items: center; gap: 6px; }
+    .pkg-weee { font-size: 16pt; line-height: 1; position: relative; display: inline-block; }
+    .pkg-weee::after {
+      content: ''; position: absolute; left: 50%; bottom: -2px;
+      transform: translateX(-50%); width: 100%; height: 2px; background: #000;
+    }
+
+    /* ── sezione titoli su schermo ── */
+    .section-heading {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+      font-weight: bold;
+      color: #1a1a2e;
+      border-left: 4px solid #1a1a2e;
+      padding-left: 8px;
+      margin: 18px 0 8px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .section-note {
+      font-family: Arial, sans-serif;
+      font-size: 8.5pt;
+      color: #555;
+      margin-bottom: 12px;
+      max-width: 500px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ── stampa ── */
+    @media print {
+      body { background: #fff; padding: 10mm; flex-direction: row; flex-wrap: wrap; gap: 15mm; align-items: flex-start; }
+      .no-print { display: none !important; }
+      .label-wrap { box-shadow: none; border: 0.5pt solid #000; page-break-inside: avoid; margin: 0; }
+      .section-heading, .section-note { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print">
+    <button class="print-btn" onclick="window.print()">Stampa / Salva PDF</button>
+    <p class="print-note">
+      Stampare su carta adesiva. Etichetta piccola (80×50 mm) per il retro del dispositivo.
+      Etichetta grande (105×74 mm / A7) per la scatola di imballaggio.<br>
+      Completare i campi tratteggiati prima della stampa finale.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ETICHETTA DISPOSITIVO — 80 × 50 mm
+  ══════════════════════════════════════════════ -->
+  <div class="section-heading no-print">Etichetta Dispositivo — 80 × 50 mm (retro del prodotto)</div>
+  <p class="section-note no-print">Da stampare su carta adesiva e applicare sul retro del lettore NFC.</p>
+
+  <div class="label-wrap">
+    <div class="label">
+
+      <div class="lbl-header">
+        <div>
+          <div class="lbl-brand">ContaOre</div>
+          <div class="lbl-model">Lettore NFC &nbsp;|&nbsp; ContaOre-NFC-R1</div>
+        </div>
+        <div class="ce-symbol">CE</div>
+      </div>
+
+      <div class="lbl-body">
+
+        <div class="lbl-col">
+          <div class="lbl-row">
+            <span class="lbl-key">Fabbricante</span>
+            <span class="lbl-val"><span class="fill"></span></span>
+          </div>
+          <div class="lbl-row">
+            <span class="lbl-key">Indirizzo</span>
+            <span class="lbl-val"><span class="fill"></span></span>
+          </div>
+          <div class="lbl-row">
+            <span class="lbl-key">N° serie / lotto</span>
+            <span class="lbl-val"><span class="fill"></span></span>
+          </div>
+          <div class="lbl-row">
+            <span class="lbl-key">Anno marcatura CE</span>
+            <span class="lbl-val"><span class="fill fill-sm"></span></span>
+          </div>
+        </div>
+
+        <div class="lbl-col">
+          <div class="lbl-row">
+            <span class="lbl-key">Alimentazione</span>
+            <span class="lbl-val">USB-C 5V DC — 500 mA</span>
+          </div>
+          <div class="lbl-row">
+            <span class="lbl-key">Frequenze radio</span>
+            <span class="lbl-val">13,56 MHz (NFC) — 2,4 GHz (WiFi)</span>
+          </div>
+          <div class="lbl-row">
+            <span class="lbl-key">Potenza max RF</span>
+            <span class="lbl-val">NFC ≤ 42 dBµA/m (10m) &nbsp;|&nbsp; WiFi ≤ 20 dBm</span>
+          </div>
+          <div class="lbl-row">
+            <span class="lbl-key">Temp. operativa</span>
+            <span class="lbl-val">0 °C — +50 °C &nbsp;|&nbsp; Solo uso interno</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="lbl-footer">
+        <div class="symbols">
+          <!-- WEEE: bidone barrato -->
+          <span style="font-size:13pt; line-height:1; position:relative; display:inline-block;">
+            🗑
+            <span style="position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);width:110%;height:1.5px;background:#000;"></span>
+          </span>
+          <!-- No-disposal EU: simbolo X cestino approssimato tramite testo -->
+          <span style="font-size:6pt; color:#000;">Smaltimento differenziato RAEE</span>
+        </div>
+        <div class="lbl-directives">
+          RED 2014/53/UE &nbsp;·&nbsp; RoHS 2011/65/UE<br>
+          Paese: Italia (IT) &nbsp;·&nbsp; Firmware: ContaOre v<span class="fill fill-sm"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ETICHETTA IMBALLAGGIO — 105 × 74 mm (A7)
+  ══════════════════════════════════════════════ -->
+  <div class="section-heading no-print">Etichetta Imballaggio — 105 × 74 mm (A7)</div>
+  <p class="section-note no-print">Da applicare sulla confezione / scatola di spedizione.</p>
+
+  <div class="label-wrap">
+    <div class="label-lg">
+
+      <div class="pkg-header">
+        <div>
+          <div class="pkg-brand">ContaOre</div>
+          <div class="pkg-product">Lettore NFC per Rilevazione Presenze</div>
+          <div class="pkg-code">Modello: ContaOre-NFC-R1 &nbsp;|&nbsp; ESP32 + NFC 13,56 MHz + WiFi 2,4 GHz</div>
+        </div>
+        <div class="pkg-ce">CE</div>
+      </div>
+
+      <div class="pkg-body">
+
+        <div class="pkg-col">
+          <div class="pkg-row">
+            <div class="pkg-key">Fabbricante / Manufacturer</div>
+            <div class="pkg-val"><span class="pkg-fill"></span></div>
+          </div>
+          <div class="pkg-row">
+            <div class="pkg-key">Indirizzo sede legale</div>
+            <div class="pkg-val"><span class="pkg-fill"></span></div>
+          </div>
+          <div class="pkg-row">
+            <div class="pkg-key">P. IVA</div>
+            <div class="pkg-val"><span class="pkg-fill pkg-fill-sm"></span></div>
+          </div>
+          <div class="pkg-row">
+            <div class="pkg-key">Numero di serie / lotto</div>
+            <div class="pkg-val"><span class="pkg-fill"></span></div>
+          </div>
+          <div class="pkg-row">
+            <div class="pkg-key">Anno apposizione marcatura CE</div>
+            <div class="pkg-val"><span class="pkg-fill pkg-fill-sm"></span></div>
+          </div>
+        </div>
+
+        <div class="pkg-col">
+          <div class="pkg-row">
+            <div class="pkg-key">Alimentazione</div>
+            <div class="pkg-val">USB-C 5V DC — 500 mA (max 2A)</div>
+          </div>
+          <div class="pkg-row">
+            <div class="pkg-key">Bande di frequenza radio</div>
+            <div class="pkg-val">
+              NFC: 13,56 MHz (ISO/IEC 14443 A/B)<br>
+              WiFi: 2400–2483,5 MHz (IEEE 802.11 b/g/n)
+            </div>
+          </div>
+          <div class="pkg-row">
+            <div class="pkg-key">Potenza massima RF</div>
+            <div class="pkg-val">NFC ≤ 42 dBµA/m (@ 10m) &nbsp;|&nbsp; WiFi ≤ 20 dBm EIRP</div>
+          </div>
+          <div class="pkg-row">
+            <div class="pkg-key">Temperatura operativa</div>
+            <div class="pkg-val">0 °C — +50 °C &nbsp;|&nbsp; Solo uso interno</div>
+          </div>
+          <div class="pkg-row">
+            <div class="pkg-key">Versione firmware</div>
+            <div class="pkg-val">ContaOre v<span class="pkg-fill pkg-fill-sm"></span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="pkg-footer">
+        <div>
+          <div class="pkg-directives">
+            Conforme a: RED 2014/53/UE &nbsp;·&nbsp; RoHS 2011/65/UE (mod. 2015/863/UE)<br>
+            Norme: EN 300 328 V2.2.2 &nbsp;·&nbsp; EN 302 291-1/2 &nbsp;·&nbsp; EN 55032 &nbsp;·&nbsp; EN 55035 &nbsp;·&nbsp; EN 62368-1<br>
+            Autocertificazione — Nessun organismo notificato coinvolto
+          </div>
+        </div>
+        <div class="pkg-symbols">
+          <div style="text-align:center;">
+            <span class="pkg-weee">🗑</span>
+            <div style="font-size:5.5pt; margin-top:4px;">RAEE</div>
+          </div>
+          <div style="font-size:5.5pt; color:#444; max-width:90px; line-height:1.4;">
+            Non smaltire nei rifiuti domestici.<br>
+            Raccolta differenziata RAEE<br>
+            (D.Lgs. 49/2014).
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ISTRUZIONI COMPILAZIONE
+  ══════════════════════════════════════════════ -->
+  <div class="section-heading no-print">Istruzioni Compilazione</div>
+  <div class="no-print" style="font-family:Arial,sans-serif; font-size:8.5pt; color:#333; max-width:500px; line-height:1.7; margin-bottom:30px; background:#fff; padding:14px 18px; border:1px solid #ccc;">
+    <strong>Campi da completare prima della stampa finale:</strong>
+    <ul style="margin: 6px 0 0 16px; padding:0;">
+      <li><strong>Fabbricante</strong> — Ragione sociale dell'azienda produttrice (es. ACME S.r.l.)</li>
+      <li><strong>Indirizzo</strong> — Sede legale completa (via, CAP, città)</li>
+      <li><strong>P. IVA</strong> — Partita IVA del fabbricante</li>
+      <li><strong>N° serie / lotto</strong> — Numero seriale univoco del dispositivo o codice lotto</li>
+      <li><strong>Anno marcatura CE</strong> — Anno in cui la marcatura CE è stata apposta per la prima volta (es. 2025)</li>
+      <li><strong>Versione firmware</strong> — Versione firmware installata (es. 1.2.0)</li>
+    </ul>
+    <p style="margin-top:8px;">
+      La potenza RF indicata (NFC ≤ 42 dBµA/m, WiFi ≤ 20 dBm) è il limite massimo previsto dalle norme
+      EN 302 291 ed EN 300 328. Verificare i valori reali del modulo hardware installato e aggiornarli
+      se necessario. La Dichiarazione di Conformità UE deve essere conservata per 10 anni dalla messa
+      sul mercato (art. 10, par. 8, Direttiva 2014/53/UE).
+    </p>
+  </div>
+
+</body>
+</html>
