@@ -92,7 +92,7 @@
 
 // ── TAG ADMIN ────────────────────────
 #define ADMIN_UID           "3605CA06"
-#define ADMIN_UID_2         "F9170906"
+#define ADMIN_UID_2         "F917C906"
 #define ADMIN_TIMEOUT_MS    60000UL
 
 // ── LAYOUT ───────────────────────────
