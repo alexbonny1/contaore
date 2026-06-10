@@ -92,6 +92,7 @@
 
 // ── TAG ADMIN ────────────────────────
 #define ADMIN_UID           "3605CA06"
+#define ADMIN_UID_2         "F9170906"
 #define ADMIN_TIMEOUT_MS    60000UL
 
 // ── LAYOUT ───────────────────────────
@@ -169,7 +170,6 @@ struct Config {
   char     readerId[64];
   char     companyId[64];
   char     sede[64];
-  char     adminUid2[16];  // secondo tag admin (vuoto = disabilitato)
   uint8_t  theme;
   uint32_t debounce;
   bool     valid;
@@ -581,7 +581,6 @@ bool loadConfig() {
   String readerId   = prefs.getString("readerId",   "");
   String companyId  = prefs.getString("companyId",  "");
   String sede       = prefs.getString("sede",       "");
-  String adminUid2  = prefs.getString("adminUid2",  "");
   uint8_t  theme    = (uint8_t)prefs.getUInt("theme", 0);
   uint32_t debounce = prefs.getUInt("debounce", (uint32_t)DEBOUNCE_DEFAULT);
   prefs.end();
@@ -590,7 +589,6 @@ bool loadConfig() {
   strlcpy(cfg.readerId,   readerId.c_str(),   sizeof(cfg.readerId));
   strlcpy(cfg.companyId,  companyId.c_str(),  sizeof(cfg.companyId));
   strlcpy(cfg.sede,       sede.c_str(),       sizeof(cfg.sede));
-  strlcpy(cfg.adminUid2,  adminUid2.c_str(),  sizeof(cfg.adminUid2));
   cfg.theme     = (theme < THEME_COUNT) ? theme : 0;
   cfg.debounce  = (debounce >= 500 && debounce <= 30000) ? debounce : (uint32_t)DEBOUNCE_DEFAULT;
   cfg.valid     = true;
@@ -605,7 +603,6 @@ void saveConfig() {
   prefs.putString("readerId",  cfg.readerId);
   prefs.putString("companyId", cfg.companyId);
   prefs.putString("sede",      cfg.sede);
-  prefs.putString("adminUid2", cfg.adminUid2);
   prefs.putUInt("theme",       cfg.theme);
   prefs.putUInt("debounce",    cfg.debounce);
   prefs.end();
@@ -869,7 +866,7 @@ void taskRfid() {
 
   // ── TAG ADMIN ──────────────────────
   bool isAdmin = (strcmp(g_uid, ADMIN_UID) == 0) ||
-                 (cfg.adminUid2[0] != '\0' && strcmp(g_uid, cfg.adminUid2) == 0);
+                 (strcmp(g_uid, ADMIN_UID_2) == 0);
   if (isAdmin) {
     if (g_adminMode) {
       // 2a lettura → entra in provisioning (NON resetta)
@@ -1040,8 +1037,6 @@ void startProvisioning() {
   WiFiManagerParameter p_r("reader",  "Reader ID",       cfg.readerId,   63);
   WiFiManagerParameter p_c("company", "Company ID",      cfg.companyId,  63);
   WiFiManagerParameter p_s("sede",    "Sede / Ubicazione", cfg.sede,     63);
-  WiFiManagerParameter p_a("adminUid2", "Tag Admin 2 (UID hex, vuoto=disabilitato)", cfg.adminUid2, 15);
-
   char themeStr[4];
   snprintf(themeStr, sizeof(themeStr), "%d", cfg.theme);
   WiFiManagerParameter p_t("theme",
@@ -1066,7 +1061,6 @@ void startProvisioning() {
   wm.addParameter(&p_r);
   wm.addParameter(&p_c);
   wm.addParameter(&p_s);
-  wm.addParameter(&p_a);
   wm.addParameter(&p_t);
   wm.addParameter(&p_d);
   wm.addParameter(&p_reset);
@@ -1093,9 +1087,6 @@ void startProvisioning() {
   strlcpy(cfg.readerId,  p_r.getValue(),     sizeof(cfg.readerId));
   strlcpy(cfg.companyId, p_c.getValue(),     sizeof(cfg.companyId));
   strlcpy(cfg.sede,      p_s.getValue(),     sizeof(cfg.sede));
-  // Normalizza UID in maiuscolo e rimuovi spazi
-  { String uid2 = String(p_a.getValue()); uid2.trim(); uid2.toUpperCase();
-    strlcpy(cfg.adminUid2, uid2.c_str(), sizeof(cfg.adminUid2)); }
 
   int themeVal = atoi(p_t.getValue());
   cfg.theme = (themeVal >= 0 && themeVal < THEME_COUNT) ? (uint8_t)themeVal : 0;
