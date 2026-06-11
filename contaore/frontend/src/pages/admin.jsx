@@ -98,8 +98,9 @@ export default function Admin() {
   const [savingOta, setSavingOta]         = useState(false);
   const [otaPendingReaders, setOtaPendingReaders] = useState(new Set());
 
-  const [customDocs, setCustomDocs]         = useState({}); // key → url
-  const [uploadingDoc, setUploadingDoc]     = useState(null); // key in progress
+  const [customDocs, setCustomDocs]         = useState({});
+  const [uploadingDoc, setUploadingDoc]     = useState(null);
+  const [activeTab, setActiveTab]           = useState("aziende");
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -543,15 +544,35 @@ export default function Admin() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
-
-        {/* ══ SEZIONE SISTEMA ══ */}
-        <div className="mb-3">
-          <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Impostazioni sistema</p>
+      {/* ── TAB BAR ── */}
+      <div className="sticky top-14 z-40 bg-white/95 dark:bg-[#111113]/95 backdrop-blur-lg border-b border-zinc-200 dark:border-zinc-800">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 flex gap-1 py-2">
+          {[
+            { id: "aziende",   label: "Aziende",   icon: Building2,  count: companies.length },
+            { id: "sistema",   label: "Sistema",    icon: Radio,      count: null },
+            { id: "documenti", label: "Documenti",  icon: FileText,   count: null },
+          ].map(({ id, label, icon: Icon, count }) => (
+            <button key={id} onClick={() => setActiveTab(id)}
+              className={`flex items-center gap-2 h-9 px-3 sm:px-4 rounded-xl text-sm font-medium transition-colors whitespace-nowrap
+                ${activeTab === id
+                  ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black"
+                  : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}>
+              <Icon size={14} />
+              <span>{label}</span>
+              {count !== null && (
+                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${activeTab === id ? "bg-white/20 text-white dark:bg-black/20 dark:text-black" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400"}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* ALERT + OTA affiancati da tablet in su */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-7">
+
+        {/* ══ TAB SISTEMA ══ */}
+        {activeTab === "sistema" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {/* ─── ALERT EMAIL ─── */}
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5">
@@ -712,10 +733,10 @@ export default function Admin() {
           )}
         </div>
 
-        </div>{/* fine grid Alert+OTA */}
+        </div>}{/* fine tab sistema */}
 
-        {/* ─── DOCUMENTI LEGALI ─── */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5 mb-4">
+        {/* ══ TAB DOCUMENTI ══ */}
+        {activeTab === "documenti" && <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-4">
             <FileText size={16} className="text-zinc-500 shrink-0" />
             <div>
@@ -870,19 +891,20 @@ export default function Admin() {
           <p className="text-[11px] text-zinc-400 mt-3 leading-relaxed">
             Su iPhone: Apri → tocca il quadrato con freccia in alto → Stampa → Salva PDF
           </p>
-        </div>
+        </div>}{/* fine tab documenti */}
 
-        {/* ══ SEZIONE AZIENDE ══ */}
-        <div className="flex items-center justify-between mb-3 mt-6">
+        {/* ══ TAB AZIENDE ══ */}
+        {activeTab === "aziende" && <div>
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">Gestione aziende</p>
-            <p className="text-xs text-zinc-500 mt-0.5">{companies.length} {companies.length === 1 ? "azienda registrata" : "aziende registrate"}</p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Aziende</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">{companies.length} {companies.length === 1 ? "registrata" : "registrate"}</p>
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 h-11 px-4 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
+            className="flex items-center gap-2 h-11 px-4 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
           >
-            <Plus size={15} /> <span className="hidden xs:inline">Nuova</span><span className="hidden sm:inline"> azienda</span>
+            <Plus size={15} /> Nuova
           </button>
         </div>
 
@@ -1282,6 +1304,8 @@ export default function Admin() {
             ))}
           </div>
         )}
+        </div>}{/* fine tab aziende */}
+
       </div>
     </div>
   );
