@@ -4,7 +4,7 @@ import {
   Building2, Plus, Trash2,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
   Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio, Download,
-  FileText, ExternalLink, Shield, Upload, RotateCcw
+  FileText, ExternalLink, Shield, Upload, RotateCcw, Sun, Moon, LogOut
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -50,6 +50,7 @@ export default function Admin() {
 
   const navigate = useNavigate();
 
+  const [dark, setDark]                     = useState(false);
   const [companies, setCompanies]           = useState([]);
   const [loading, setLoading]               = useState(true);
 
@@ -491,6 +492,16 @@ export default function Admin() {
     setTimeout(() => setCopiedId(null), 2000);
   }
 
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
+  }, []);
+
+  useEffect(() => {
+    if (dark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
+    else       { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
+  }, [dark]);
+
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -516,9 +527,14 @@ export default function Admin() {
             <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">ContaOre</h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Pannello Superadmin</p>
           </div>
-          <button onClick={logout} className="h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setDark(d => !d)} className="flex items-center justify-center h-10 w-10 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
+              {dark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button onClick={logout} className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
+              <LogOut size={14} /> Logout
+            </button>
+          </div>
         </div>
       </header>
 

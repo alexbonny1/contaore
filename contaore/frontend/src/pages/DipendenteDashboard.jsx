@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Clock, Calendar, AlertCircle, CheckCircle2,
   XCircle, ChevronDown, ChevronUp, Send, LogOut, Lock,
-  Sun, TrendingUp, UserCheck, Umbrella, Pencil
+  Sun, Moon, TrendingUp, UserCheck, Umbrella, Pencil
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -52,6 +52,7 @@ export default function DipendenteDashboard() {
 
   const navigate = useNavigate();
 
+  const [dark, setDark]                 = useState(false);
   const [loading, setLoading]           = useState(true);
   const [data, setData]                 = useState(null);
   const [toast, setToast]               = useState(null);
@@ -94,6 +95,16 @@ export default function DipendenteDashboard() {
   const [modifyDatetime, setModifyDatetime]           = useState("");
   const [modifyMotivo, setModifyMotivo]               = useState("");
   const [savingModify, setSavingModify]               = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
+  }, []);
+
+  useEffect(() => {
+    if (dark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
+    else       { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
+  }, [dark]);
 
   function showToast(msg, type = "success") { setToast({ message: msg, type }); }
 
@@ -312,6 +323,9 @@ export default function DipendenteDashboard() {
             <button onClick={() => setShowChangePassword(true)} className="flex items-center gap-1 sm:gap-2 h-9 sm:h-10 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
               <Lock size={12} className="sm:w-[14px] sm:h-[14px]" />
               <span className="hidden xs:inline">Password</span>
+            </button>
+            <button onClick={() => setDark(d => !d)} className="flex items-center justify-center h-9 sm:h-10 w-9 sm:w-10 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
+              {dark ? <Sun size={14} /> : <Moon size={14} />}
             </button>
             <button onClick={logout} className="flex items-center gap-1 sm:gap-2 h-9 sm:h-10 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium">
               <LogOut size={12} className="sm:w-[14px] sm:h-[14px]" />
