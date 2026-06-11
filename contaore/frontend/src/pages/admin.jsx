@@ -533,11 +533,11 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setDark(d => !d)} className="flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
-              {dark ? <Sun size={14} /> : <Moon size={14} />}
+            <button onClick={() => setDark(d => !d)} className="flex items-center justify-center h-10 w-10 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
+              {dark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <button onClick={logout} className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
-              <LogOut size={13} /> <span className="hidden sm:inline">Logout</span>
+            <button onClick={logout} className="flex items-center gap-1.5 h-10 px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
+              <LogOut size={14} /> Esci
             </button>
           </div>
         </div>
@@ -550,8 +550,8 @@ export default function Admin() {
           <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Impostazioni sistema</p>
         </div>
 
-        {/* ALERT + OTA affiancati su desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* ALERT + OTA affiancati da tablet in su */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
         {/* ─── ALERT EMAIL ─── */}
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5">
@@ -841,24 +841,24 @@ export default function Admin() {
                       <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug">{doc.sottotitolo}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <a
                       href={customUrl || `/docs/${doc.file}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 h-8 px-3 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-[11px] font-medium"
+                      className="flex items-center gap-1.5 h-10 px-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium"
                     >
-                      <ExternalLink size={11} /> Apri
+                      <ExternalLink size={12} /> Apri
                     </a>
-                    <label className={`flex items-center gap-1 h-8 px-3 rounded-lg text-[11px] font-medium cursor-pointer transition-colors ${isUploading ? "opacity-50 pointer-events-none bg-zinc-200 dark:bg-zinc-700 text-zinc-400" : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700"}`}>
-                      <Upload size={11} /> {isUploading ? "..." : "Sostituisci"}
+                    <label className={`flex items-center gap-1.5 h-10 px-3 rounded-xl text-xs font-medium cursor-pointer transition-colors ${isUploading ? "opacity-50 pointer-events-none bg-zinc-200 dark:bg-zinc-700 text-zinc-400" : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700"}`}>
+                      <Upload size={12} /> {isUploading ? "..." : "Sostituisci"}
                       <input type="file" accept=".pdf,.html" className="hidden"
                         onChange={e => { if (e.target.files[0]) uploadDoc(doc.file, e.target.files[0]); e.target.value = ""; }} />
                     </label>
                     {customUrl && (
                       <button onClick={() => resetDoc(doc.file)}
-                        className="flex items-center gap-1 h-8 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[11px] hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors">
-                        <RotateCcw size={11} /> Reset
+                        className="flex items-center gap-1.5 h-10 px-3 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors">
+                        <RotateCcw size={12} /> Reset
                       </button>
                     )}
                   </div>
@@ -880,9 +880,9 @@ export default function Admin() {
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs font-medium"
+            className="flex items-center gap-1.5 h-11 px-4 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
           >
-            <Plus size={14} /> Nuova azienda
+            <Plus size={15} /> <span className="hidden xs:inline">Nuova</span><span className="hidden sm:inline"> azienda</span>
           </button>
         </div>
 
@@ -953,13 +953,13 @@ export default function Admin() {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => setExpandedCompany(expandedCompany === company.id ? null : company.id)}
-                        className="flex items-center gap-1 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-300"
+                        className="flex items-center gap-1.5 h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-300"
                       >
                         {expandedCompany === company.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         {expandedCompany === company.id ? "Chiudi" : "Dettagli"}
                       </button>
                       <button onClick={() => askDeleteCompany(company.id, company.nome)}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500">
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500">
                         <Trash2 size={15} />
                       </button>
                     </div>
@@ -973,7 +973,7 @@ export default function Admin() {
                         <p className="text-xs font-mono text-zinc-700 dark:text-zinc-300 truncate">{company.id}</p>
                       </div>
                       <button onClick={() => copyToClipboard(company.id, company.id)}
-                        className="ml-3 shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+                        className="ml-3 shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
                         {copiedId === company.id ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
                       </button>
                     </div>
@@ -1028,7 +1028,7 @@ export default function Admin() {
                               </div>
                               <button
                                 onClick={() => setResettingPassword(resettingPassword === user.id ? null : user.id)}
-                                className="shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-500 dark:text-zinc-400"
+                                className="shrink-0 flex items-center gap-1.5 h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-500 dark:text-zinc-400"
                               >
                                 <RefreshCw size={13} /> Reset
                               </button>
@@ -1091,7 +1091,7 @@ export default function Admin() {
                         <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Fasce orarie</h4>
                         <button
                           onClick={() => openFasciaForm(company.id)}
-                          className="flex items-center gap-1 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-500 dark:text-zinc-400"
+                          className="flex items-center gap-1 h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-500 dark:text-zinc-400"
                         >
                           <Plus size={13} /> Aggiungi
                         </button>
@@ -1177,7 +1177,7 @@ export default function Admin() {
                                   {fascia.tipo}
                                 </span>
                                 <button onClick={() => askDeleteFascia(fascia.id)}
-                                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-red-400">
+                                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-red-400">
                                   <Trash2 size={14} />
                                 </button>
                               </div>
