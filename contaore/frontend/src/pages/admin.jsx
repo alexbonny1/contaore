@@ -509,7 +509,7 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10]">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#0f0f10]">
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {confirm && (
@@ -522,94 +522,39 @@ export default function Admin() {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#111113]/90 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">ContaOre</h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Pannello Superadmin</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center shrink-0">
+              <Shield size={14} className="text-white dark:text-black" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">ContaOre</span>
+              <span className="hidden sm:inline ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Superadmin</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setDark(d => !d)} className="flex items-center justify-center h-10 w-10 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
-              {dark ? <Sun size={15} /> : <Moon size={15} />}
+            <button onClick={() => setDark(d => !d)} className="flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
+              {dark ? <Sun size={14} /> : <Moon size={14} />}
             </button>
-            <button onClick={logout} className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
-              <LogOut size={14} /> Logout
+            <button onClick={logout} className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
+              <LogOut size={13} /> <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
 
-        {/* TITLE + BUTTON */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Aziende</h2>
-            <p className="text-sm text-zinc-500 mt-0.5">{companies.length} aziende registrate</p>
-          </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 h-11 px-4 sm:px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium"
-          >
-            <Plus size={16} />
-            <span>Nuova</span>
-          </button>
+        {/* ══ SEZIONE SISTEMA ══ */}
+        <div className="mb-3">
+          <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Impostazioni sistema</p>
         </div>
 
-        {/* FORM CREA AZIENDA */}
-        {showCreate && (
-          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6">
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Nuova azienda</h3>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">La password viene generata automaticamente e inviata via email al titolare</p>
-              </div>
-              <button onClick={() => { setShowCreate(false); setError(""); }} className="ml-3 shrink-0 p-1">
-                <X size={20} className="text-zinc-500" />
-              </button>
-            </div>
-            <form onSubmit={createCompany} className="flex flex-col gap-3">
-              <input
-                type="text"
-                placeholder="Nome azienda *"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className={inputCls}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Username titolare *"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className={inputCls}
-                required
-              />
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-                <input
-                  type="email"
-                  placeholder="Email titolare * (riceverà le credenziali)"
-                  value={ownerEmail}
-                  onChange={(e) => setOwnerEmail(e.target.value)}
-                  className="w-full h-11 pl-9 pr-3 rounded-xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-[16px] sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 placeholder-zinc-400"
-                  required
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <button
-                type="submit"
-                disabled={saving}
-                className="h-12 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Mail size={16} />
-                {saving ? "Creazione in corso..." : "Crea e invia credenziali"}
-              </button>
-            </form>
-          </div>
-        )}
+        {/* ALERT + OTA affiancati su desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
 
-        {/* ─── SEZIONE ALERT EMAIL ─── */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6">
+        {/* ─── ALERT EMAIL ─── */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3 min-w-0">
               <Mail size={18} className="text-zinc-500 shrink-0" />
@@ -700,7 +645,7 @@ export default function Admin() {
         </div>
 
         {/* ─── SEZIONE OTA ─── */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6">
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5">
           <div className="flex items-start justify-between mb-4">
             <div className="min-w-0">
               <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -767,17 +712,19 @@ export default function Admin() {
           )}
         </div>
 
-        {/* ─── SEZIONE DOCUMENTI LEGALI ─── */}
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6">
+        </div>{/* fine grid Alert+OTA */}
+
+        {/* ─── DOCUMENTI LEGALI ─── */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5 mb-4">
           <div className="flex items-center gap-3 mb-4">
-            <Shield size={18} className="text-zinc-500 shrink-0" />
+            <FileText size={16} className="text-zinc-500 shrink-0" />
             <div>
-              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Documenti legali</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Modelli pronti — compila, stampa, fai firmare, archivia</p>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Documenti legali</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">Modelli pronti — compila, stampa, fai firmare, archivia</p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {[
               {
                 file: "informativa_privacy_dipendente.html",
@@ -881,46 +828,37 @@ export default function Admin() {
               const customUrl = customDocs[doc.file];
               const isUploading = uploadingDoc === doc.file;
               return (
-                <div key={doc.file} className="flex items-start justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <FileText size={15} className="text-zinc-400 shrink-0 mt-0.5" />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug">{doc.titolo}</p>
-                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${doc.tagColor}`}>{doc.tag}</span>
+                <div key={doc.file} className="flex flex-col rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3 gap-2.5">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${doc.tagColor}`}>{doc.tag}</span>
                         {customUrl && (
-                          <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-                            PERSONALIZZATO
-                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">✓ Custom</span>
                         )}
                       </div>
-                      <p className="text-xs text-zinc-400 mt-0.5 leading-snug">{doc.sottotitolo}</p>
+                      <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100 leading-snug">{doc.titolo}</p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug">{doc.sottotitolo}</p>
                     </div>
                   </div>
-                  <div className="shrink-0 flex flex-col items-end gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <a
                       href={customUrl || `/docs/${doc.file}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium"
+                      className="flex items-center gap-1 h-8 px-3 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-[11px] font-medium"
                     >
-                      <ExternalLink size={13} /> Apri
+                      <ExternalLink size={11} /> Apri
                     </a>
-                    <label className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-medium cursor-pointer transition-colors ${isUploading ? "opacity-50 pointer-events-none bg-zinc-100 dark:bg-zinc-800 text-zinc-400" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}>
-                      <Upload size={12} /> {isUploading ? "..." : "Sostituisci"}
-                      <input
-                        type="file"
-                        accept=".pdf,.html"
-                        className="hidden"
-                        onChange={e => { if (e.target.files[0]) uploadDoc(doc.file, e.target.files[0]); e.target.value = ""; }}
-                      />
+                    <label className={`flex items-center gap-1 h-8 px-3 rounded-lg text-[11px] font-medium cursor-pointer transition-colors ${isUploading ? "opacity-50 pointer-events-none bg-zinc-200 dark:bg-zinc-700 text-zinc-400" : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700"}`}>
+                      <Upload size={11} /> {isUploading ? "..." : "Sostituisci"}
+                      <input type="file" accept=".pdf,.html" className="hidden"
+                        onChange={e => { if (e.target.files[0]) uploadDoc(doc.file, e.target.files[0]); e.target.value = ""; }} />
                     </label>
                     {customUrl && (
-                      <button
-                        onClick={() => resetDoc(doc.file)}
-                        className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors"
-                      >
-                        <RotateCcw size={12} /> Template
+                      <button onClick={() => resetDoc(doc.file)}
+                        className="flex items-center gap-1 h-8 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[11px] hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors">
+                        <RotateCcw size={11} /> Reset
                       </button>
                     )}
                   </div>
@@ -934,11 +872,63 @@ export default function Admin() {
           </p>
         </div>
 
+        {/* ══ SEZIONE AZIENDE ══ */}
+        <div className="flex items-center justify-between mb-3 mt-6">
+          <div>
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">Gestione aziende</p>
+            <p className="text-xs text-zinc-500 mt-0.5">{companies.length} {companies.length === 1 ? "azienda registrata" : "aziende registrate"}</p>
+          </div>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs font-medium"
+          >
+            <Plus size={14} /> Nuova azienda
+          </button>
+        </div>
+
+        {/* FORM CREA AZIENDA */}
+        {showCreate && (
+          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-6 mb-4">
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Nuova azienda</h3>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">La password viene generata automaticamente e inviata via email al titolare</p>
+              </div>
+              <button onClick={() => { setShowCreate(false); setError(""); }} className="ml-3 shrink-0 p-1">
+                <X size={20} className="text-zinc-500" />
+              </button>
+            </div>
+            <form onSubmit={createCompany} className="flex flex-col gap-3">
+              <input type="text" placeholder="Nome azienda *" value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)} className={inputCls} required />
+              <input type="text" placeholder="Username titolare *" value={username}
+                onChange={(e) => setUsername(e.target.value)} className={inputCls} required />
+              <div className="relative">
+                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                <input type="email" placeholder="Email titolare * (riceverà le credenziali)" value={ownerEmail}
+                  onChange={(e) => setOwnerEmail(e.target.value)}
+                  className="w-full h-11 pl-9 pr-3 rounded-xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-[16px] sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 placeholder-zinc-400"
+                  required />
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <button type="submit" disabled={saving}
+                className="h-12 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                <Mail size={16} />
+                {saving ? "Creazione in corso..." : "Crea e invia credenziali"}
+              </button>
+            </form>
+          </div>
+        )}
+
         {/* ─── LISTA AZIENDE ─── */}
         {loading ? (
           <div className="text-zinc-500 text-center py-16">Caricamento...</div>
         ) : companies.length === 0 ? (
-          <div className="text-zinc-500 text-center py-16">Nessuna azienda creata</div>
+          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] py-16 text-center">
+            <Building2 size={32} className="mx-auto text-zinc-300 dark:text-zinc-700 mb-3" />
+            <p className="text-sm text-zinc-500">Nessuna azienda creata</p>
+            <p className="text-xs text-zinc-400 mt-1">Usa il pulsante "Nuova azienda" per iniziare</p>
+          </div>
         ) : (
           <div className="flex flex-col gap-4">
             {companies.map((company) => (
