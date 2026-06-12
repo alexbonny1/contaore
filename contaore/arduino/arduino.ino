@@ -449,15 +449,17 @@ void drawWifiBars(int x, int y) {
 
 void drawScreen_1() {
   char dateBuf[16] = "--/--/----";
+  char timeBuf[8]  = "--:--";
   if (g_ntpSynced) {
     time_t now = time(nullptr);
     struct tm* t = localtime(&now);
     snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
       t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
+    snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d",
+      t->tm_hour, t->tm_min);
   }
 
   tft.fillScreen(0x0000);
-  tft.drawBitmap(73, 125, image_paint_2_bits, 348, 84, 0xFFFF, 0x0000);
   tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
   tft.setTextColor(0xFFFF, 0x0000);
   tft.setTextSize(2);
@@ -466,6 +468,9 @@ void drawScreen_1() {
   tft.drawString("Timbratura", 288, 284);
   drawWifiBars(435, 11);
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
+  tft.setTextColor(0xFFFF, 0x0000);
+  tft.setTextSize(13);
+  tft.drawString(timeBuf, 59, 126);
 }
 
 void showIdle() {
@@ -482,33 +487,42 @@ void showResult(String tipo, String nome, String orario) {
   ds.dipendente = nome;
   ds.orario     = orario;
 
-  uint16_t bg, fg;
-  if      (tipo == "ENTRATA") { bg = 0x0320; fg = C_GREEN;  }
-  else if (tipo == "USCITA")  { bg = 0x8200; fg = C_RED;    }
-  else if (tipo == "ERRORE")  { bg = 0x4000; fg = C_ORANGE; }
-  else                         { bg = 0x2104; fg = C_YELLOW; }
+  uint16_t typeColor;
+  if      (tipo == "ENTRATA") typeColor = 0x64E6;
+  else if (tipo == "USCITA")  typeColor = 0xF800;
+  else if (tipo == "ERRORE")  typeColor = C_ORANGE;
+  else                         typeColor = C_YELLOW;
 
-  tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, bg);
+  String linea2 = (tipo == "OFFLINE") ? "Salvato offline" : nome;
 
-  tft.setTextColor(fg, bg); tft.setTextSize(6);
-  int16_t sw = tipo.length() * 36;
-  tft.setCursor(max((int16_t)10, (int16_t)((480 - sw) / 2)), HDR_H + 22);
-  tft.print(tipo);
-
-  if (nome.length() > 0) {
-    tft.setTextColor(C_WHITE, bg); tft.setTextSize(3);
-    int16_t nw = nome.length() * 18;
-    tft.setCursor(max((int16_t)10, (int16_t)((480 - nw) / 2)), HDR_H + 110);
-    tft.print(nome);
-  }
-  if (orario.length() > 0) {
-    tft.setTextColor(C_YELLOW, bg); tft.setTextSize(3);
-    int16_t ow = orario.length() * 18;
-    tft.setCursor(max((int16_t)10, (int16_t)((480 - ow) / 2)), HDR_H + 165);
-    tft.print(orario);
+  char dateBuf[16] = "--/--/----";
+  if (g_ntpSynced) {
+    time_t now = time(nullptr);
+    struct tm* t = localtime(&now);
+    snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
+      t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
   }
 
-  drawHeader(); drawFooter();
+  tft.fillScreen(0x0000);
+  tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
+  tft.setTextColor(0xFFFF, 0x0000);
+  tft.setTextSize(2);
+  tft.drawString(cfg.readerId[0] ? cfg.readerId : "TIMBRY", 83, 17);
+  tft.drawString(dateBuf, 82, 45);
+  tft.drawString("Timbratura", 288, 284);
+  drawWifiBars(435, 11);
+  tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
+
+  tft.setTextColor(typeColor, 0x0000);
+  tft.setTextSize(8);
+  tft.drawString(tipo, 80, 103);
+
+  if (linea2.length() > 0) {
+    tft.setTextColor(0xFFFF, 0x0000);
+    tft.setTextSize(4);
+    tft.drawString(linea2, 69, 182);
+  }
+
   g_resultTimer = millis();
 }
 
@@ -637,10 +651,12 @@ void updateClock() {
       char dateBuf[16];
       snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
         t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
-      tft.fillRect(82, 45, 200, 18, 0x0000);
       tft.setTextColor(0xFFFF, 0x0000);
       tft.setTextSize(2);
+      tft.fillRect(82, 45, 200, 18, 0x0000);
       tft.drawString(dateBuf, 82, 45);
+      tft.setTextSize(13);
+      tft.drawString(newOra, 59, 126);
     }
     if (minuteChanged || wifiChanged || internetChanged) {
       drawWifiBars(435, 11);
