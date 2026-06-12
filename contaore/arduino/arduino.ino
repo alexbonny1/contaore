@@ -214,6 +214,7 @@ bool          g_adminMode       = false;
 unsigned long g_adminTimer      = 0;
 bool          g_waitingNtp      = false;
 unsigned long g_lastNtpRetry    = 0;
+bool          g_internetOk      = false;
 #define NTP_RETRY_MS  10000UL
 
 // forward declarations
@@ -411,6 +412,41 @@ void drawDate() {
   g_dateSprite.pushSprite(DATE_X, DATE_Y);
 }
 
+// Disegna le barre WiFi dinamiche in base a RSSI e stato internet
+// x, y = angolo in alto a sinistra, occupa 30x32 px
+void drawWifiBars(int x, int y) {
+  const int bw = 6, gap = 2;
+  const int heights[4] = {8, 14, 20, 26};
+  tft.fillRect(x, y, 30, 32, 0x0000);
+
+  if (g_wifiOffline) {
+    for (int i = 0; i < 4; i++) {
+      int bx = x + i * (bw + gap);
+      tft.drawRect(bx, y + 32 - heights[i], bw, heights[i], 0x4208);
+    }
+    return;
+  }
+
+  int bars;
+  uint16_t color;
+  if (!g_internetOk) {
+    bars = 1; color = C_YELLOW;
+  } else {
+    int rssi = WiFi.RSSI();
+    if      (rssi >= -55) { bars = 4; color = 0x64E6; }
+    else if (rssi >= -70) { bars = 3; color = 0x64E6; }
+    else if (rssi >= -80) { bars = 2; color = C_ORANGE; }
+    else                  { bars = 1; color = C_RED; }
+  }
+
+  for (int i = 0; i < 4; i++) {
+    int bx = x + i * (bw + gap);
+    int by = y + 32 - heights[i];
+    if (i < bars) tft.fillRect(bx, by, bw, heights[i], color);
+    else          tft.drawRect(bx, by, bw, heights[i], 0x4208);
+  }
+}
+
 void drawScreen_1() {
   char dateBuf[16] = "--/--/----";
   if (g_ntpSynced) {
@@ -419,7 +455,6 @@ void drawScreen_1() {
     snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
       t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
   }
-  uint16_t wifiColor = g_wifiOffline ? C_RED : 0x64E6;
 
   tft.fillScreen(0x0000);
   tft.pushImage(73, 125, 348, 84, image_paint_2_pixels);
@@ -429,7 +464,7 @@ void drawScreen_1() {
   tft.drawString(cfg.readerId[0] ? cfg.readerId : "TIMBRY", 83, 17);
   tft.drawString(dateBuf, 82, 45);
   tft.drawString("Timbratura", 288, 284);
-  tft.drawBitmap(435, 11, image_network_4_bars_bits, 30, 32, wifiColor);
+  drawWifiBars(435, 11);
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
 }
 
@@ -588,9 +623,12 @@ void updateClock() {
   snprintf(buf, sizeof(buf), "%02d:%02d", t->tm_hour, t->tm_min);
   String newOra = String(buf);
 
-  static bool lwOff = false;
-  bool wifiChanged = (lwOff != g_wifiOffline);
-  if (wifiChanged) lwOff = g_wifiOffline;
+  static bool lwOff      = false;
+  static bool lInternet  = false;
+  bool wifiChanged     = (lwOff     != g_wifiOffline);
+  bool internetChanged = (lInternet != g_internetOk);
+  if (wifiChanged)    lwOff     = g_wifiOffline;
+  if (internetChanged) lInternet = g_internetOk;
 
   if (ds.status == "ATTESA") {
     bool minuteChanged = (newOra != ds.oraCorrente);
@@ -604,10 +642,8 @@ void updateClock() {
       tft.setTextSize(2);
       tft.drawString(dateBuf, 82, 45);
     }
-    if (wifiChanged) {
-      uint16_t wifiColor = g_wifiOffline ? C_RED : 0x64E6;
-      tft.fillRect(435, 11, 30, 32, 0x0000);
-      tft.drawBitmap(435, 11, image_network_4_bars_bits, 30, 32, wifiColor);
+    if (minuteChanged || wifiChanged || internetChanged) {
+      drawWifiBars(435, 11);
     }
   } else {
     ds.oraCorrente = newOra;
@@ -877,6 +913,7 @@ void sendHeartbeat() {
   if (pingCode <= 0) {
     g_lastHeartbeat = millis() - HEARTBEAT_MS + 10000UL;
   }
+  g_internetOk = (pingCode > 0);
 
   if (otaUrl.length() > 0 && otaVersion.length() > 0 && otaVersion != FW_VERSION) {
     doOTA(otaUrl, otaVersion);
