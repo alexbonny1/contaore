@@ -1199,11 +1199,6 @@ void setup() {
     cfg.backend, cfg.readerId, cfg.companyId,
     cfg.theme, THEMES[cfg.theme].name, g_queueSize);
 
-  tft.fillScreen(C_BG);
-  uint16_t bodyTxt = g_themeLight ? C_BLACK : C_WHITE;
-  tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(2);
-  tft.setCursor(20, 100); tft.print("Connessione WiFi...");
-
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   WiFi.setAutoReconnect(true);
