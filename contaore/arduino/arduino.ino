@@ -457,7 +457,7 @@ void drawScreen_1() {
   }
 
   tft.fillScreen(0x0000);
-  tft.pushImage(73, 125, 348, 84, image_paint_2_pixels);
+  tft.drawBitmap(73, 125, image_paint_2_bits, 348, 84, 0xFFFF, 0x0000);
   tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
   tft.setTextColor(0xFFFF, 0x0000);
   tft.setTextSize(2);
