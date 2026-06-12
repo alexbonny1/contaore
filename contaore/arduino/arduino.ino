@@ -779,19 +779,24 @@ static String resolveOtaUrl(const String& url) {
 void doOTA(String url, String newVersion) {
   Serial.printf("OTA: aggiornamento v%s → v%s\n", FW_VERSION, newVersion.c_str());
 
-  tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, C_BG);
-  uint16_t bodyTxt = g_themeLight ? C_BLACK : C_WHITE;
-  tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(3);
-  tft.setCursor(50, HDR_H + 25);
-  tft.print("Aggiornamento FW");
-  tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(2);
-  tft.setCursor(60, HDR_H + 90);
-  tft.print("v"); tft.print(FW_VERSION);
-  tft.print(" -> v"); tft.print(newVersion);
-  tft.setTextColor(C_YELLOW, C_BG); tft.setTextSize(1);
-  tft.setCursor(70, HDR_H + 140);
-  tft.print("Non spegnere il dispositivo...");
-  drawHeader(); drawFooter();
+  tft.fillScreen(0x0000);
+  tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
+  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(3);
+  tft.drawString("Aggiornamento del sistema", 19, 78);
+  tft.setTextSize(2);
+  tft.drawString("Non spegnere il dispositivo", 71, 128);
+  tft.drawString("FW attuale", 26, 189);
+  tft.drawString("Nuovo FW", 359, 186);
+  tft.drawString(FW_VERSION, 46, 212);
+  tft.drawString(newVersion, 375, 212);
+  tft.drawString("Tempo stimato 1/2 minuti", 80, 293);
+  tft.drawRect(28, 234, 426, 19, 0xFFFF);
+
+  httpUpdate.onProgress([](int current, int total) {
+    if (total <= 0) return;
+    int filled = (int)((long)424 * current / total);
+    tft.fillRect(29, 235, filled, 17, 0xFFFF);
+  });
 
   String finalUrl = resolveOtaUrl(url);
   httpUpdate.rebootOnUpdate(true);
@@ -807,10 +812,9 @@ void doOTA(String url, String newVersion) {
   // Arriva qui solo se OTA non è andata a buon fine (altrimenti si riavvia)
   Serial.printf("OTA FALLITO (%d): %s\n", httpUpdate.getLastError(),
     httpUpdate.getLastErrorString().c_str());
-  tft.fillRect(0, HDR_H + 155, 480, 50, C_BG);
-  tft.setTextColor(C_RED, C_BG); tft.setTextSize(2);
-  tft.setCursor(80, HDR_H + 165);
-  tft.print("Errore aggiornamento");
+  tft.fillRect(0, 225, 480, 75, 0x0000);
+  tft.setTextColor(C_RED, 0x0000); tft.setTextSize(2);
+  tft.drawString("Errore aggiornamento", 80, 248);
   delay(4000);
   showIdle();
 }
