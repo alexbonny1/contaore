@@ -529,58 +529,40 @@ void showResult(String tipo, String nome, String orario) {
 // Schermata admin: mostra config e istruzioni
 // 2a lettura → entrerà nel provisioning (non reset)
 void drawAdmin() {
-  tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, C_BG);
-
-  uint16_t bodyTxt = g_themeLight ? C_BLACK : C_WHITE;
-
-  tft.setTextColor(C_YELLOW, C_BG); tft.setTextSize(2);
-  tft.setCursor(100, HDR_H + 8);
-  tft.print("-- CONFIGURAZIONE --");
-
-  tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(1);
-  int y = HDR_H + 32;
-  tft.setCursor(10, y); tft.print("Backend: "); tft.print(cfg.backend);   y += 18;
-  tft.setCursor(10, y); tft.print("Reader:  "); tft.print(cfg.readerId);  y += 18;
-  tft.setCursor(10, y); tft.print("Company: "); tft.print(cfg.companyId); y += 18;
-  tft.setCursor(10, y); tft.print("Tema:    ");
-  tft.print(cfg.theme < THEME_COUNT ? THEMES[cfg.theme].name : "?");
-  tft.print(" ("); tft.print(cfg.theme); tft.print(")");
-  y += 18;
-  tft.setCursor(10, y); tft.print("WiFi:    ");
-  if (WiFi.status() == WL_CONNECTED) {
-    tft.print("OK  "); tft.print(WiFi.localIP().toString());
-  } else { tft.print("OFFLINE"); }
-  y += 18;
-  tft.setCursor(10, y); tft.print("Queue:   "); tft.print(g_queueSize);        y += 18;
-  tft.setCursor(10, y); tft.print("NTP:     "); tft.print(g_ntpSynced ? "OK" : "NO SYNC"); y += 18;
-  tft.setCursor(10, y); tft.print("Time:    "); tft.print(getISOTimestamp());  y += 18;
-  tft.setCursor(10, y); tft.print("FW:      "); tft.print(FW_VERSION);         y += 18;
-  tft.setCursor(10, y); tft.print("Sede:    "); tft.print(cfg.sede[0] ? cfg.sede : "(non impostata)"); y += 18;
-
-  tft.setCursor(10, y); tft.print("NFC:     ");
-  tft.setTextColor(g_rfidOk ? C_GREEN : C_RED, C_BG);
-  tft.print(g_rfidOk ? "OK" : "ERRORE");
-  tft.setTextColor(bodyTxt, C_BG); y += 18;
-
-  tft.setCursor(10, y); tft.print("Display: ");
-  tft.setTextColor(g_displayOk ? C_GREEN : C_RED, C_BG);
-  tft.print(g_displayOk ? "OK" : "ERRORE");
-  tft.setTextColor(bodyTxt, C_BG); y += 28;
-
-  // Istruzione 2a lettura → provisioning (non reset!)
-  tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(2);
-  tft.setCursor(30, y);
-  tft.print("Ripassare: ENTRA IN PORTALE");
-  y += 22;
-
-  tft.setTextColor(C_GRAY, C_BG); tft.setTextSize(1);
-  tft.setCursor(30, y);
-  tft.print("(Nel portale puoi modificare o resettare tutto)");
-  y += 14;
-  tft.setCursor(30, y);
-  tft.print("Attendi 60s per annullare");
-
-  drawHeader(); drawFooter();
+  char dateBuf[16] = "--/--/----";
+  if (g_ntpSynced) {
+    time_t now = time(nullptr);
+    struct tm* t = localtime(&now);
+    snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
+      t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
+  }
+  tft.fillScreen(0x0000);
+  tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
+  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(2);
+  tft.drawString("Schermata ADMIN", 83, 17);
+  tft.drawString(dateBuf, 82, 45);
+  drawWifiBars(435, 11);
+  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(2);
+  tft.drawString("Reader id: " + String(cfg.readerId), 11, 78);
+  String wSsid = WiFi.SSID();
+  tft.drawString("WI-FI ssid: " + (wSsid.length() ? wSsid : "offline"), 10, 101);
+  tft.drawString("Wi-Fi pass: " + WiFi.psk(), 10, 125);
+  tft.drawString("Company id: " + String(cfg.companyId), 10, 148);
+  tft.drawString("Backend: " + String(cfg.backend), 10, 172);
+  tft.drawString("Queue: " + String(g_queueSize), 11, 195);
+  tft.drawString("NTP: " + String(g_ntpSynced ? "OK" : "NO SYNC"), 11, 218);
+  tft.drawString("Time: " + getISOTimestamp(), 11, 240);
+  tft.drawString("FW: " + String(FW_VERSION), 10, 260);
+  tft.drawString("Sede: " + String(cfg.sede[0] ? cfg.sede : "(non impostata)"), 10, 280);
+  tft.setCursor(11, 301);
+  tft.setTextColor(0xFFFF, 0x0000);
+  tft.print("NFC: ");
+  tft.setTextColor(g_rfidOk ? 0x64E6 : 0xF800, 0x0000);
+  tft.print(g_rfidOk ? "OK" : "ERR");
+  tft.setTextColor(0xFFFF, 0x0000);
+  tft.print(" / Display: ");
+  tft.setTextColor(g_displayOk ? 0x64E6 : 0xF800, 0x0000);
+  tft.print(g_displayOk ? "OK" : "ERR");
 }
 
 void showWaitingNtp() {
@@ -1065,58 +1047,17 @@ void taskWifi() {
 //
 void startProvisioning() {
   // ── Schermata TFT ──
-  tft.fillScreen(C_BG);
-  uint16_t bodyTxt = g_themeLight ? C_BLACK : C_WHITE;
-
-  tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(2);
-  tft.setCursor(20, 18); tft.print("Configurazione WiFi");
-
-  tft.setTextColor(C_GRAY, C_BG); tft.setTextSize(1);
-  tft.setCursor(20, 46); tft.print("Connetti al WiFi:");
-
   char apName[32];
   snprintf(apName, sizeof(apName), "timbry-%06X", (uint32_t)(ESP.getEfuseMac() & 0xFFFFFF));
-  tft.setTextColor(C_TIMBRY, C_BG); tft.setTextSize(3);
-  tft.setCursor(20, 62); tft.print(apName);
 
-  tft.setTextColor(C_GRAY, C_BG); tft.setTextSize(1);
-  tft.setCursor(20, 102); tft.print("Poi vai su: 192.168.4.1");
-  tft.setCursor(20, 116);
-  tft.print("Per RESET: scrivi RESET nel campo Backend");
-
-  // Anteprima temi: 2 colonne × 5 righe (9 temi)
-  tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(1);
-  tft.setCursor(20, 135); tft.print("Temi (campo Tema nel portale):");
-
-  int cols = 2;
-  int startY = 148;
-  int rowH   = 18;
-  int col0x  = 20;
-  int col1x  = 250;
-
-  for (int i = 0; i < THEME_COUNT; i++) {
-    int col  = i % cols;
-    int row  = i / cols;
-    int bx   = (col == 0) ? col0x : col1x;
-    int by2  = startY + row * rowH;
-
-    // Campione sfondo + header
-    tft.fillRect(bx,    by2, 14, 10, THEMES[i].bg);
-    tft.drawRect(bx,    by2, 14, 10, C_GRAY);
-    tft.fillRect(bx+16, by2, 14, 10, THEMES[i].header);
-    tft.drawRect(bx+16, by2, 14, 10, C_GRAY);
-
-    // Numero + nome
-    tft.setTextColor(bodyTxt, C_BG);
-    tft.setCursor(bx + 34, by2 + 2);
-    tft.print(i); tft.print("="); tft.print(THEMES[i].name);
-
-    // Marcatore tema attuale
-    if (i == cfg.theme) {
-      tft.setTextColor(C_TIMBRY, C_BG);
-      tft.print(" <");
-    }
-  }
+  tft.fillScreen(0x0000);
+  tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
+  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(4);
+  tft.drawString("Configurazione", 93, 26);
+  tft.setTextSize(3);
+  tft.drawString("Nome wifi: " + String(apName), 16, 88);
+  tft.drawString("Scansiona QR:", 14, 205);
+  tft.drawBitmap(286, 136, image_IMG_9666_bits, 160, 160, 0xFFFF);
 
   // ── Portale WiFiManager ──
   WiFiManager wm;
