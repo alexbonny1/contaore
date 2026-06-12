@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "3.1"
+#define FW_VERSION          "3.2"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -794,32 +794,29 @@ void queueFlush() {
 }
 
 // ── OTA UPDATE ───────────────────────
-// GitHub releases rispondono 302 → CDN; HTTPUpdate non può seguire redirect
-// autonomamente in questa versione, quindi lo risolviamo prima con HTTPClient.
+// GitHub releases: 302 → CDN → a volte un altro redirect. Seguiamo fino a 5 hop.
 static String resolveOtaUrl(const String& url) {
   const char* hdrKeys[] = {"Location"};
-  String loc = "";
-  if (url.startsWith("https")) {
-    WiFiClientSecure c; c.setInsecure(); HTTPClient h;
-    h.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
-    h.collectHeaders(hdrKeys, 1);
-    if (h.begin(c, url)) {
-      int code = h.GET();
-      if (code >= 300 && code < 400) loc = h.header("Location");
-      h.end();
+  String current = url;
+  for (int hop = 0; hop < 5; hop++) {
+    String loc = "";
+    bool isHttps = current.startsWith("https");
+    if (isHttps) {
+      WiFiClientSecure c; c.setInsecure(); HTTPClient h;
+      h.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
+      h.collectHeaders(hdrKeys, 1);
+      if (h.begin(c, current)) { int code = h.GET(); if (code >= 300 && code < 400) loc = h.header("Location"); h.end(); }
+    } else {
+      WiFiClient c; HTTPClient h;
+      h.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
+      h.collectHeaders(hdrKeys, 1);
+      if (h.begin(c, current)) { int code = h.GET(); if (code >= 300 && code < 400) loc = h.header("Location"); h.end(); }
     }
-  } else {
-    WiFiClient c; HTTPClient h;
-    h.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
-    h.collectHeaders(hdrKeys, 1);
-    if (h.begin(c, url)) {
-      int code = h.GET();
-      if (code >= 300 && code < 400) loc = h.header("Location");
-      h.end();
-    }
+    if (loc.length() > 8) { Serial.printf("OTA hop %d → %s\n", hop+1, loc.c_str()); current = loc; }
+    else { break; }
   }
-  Serial.printf("OTA URL risolto: %s\n", loc.length() > 8 ? loc.c_str() : "(nessun redirect)");
-  return (loc.length() > 8) ? loc : url;
+  Serial.printf("OTA URL finale: %s\n", current.c_str());
+  return current;
 }
 
 void doOTA(String url, String newVersion) {
