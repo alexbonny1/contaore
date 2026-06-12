@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Clock, Calendar, AlertCircle, CheckCircle2,
   XCircle, ChevronDown, ChevronUp, Send, LogOut, Lock,
-  Sun, Moon, TrendingUp, UserCheck, Umbrella, Pencil
+  Sun, Moon, TrendingUp, UserCheck, Umbrella, Pencil, Download
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -281,6 +281,35 @@ export default function DipendenteDashboard() {
 
   function logout() { localStorage.clear(); navigate("/"); }
 
+  function downloadMonthCSV(mese, giorni) {
+    const header = ["Data", "Giorno", "Stato", "Entrata 1", "Uscita 1", "Entrata 2", "Uscita 2", "Ore totali", "Giustificazione"];
+    const rows = giorni.map(g => {
+      const { label } = statoBadge(g.stato, g.ritardo_minuti);
+      const giust = giustificazioni.find(j => j.data === g.giorno);
+      return [
+        new Date(g.giorno).toLocaleDateString("it-IT"),
+        new Date(g.giorno).toLocaleDateString("it-IT", { weekday: "long" }),
+        label,
+        g.coppie[0]?.entrata || "",
+        g.coppie[0]?.uscita  || "",
+        g.coppie[1]?.entrata || "",
+        g.coppie[1]?.uscita  || "",
+        String(g.ore_totali).replace(".", ","),
+        giust?.motivo || "",
+      ];
+    });
+    const csv  = [header, ...rows].map(r => r.map(v => `"${v}"`).join(";")).join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `ContaOre_${employee.cognome}_${employee.nome}_${mese}.csv`.replace(/\s+/g, "_");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -426,17 +455,27 @@ export default function DipendenteDashboard() {
                 <div key={mese} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 overflow-hidden">
 
                   {/* header mese */}
-                  <button className="w-full flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4" onClick={() => setOpenMonth(isOpen ? null : mese)}>
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-full flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 gap-2">
+                    <button className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 text-left" onClick={() => setOpenMonth(isOpen ? null : mese)}>
                       <Calendar size={14} className="sm:w-4 sm:h-4 text-zinc-400 flex-shrink-0" />
                       <span className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize truncate">{mese}</span>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-4">
+                    </button>
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <span className="text-[10px] sm:text-xs text-zinc-400 whitespace-nowrap">{oreM}h</span>
-                      {assM > 0 && <span className="text-[10px] sm:text-xs text-red-500 whitespace-nowrap hidden xs:inline">{assM} assenze</span>}
-                      {isOpen ? <ChevronUp size={14} className="sm:w-4 sm:h-4 text-zinc-400" /> : <ChevronDown size={14} className="sm:w-4 sm:h-4 text-zinc-400" />}
+                      {assM > 0 && <span className="text-[10px] sm:text-xs text-red-500 whitespace-nowrap hidden xs:inline">{assM} ass.</span>}
+                      <button
+                        onClick={() => downloadMonthCSV(mese, giorni)}
+                        className="flex items-center gap-1 h-8 px-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[11px] font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                        title={`Scarica ore ${mese}`}
+                      >
+                        <Download size={12} />
+                        <span className="hidden sm:inline">CSV</span>
+                      </button>
+                      <button onClick={() => setOpenMonth(isOpen ? null : mese)} className="flex items-center justify-center h-8 w-8 rounded-xl text-zinc-400">
+                        {isOpen ? <ChevronUp size={14} className="sm:w-4 sm:h-4" /> : <ChevronDown size={14} className="sm:w-4 sm:h-4" />}
+                      </button>
                     </div>
-                  </button>
+                  </div>
 
                   {/* giorni */}
                   {isOpen && (
