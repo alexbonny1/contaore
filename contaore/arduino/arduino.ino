@@ -480,7 +480,9 @@ void showResult(String tipo, String nome, String orario) {
   if (linea2.length() > 0) {
     tft.setTextColor(0xFFFF, 0x0000);
     tft.setTextSize(4);
-    tft.drawString(linea2, 69, 182);
+    tft.setTextDatum(MC_DATUM);
+    tft.drawString(linea2, 240, 182);
+    tft.setTextDatum(TL_DATUM);
   }
 
   g_resultTimer = millis();
