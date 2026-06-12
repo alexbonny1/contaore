@@ -69,6 +69,7 @@
 #include <time.h>
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "lopaka_assets.h"
 
 // ── PIN ──────────────────────────────
 #define PIN_RC522_SS    21
@@ -410,14 +411,35 @@ void drawDate() {
   g_dateSprite.pushSprite(DATE_X, DATE_Y);
 }
 
+void drawScreen_1() {
+  char dateBuf[16] = "--/--/----";
+  if (g_ntpSynced) {
+    time_t now = time(nullptr);
+    struct tm* t = localtime(&now);
+    snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
+      t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
+  }
+  uint16_t wifiColor = g_wifiOffline ? C_RED : 0x64E6;
+
+  tft.fillScreen(0x0000);
+  tft.pushImage(73, 125, 348, 84, image_paint_2_pixels);
+  tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
+  tft.setTextColor(0xFFFF, 0x0000);
+  tft.setTextSize(2);
+  tft.drawString(cfg.readerId[0] ? cfg.readerId : "TIMBRY", 83, 17);
+  tft.drawString(dateBuf, 82, 45);
+  tft.drawString("Timbratura", 288, 284);
+  tft.drawBitmap(435, 11, image_network_4_bars_bits, 30, 32, wifiColor);
+  tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
+}
+
 void showIdle() {
   if (!g_ntpSynced) { g_waitingNtp = true; showWaitingNtp(); return; }
   g_waitingNtp  = false;
   ds.status     = "ATTESA";
   ds.dipendente = "";
   ds.orario     = "";
-  tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, C_BG);
-  drawHeader(); drawClock(); drawDate(); drawFooter();
+  drawScreen_1();
 }
 
 void showResult(String tipo, String nome, String orario) {
@@ -567,11 +589,29 @@ void updateClock() {
   String newOra = String(buf);
 
   static bool lwOff = false;
-  if (lwOff != g_wifiOffline) { lwOff = g_wifiOffline; drawHeader(); }
+  bool wifiChanged = (lwOff != g_wifiOffline);
+  if (wifiChanged) lwOff = g_wifiOffline;
 
-  if (ds.status == "ATTESA" && newOra != ds.oraCorrente) {
-    ds.oraCorrente = newOra; drawClock(); drawDate();
-  } else { ds.oraCorrente = newOra; }
+  if (ds.status == "ATTESA") {
+    bool minuteChanged = (newOra != ds.oraCorrente);
+    ds.oraCorrente = newOra;
+    if (minuteChanged) {
+      char dateBuf[16];
+      snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
+        t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
+      tft.fillRect(82, 45, 200, 18, 0x0000);
+      tft.setTextColor(0xFFFF, 0x0000);
+      tft.setTextSize(2);
+      tft.drawString(dateBuf, 82, 45);
+    }
+    if (wifiChanged) {
+      uint16_t wifiColor = g_wifiOffline ? C_RED : 0x64E6;
+      tft.fillRect(435, 11, 30, 32, 0x0000);
+      tft.drawBitmap(435, 11, image_network_4_bars_bits, 30, 32, wifiColor);
+    }
+  } else {
+    ds.oraCorrente = newOra;
+  }
 }
 
 // ── CONFIG NVS ───────────────────────
