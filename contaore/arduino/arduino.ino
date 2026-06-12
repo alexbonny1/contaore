@@ -585,23 +585,17 @@ void drawAdmin() {
 
 void showWaitingNtp() {
   g_waitingNtp = true;
-  tft.fillScreen(C_BG);
-  drawHeader();
-  tft.fillRect(0, FTR_Y, 480, 320 - FTR_Y, C_HEADER);
-
-  tft.setTextColor(C_YELLOW, C_BG); tft.setTextSize(4);
-  tft.setCursor(195, 65); tft.print("?:??");
-
-  uint16_t bodyTxt = g_themeLight ? C_BLACK : C_WHITE;
-  tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(2);
-  tft.setCursor(110, 145); tft.print("Orario non disponibile");
-
-  tft.setTextColor(C_YELLOW, C_BG); tft.setTextSize(1);
-  tft.setCursor(180, 180);
-  tft.print(g_wifiOffline ? "In attesa del WiFi..." : "Sincronizzazione NTP...");
-  tft.setCursor(160, 198);
-  tft.print("Le timbrature sono bloccate");
-
+  tft.fillScreen(0x0000);
+  tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
+  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(2);
+  tft.drawString(cfg.readerId[0] ? cfg.readerId : "TIMBRY", 83, 17);
+  tft.drawString("--/--/----", 82, 45);
+  drawWifiBars(435, 11);
+  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(4);
+  tft.drawString("Orario non", 116, 114);
+  tft.drawString("Configurato", 112, 159);
+  tft.setTextColor(C_YELLOW, 0x0000); tft.setTextSize(4);
+  tft.drawString(g_wifiOffline ? "in attesa di Wi-Fi" : "Sincronizzazione NTP...", 36, 242);
   g_lastNtpRetry = millis();
 }
 
@@ -613,11 +607,9 @@ void taskNtpRetry() {
   Serial.println("NTP retry...");
   if (syncNTP()) { g_ntpSynced = true; g_waitingNtp = false; showIdle(); }
   else {
-    uint16_t bodyTxt = g_themeLight ? C_BLACK : C_GRAY;
-    tft.fillRect(0, HDR_H + 180, 480, 30, C_BG);
-    tft.setTextColor(bodyTxt, C_BG); tft.setTextSize(1);
-    tft.setCursor(90, HDR_H + 185);
-    tft.print("Ultimo tentativo: "); tft.print(millis() / 1000); tft.print("s");
+    tft.fillRect(36, 242, 410, 36, 0x0000);
+    tft.setTextColor(C_YELLOW, 0x0000); tft.setTextSize(4);
+    tft.drawString(g_wifiOffline ? "in attesa di Wi-Fi" : "Sincronizzazione NTP...", 36, 242);
   }
 }
 
@@ -627,7 +619,14 @@ void updateClock() {
 
   if (!g_ntpSynced) {
     static bool lwOff2 = false;
-    if (lwOff2 != g_wifiOffline) { lwOff2 = g_wifiOffline; drawHeader(); }
+    bool wOff2Changed = (lwOff2 != g_wifiOffline);
+    if (wOff2Changed) {
+      lwOff2 = g_wifiOffline;
+      drawWifiBars(435, 11);
+      tft.fillRect(36, 242, 410, 36, 0x0000);
+      tft.setTextColor(C_YELLOW, 0x0000); tft.setTextSize(4);
+      tft.drawString(g_wifiOffline ? "in attesa di Wi-Fi" : "Sincronizzazione NTP...", 36, 242);
+    }
     return;
   }
 
@@ -1045,7 +1044,7 @@ void taskWifi() {
     g_wifiOffline   = true;
     g_lastReconnect = millis();
     Serial.println("WIFI OFFLINE");
-    if (!g_ntpSynced) showWaitingNtp(); else drawHeader();
+    if (!g_ntpSynced) showWaitingNtp(); else drawWifiBars(435, 11);
   }
   if (millis() - g_lastReconnect > RECONNECT_MS) {
     g_lastReconnect = millis();
