@@ -430,7 +430,7 @@ void drawScreen_1() {
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
   tft.setTextColor(0xFFFF, 0x0000);
   tft.setTextSize(13);
-  tft.drawString(timeBuf, 59, 126);
+  tft.drawString(timeBuf, 54, 127);
 }
 
 void showIdle() {
@@ -597,7 +597,7 @@ void updateClock() {
       tft.fillRect(82, 45, 200, 18, 0x0000);
       tft.drawString(dateBuf, 82, 45);
       tft.setTextSize(13);
-      tft.drawString(newOra, 59, 126);
+      tft.drawString(newOra, 54, 127);
     }
     if (minuteChanged || wifiChanged || internetChanged) {
       drawWifiBars(435, 11);
