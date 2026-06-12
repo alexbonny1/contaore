@@ -234,52 +234,12 @@ void applyTheme(uint8_t idx) {
 
 // ── SPLASH ───────────────────────────
 void drawSplashLogo() {
-  tft.fillScreen(C_BG);
-
-  // Card centrale: leggermente più chiara/scura del bg
-  uint16_t cardBg = g_themeLight
-    ? tft.alphaBlend(200, C_BG, 0xC618)   // sui temi chiari: grigio chiaro
-    : (C_BG == 0x0000 ? 0x0841 : tft.alphaBlend(128, C_BG, 0x0000));
-
-  tft.fillRect(80, 60, 320, 160, cardBg);
-  tft.drawRect(80, 60, 320, 160, C_TIMBRY);
-
-  // Badge NFC
-  int16_t bx = 130, by = 90;
-  tft.drawRect(bx, by, 36, 48, C_TIMBRY);
-  tft.fillRect(bx+1, by+1, 34, 46, cardBg);
-  tft.drawRect(bx+8, by+12, 20, 24, C_TIMBRY);
-  tft.fillRect(bx+10, by+14, 16, 20, 0x051F);
-  for (int i = 0; i < 3; i++) {
-    tft.drawFastHLine(bx+5,  by+17+i*6, 3, C_TIMBRY);
-    tft.drawFastHLine(bx+28, by+17+i*6, 3, C_TIMBRY);
-  }
-  tft.drawCircle(bx+36, by+24, 8,  C_TIMBRY);
-  tft.drawCircle(bx+36, by+24, 15, C_TIMBRY);
-  tft.drawCircle(bx+36, by+24, 22, 0x02DF);
-  tft.fillRect(bx-4, by-4, 42, 56, cardBg);
-  tft.drawRect(bx, by, 36, 48, C_TIMBRY);
-  tft.drawRect(bx+8, by+12, 20, 24, C_TIMBRY);
-
-  uint16_t titleColor = g_themeLight ? C_BLACK : C_WHITE;
-  tft.setTextColor(titleColor, cardBg);
-  tft.setTextSize(5);
-  tft.setCursor(185, 100);
-  tft.print("TIMBRY");
-
-  tft.drawFastHLine(185, 138, 190, C_TIMBRY);
-
-  tft.setTextColor(C_TIMBRY, cardBg);
-  tft.setTextSize(1);
-  tft.setCursor(185, 148);
-  tft.print("NFC READER  v");
-  tft.print(FW_VERSION);
-
-  uint16_t subtitleColor = g_themeLight ? 0x6B4D : C_GRAY;
-  tft.setTextColor(subtitleColor, C_BG);
-  tft.setTextSize(1);
-  tft.setCursor(170, 240);
-  tft.print("Sistema Presenze NFC");
+  tft.fillScreen(0x0000);
+  tft.drawBitmap(35, 65, image_splash_logo_bits, 174, 150, 0x02BA);
+  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(7);
+  tft.drawString("TIMBRY", 223, 121);
+  tft.setTextSize(4);
+  tft.drawString("Firmware: " + String(FW_VERSION), 78, 273);
 }
 
 // ── BUZZER ───────────────────────────
