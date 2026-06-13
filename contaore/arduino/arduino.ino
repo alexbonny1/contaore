@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "3.9"
+#define FW_VERSION          "4.0"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -234,9 +234,11 @@ void applyTheme(uint8_t idx) {
 
 // ── SPLASH ───────────────────────────
 void drawSplashLogo() {
-  tft.fillScreen(0x0000);
+  uint16_t bg = C_BG;
+  uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
+  tft.fillScreen(bg);
   tft.drawBitmap(35, 65, image_splash_logo_bits, 174, 150, 0x02BA);
-  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(7);
+  tft.setTextColor(fg, bg); tft.setTextSize(7);
   tft.drawString("TIMBRY", 223, 121);
   tft.setTextSize(4);
   tft.drawString("Firmware: " + String(FW_VERSION), 78, 273);
@@ -383,7 +385,7 @@ void drawDate() {
 void drawWifiBars(int x, int y) {
   const int bw = 6, gap = 2;
   const int heights[4] = {8, 14, 20, 26};
-  tft.fillRect(x, y, 30, 32, 0x0000);
+  tft.fillRect(x, y, 30, 32, C_BG);
 
   if (g_wifiOffline) {
     for (int i = 0; i < 4; i++) {
@@ -425,17 +427,19 @@ void drawScreen_1() {
       t->tm_hour, t->tm_min);
   }
 
-  tft.fillScreen(0x0000);
+  uint16_t bg = C_BG;
+  uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
+  tft.fillScreen(bg);
   tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
-  tft.setTextColor(0xFFFF, 0x0000);
+  tft.setTextColor(fg, bg);
   tft.setTextSize(2);
   tft.drawString(cfg.readerId[0] ? cfg.readerId : "TIMBRY", 83, 17);
   tft.drawString(dateBuf, 82, 45);
   tft.drawString("Timbratura", 288, 284);
   drawWifiBars(435, 11);
-  tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
-  tft.setTextColor(0xFFFF, 0x0000);
-  tft.setTextSize(13);
+  tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, fg);
+  tft.setTextColor(fg, bg);
+  tft.setTextSize(23);
   tft.setTextDatum(MC_DATUM);
   tft.drawString(timeBuf, 240, 179);
   tft.setTextDatum(TL_DATUM);
@@ -471,22 +475,24 @@ void showResult(String tipo, String nome, String orario) {
       t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
   }
 
-  tft.fillScreen(0x0000);
+  uint16_t bg = C_BG;
+  uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
+  tft.fillScreen(bg);
   tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
-  tft.setTextColor(0xFFFF, 0x0000);
+  tft.setTextColor(fg, bg);
   tft.setTextSize(2);
   tft.drawString(cfg.readerId[0] ? cfg.readerId : "TIMBRY", 83, 17);
   tft.drawString(dateBuf, 82, 45);
   tft.drawString("Timbratura", 288, 284);
   drawWifiBars(435, 11);
-  tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
+  tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, fg);
 
-  tft.setTextColor(typeColor, 0x0000);
+  tft.setTextColor(typeColor, bg);
   tft.setTextSize(8);
   tft.drawString(tipo, 80, 103);
 
   if (linea2.length() > 0) {
-    tft.setTextColor(0xFFFF, 0x0000);
+    tft.setTextColor(fg, bg);
     tft.setTextSize(4);
     tft.setTextDatum(MC_DATUM);
     tft.drawString(linea2, 240, 182);
@@ -506,13 +512,15 @@ void drawAdmin() {
     snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
       t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
   }
-  tft.fillScreen(0x0000);
+  uint16_t bg = C_BG;
+  uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
+  tft.fillScreen(bg);
   tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
-  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(2);
+  tft.setTextColor(fg, bg); tft.setTextSize(2);
   tft.drawString("Schermata ADMIN", 83, 17);
   tft.drawString(dateBuf, 82, 45);
   drawWifiBars(435, 11);
-  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(2);
+  tft.setTextColor(fg, bg); tft.setTextSize(2);
   tft.drawString("Reader id: " + String(cfg.readerId), 11, 78);
   String wSsid = WiFi.SSID();
   tft.drawString("WI-FI ssid: " + (wSsid.length() ? wSsid : "offline"), 10, 101);
@@ -525,28 +533,31 @@ void drawAdmin() {
   tft.drawString("FW: " + String(FW_VERSION), 10, 260);
   tft.drawString("Sede: " + String(cfg.sede[0] ? cfg.sede : "(non impostata)"), 10, 280);
   tft.setCursor(11, 301);
-  tft.setTextColor(0xFFFF, 0x0000);
+  tft.setTextColor(fg, bg);
   tft.print("NFC: ");
-  tft.setTextColor(g_rfidOk ? 0x64E6 : 0xF800, 0x0000);
+  tft.setTextColor(g_rfidOk ? 0x64E6 : 0xF800, bg);
   tft.print(g_rfidOk ? "OK" : "ERR");
-  tft.setTextColor(0xFFFF, 0x0000);
+  tft.setTextColor(fg, bg);
   tft.print(" / Display: ");
-  tft.setTextColor(g_displayOk ? 0x64E6 : 0xF800, 0x0000);
+  tft.setTextColor(g_displayOk ? 0x64E6 : 0xF800, bg);
   tft.print(g_displayOk ? "OK" : "ERR");
 }
 
 void showWaitingNtp() {
   g_waitingNtp = true;
-  tft.fillScreen(0x0000);
+  uint16_t bg = C_BG;
+  uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
+  uint16_t warn = g_themeLight ? C_RED : C_YELLOW;
+  tft.fillScreen(bg);
   tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
-  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(2);
+  tft.setTextColor(fg, bg); tft.setTextSize(2);
   tft.drawString(cfg.readerId[0] ? cfg.readerId : "TIMBRY", 83, 17);
   tft.drawString("--/--/----", 82, 45);
   drawWifiBars(435, 11);
-  tft.setTextColor(0xFFFF, 0x0000); tft.setTextSize(4);
+  tft.setTextColor(fg, bg); tft.setTextSize(4);
   tft.drawString("Orario non", 116, 114);
   tft.drawString("Configurato", 112, 159);
-  tft.setTextColor(C_YELLOW, 0x0000); tft.setTextSize(4);
+  tft.setTextColor(warn, bg); tft.setTextSize(4);
   tft.drawString(g_wifiOffline ? "in attesa di Wi-Fi" : "Sincronizzazione NTP...", 36, 242);
   g_lastNtpRetry = millis();
 }
@@ -559,8 +570,9 @@ void taskNtpRetry() {
   Serial.println("NTP retry...");
   if (syncNTP()) { g_ntpSynced = true; g_waitingNtp = false; showIdle(); }
   else {
-    tft.fillRect(36, 242, 410, 36, 0x0000);
-    tft.setTextColor(C_YELLOW, 0x0000); tft.setTextSize(4);
+    uint16_t warn = g_themeLight ? C_RED : C_YELLOW;
+    tft.fillRect(36, 242, 410, 36, C_BG);
+    tft.setTextColor(warn, C_BG); tft.setTextSize(4);
     tft.drawString(g_wifiOffline ? "in attesa di Wi-Fi" : "Sincronizzazione NTP...", 36, 242);
   }
 }
@@ -574,9 +586,10 @@ void updateClock() {
     bool wOff2Changed = (lwOff2 != g_wifiOffline);
     if (wOff2Changed) {
       lwOff2 = g_wifiOffline;
+      uint16_t warn = g_themeLight ? C_RED : C_YELLOW;
       drawWifiBars(435, 11);
-      tft.fillRect(36, 242, 410, 36, 0x0000);
-      tft.setTextColor(C_YELLOW, 0x0000); tft.setTextSize(4);
+      tft.fillRect(36, 242, 410, 36, C_BG);
+      tft.setTextColor(warn, C_BG); tft.setTextSize(4);
       tft.drawString(g_wifiOffline ? "in attesa di Wi-Fi" : "Sincronizzazione NTP...", 36, 242);
     }
     return;
@@ -599,15 +612,18 @@ void updateClock() {
     bool minuteChanged = (newOra != ds.oraCorrente);
     ds.oraCorrente = newOra;
     if (minuteChanged) {
+      uint16_t bg = C_BG;
+      uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
       char dateBuf[16];
       snprintf(dateBuf, sizeof(dateBuf), "%02d/%02d/%04d",
         t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
-      tft.setTextColor(0xFFFF, 0x0000);
+      tft.setTextColor(fg, bg);
       tft.setTextSize(2);
-      tft.fillRect(82, 45, 200, 18, 0x0000);
+      tft.fillRect(82, 45, 200, 18, bg);
       tft.drawString(dateBuf, 82, 45);
-      tft.fillRect(0, 127, 480, 104, C_BG);
-      tft.setTextSize(13);
+      tft.fillRect(0, 127, 480, 104, bg);
+      tft.setTextColor(fg, bg);
+      tft.setTextSize(23);
       tft.setTextDatum(MC_DATUM);
       tft.drawString(newOra, 240, 179);
       tft.setTextDatum(TL_DATUM);
