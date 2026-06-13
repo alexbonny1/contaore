@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "3.7"
+#define FW_VERSION          "3.8"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -435,9 +435,9 @@ void drawScreen_1() {
   drawWifiBars(435, 11);
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
   tft.setTextColor(0xFFFF, 0x0000);
-  tft.setTextSize(13);
+  tft.setTextSize(14);
   tft.setTextDatum(MC_DATUM);
-  tft.drawString(timeBuf, 240, 179);
+  tft.drawString(timeBuf, 240, 162);
   tft.setTextDatum(TL_DATUM);
 }
 
@@ -606,9 +606,10 @@ void updateClock() {
       tft.setTextSize(2);
       tft.fillRect(82, 45, 200, 18, 0x0000);
       tft.drawString(dateBuf, 82, 45);
-      tft.setTextSize(13);
+      tft.fillRect(0, 106, 480, 112, 0x0000);
+      tft.setTextSize(14);
       tft.setTextDatum(MC_DATUM);
-      tft.drawString(newOra, 240, 179);
+      tft.drawString(newOra, 240, 162);
       tft.setTextDatum(TL_DATUM);
     }
     if (minuteChanged || wifiChanged || internetChanged) {
@@ -920,12 +921,6 @@ void taskRfid() {
       Serial.println("ADMIN → PROVISIONING");
       beepOk();
       g_adminMode = false;
-      tft.fillRect(0, HDR_H, 480, FTR_Y - HDR_H, C_BG);
-      uint16_t bodyTxt = g_themeLight ? C_BLACK : C_WHITE;
-      tft.setTextColor(C_CYAN, C_BG); tft.setTextSize(3);
-      tft.setCursor(100, 130); tft.print("Avvio portale...");
-      drawHeader(); drawFooter();
-      delay(1200);
       startProvisioning();
     } else {
       // 1a lettura → mostra config
@@ -1043,18 +1038,9 @@ void startProvisioning() {
   WiFiManagerParameter p_r("reader",  "Reader ID",       cfg.readerId,   63);
   WiFiManagerParameter p_c("company", "Company ID",      cfg.companyId,  63);
   WiFiManagerParameter p_s("sede",    "Sede / Ubicazione", cfg.sede,     63);
-  String themeHtml = String(
-    "<br/><label style='display:flex;align-items:center;gap:10px;"
-    "cursor:pointer;margin:8px 0;font-size:15px'>"
-    "<input type='checkbox' id='tcb' style='width:20px;height:20px'"
-    " onchange=\"document.getElementById('theme').value=this.checked?'1':'0';\""
-  ) + (g_themeLight ? " checked" : "") +
-  "> Sfondo chiaro (bianco)</label>"
-  "<input type='hidden' id='theme' name='theme' value='"
-  + (g_themeLight ? "1" : "0") + "'>";
-  WiFiManagerParameter p_t(themeHtml.c_str());
-
-  int capturedTheme = g_themeLight ? 1 : 0;
+  char themeAttr[24];
+  snprintf(themeAttr, sizeof(themeAttr), "type='checkbox'%s", g_themeLight ? " checked" : "");
+  WiFiManagerParameter p_t("theme", "Sfondo chiaro (bianco)", "1", 2, themeAttr);
 
   char debounceStr[8];
   snprintf(debounceStr, sizeof(debounceStr), "%lu", (unsigned long)cfg.debounce);
@@ -1076,10 +1062,6 @@ void startProvisioning() {
   wm.addParameter(&p_s);
   wm.addParameter(&p_d);
   wm.addParameter(&p_reset);
-
-  wm.setSaveParamsCallback([&]() {
-    if (wm.server) capturedTheme = wm.server->arg("theme").toInt();
-  });
 
   if (!wm.startConfigPortal(apName)) { ESP.restart(); return; }
 
@@ -1104,7 +1086,8 @@ void startProvisioning() {
   strlcpy(cfg.companyId, p_c.getValue(),     sizeof(cfg.companyId));
   strlcpy(cfg.sede,      p_s.getValue(),     sizeof(cfg.sede));
 
-  cfg.theme = (capturedTheme == 1) ? 4 : 0;
+  const char* tv = p_t.getValue();
+  cfg.theme = (tv && tv[0] == '1') ? 4 : 0;
   applyTheme(cfg.theme);
 
 
