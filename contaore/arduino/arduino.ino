@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "4.6"
+#define FW_VERSION          "4.7"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -415,21 +415,50 @@ void drawWifiBars(int x, int y) {
   }
 }
 
-// Orologio grande. Regola la dimensione cambiando CLOCK_SIZE qui sotto:
-// ogni unità = 8px di altezza. Più basso = più piccolo.
-// Massimo che entra nei 480px di larghezza per "00:00" = 16.
-#define CLOCK_SIZE 16
+// 7-segment digit table: segments [top, TR, BR, bot, BL, TL, mid]
+static const bool SEG7[10][7] = {
+  {1,1,1,1,1,1,0}, // 0
+  {0,1,1,0,0,0,0}, // 1
+  {1,1,0,1,1,0,1}, // 2
+  {1,1,1,1,0,0,1}, // 3
+  {0,1,1,0,0,1,1}, // 4
+  {1,0,1,1,0,1,1}, // 5
+  {1,0,1,1,1,1,1}, // 6
+  {1,1,1,0,0,0,0}, // 7
+  {1,1,1,1,1,1,1}, // 8
+  {1,1,1,1,0,1,1}, // 9
+};
+
+void drawSegDigit(int x, int y, int w, int h, int t, int d, uint16_t fg, uint16_t bg) {
+  tft.fillRect(x, y, w, h, bg);
+  if (d < 0 || d > 9) return;
+  int hh = h / 2;
+  if (SEG7[d][0]) tft.fillRect(x+t,   y,          w-2*t, t,      fg); // top
+  if (SEG7[d][1]) tft.fillRect(x+w-t, y+t,        t,     hh-2*t, fg); // top-right
+  if (SEG7[d][2]) tft.fillRect(x+w-t, y+hh+t,     t,     hh-2*t, fg); // bot-right
+  if (SEG7[d][3]) tft.fillRect(x+t,   y+h-t,      w-2*t, t,      fg); // bottom
+  if (SEG7[d][4]) tft.fillRect(x,     y+hh+t,     t,     hh-2*t, fg); // bot-left
+  if (SEG7[d][5]) tft.fillRect(x,     y+t,        t,     hh-2*t, fg); // top-left
+  if (SEG7[d][6]) tft.fillRect(x+t,   y+hh-t/2,  w-2*t, t,      fg); // middle
+}
+
 void drawBigClock(const char* timeStr) {
   uint16_t bg = C_BG;
   uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
-  tft.fillRect(0, 95, 480, 168, bg);
-  tft.setTextFont(1);
-  tft.setTextSize(CLOCK_SIZE);
-  tft.setTextColor(fg, bg);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(timeStr, 240, 179);
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextSize(1);
+  const int DW = 90, DH = 170, T = 13, CW = 30;
+  int totalW = 4*DW + CW;           // 390px
+  int startX = (480 - totalW) / 2;  // 45px
+  int startY = 179 - DH / 2;        // 94px
+  tft.fillRect(0, 90, 480, 184, bg);
+  if (strlen(timeStr) >= 5 && timeStr[2] == ':') {
+    drawSegDigit(startX,          startY, DW, DH, T, timeStr[0]-'0', fg, bg);
+    drawSegDigit(startX+DW,       startY, DW, DH, T, timeStr[1]-'0', fg, bg);
+    int cx = startX + 2*DW + CW/2 - T;
+    tft.fillRect(cx, startY + DH/3 - T,   T*2, T*2, fg); // colon upper dot
+    tft.fillRect(cx, startY + 2*DH/3 - T, T*2, T*2, fg); // colon lower dot
+    drawSegDigit(startX+2*DW+CW,  startY, DW, DH, T, timeStr[3]-'0', fg, bg);
+    drawSegDigit(startX+3*DW+CW,  startY, DW, DH, T, timeStr[4]-'0', fg, bg);
+  }
 }
 
 void drawScreen_1() {
