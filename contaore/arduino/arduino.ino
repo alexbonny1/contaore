@@ -99,7 +99,7 @@
 // ── LAYOUT ───────────────────────────
 #define HDR_H     40
 #define FTR_Y     285
-#define CLK_SIZE  8
+#define CLK_SIZE  7
 #define CLK_SPR_W 240   // 5 chars × 6px × size 8
 #define CLK_SPR_H 64    // 8px × size 8
 #define CLK_SPR_X 120   // (480 - 240) / 2
@@ -501,12 +501,14 @@ void showResult(String tipo, String nome, String orario) {
 
   tft.setTextColor(typeColor, bg);
   tft.setTextSize(8);
-  tft.drawString(tipo, 80, 103);
+ //testo Entrata
+  tft.drawString(tipo, 110, 103);
 
   if (linea2.length() > 0) {
     tft.setTextColor(fg, bg);
     tft.setTextSize(4);
     tft.setTextDatum(MC_DATUM);
+   //nome dipendente
     tft.drawString(linea2, 240, 182);
     tft.setTextDatum(TL_DATUM);
   }
