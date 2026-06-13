@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "3.4"
+#define FW_VERSION          "3.5"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -436,9 +436,7 @@ void drawScreen_1() {
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
   tft.setTextColor(0xFFFF, 0x0000);
   tft.setTextSize(13);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(timeBuf, 240, 184);
-  tft.setTextDatum(TL_DATUM);
+  tft.drawString(timeBuf, 45, 127);
 }
 
 void showIdle() {
@@ -607,9 +605,7 @@ void updateClock() {
       tft.fillRect(82, 45, 200, 18, 0x0000);
       tft.drawString(dateBuf, 82, 45);
       tft.setTextSize(13);
-      tft.setTextDatum(MC_DATUM);
-      tft.drawString(newOra, 240, 184);
-      tft.setTextDatum(TL_DATUM);
+      tft.drawString(newOra, 45, 127);
     }
     if (minuteChanged || wifiChanged || internetChanged) {
       drawWifiBars(435, 11);
@@ -1261,19 +1257,21 @@ void taskResult() {
 
 void taskRfidHealth() {
   static unsigned long lastCheck = 0;
-  static bool lastOk = true;
+  // false = pessimistico: al primo check forza sempre rfidInit
+  // garantendo PCD_Init in condizioni SPI stabili (post-WiFi)
+  static bool lastOk = false;
   if (millis() - lastCheck < 5000) return;
   lastCheck = millis();
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
   bool nowOk = (v != 0x00 && v != 0xFF);
-  // Reinit se: SPI rotto (v=0x00/0xFF) OPPURE era rotto al boot e ora
-  // risponde — senza reinit PCD_Init non è mai stato eseguito con SPI ok
   if (!nowOk || !lastOk) {
     Serial.printf("RFID health reinit (was=%d now=0x%02X)\n", lastOk, v);
-    rfidInit();
+    rfidInit(); // aggiorna g_rfidOk internamente
+    lastOk = g_rfidOk; // usa il risultato post-reinit, non nowOk
+  } else {
+    g_rfidOk = nowOk;
+    lastOk   = nowOk;
   }
-  lastOk  = nowOk;
-  g_rfidOk = nowOk;
 }
 
 void taskAdmin() {
