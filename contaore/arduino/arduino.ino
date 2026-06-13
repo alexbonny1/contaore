@@ -288,6 +288,11 @@ String getLocalTime() {
 
 // ── RFID INIT ────────────────────────
 void rfidInit() {
+  // Deseleziona RC522 prima di qualsiasi operazione SPI per evitare che
+  // il TFT (stesso bus) invii traffico con SS accidentalmente LOW
+  pinMode(PIN_RC522_SS, OUTPUT);
+  digitalWrite(PIN_RC522_SS, HIGH);
+  delay(5);
   SPI.begin(PIN_RC522_SCK, PIN_RC522_MISO, PIN_RC522_MOSI, PIN_RC522_SS);
   // RST basso → alto: forza hard reset garantendo stato noto dopo power cycle
   pinMode(PIN_RC522_RST, OUTPUT);
