@@ -301,6 +301,7 @@ void rfidInit() {
   digitalWrite(PIN_RC522_RST, HIGH);
   delay(50); // tempo di avvio oscillatore (datasheet: ~37μs + margine)
   rfid.PCD_Init();
+  rfid.PCD_SetAntennaGain(rfid.RxGain_max);
   delay(50);
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
   g_rfidOk = (v != 0x00 && v != 0xFF); // accetta tutti i cloni (es. 0x82, 0x88, 0x12)
@@ -1260,11 +1261,19 @@ void taskResult() {
 
 void taskRfidHealth() {
   static unsigned long lastCheck = 0;
+  static bool lastOk = true;
   if (millis() - lastCheck < 5000) return;
   lastCheck = millis();
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  g_rfidOk = (v != 0x00 && v != 0xFF);
-  if (!g_rfidOk) { Serial.println("RFID drift, reinit..."); rfidInit(); }
+  bool nowOk = (v != 0x00 && v != 0xFF);
+  // Reinit se: SPI rotto (v=0x00/0xFF) OPPURE era rotto al boot e ora
+  // risponde — senza reinit PCD_Init non è mai stato eseguito con SPI ok
+  if (!nowOk || !lastOk) {
+    Serial.printf("RFID health reinit (was=%d now=0x%02X)\n", lastOk, v);
+    rfidInit();
+  }
+  lastOk  = nowOk;
+  g_rfidOk = nowOk;
 }
 
 void taskAdmin() {
