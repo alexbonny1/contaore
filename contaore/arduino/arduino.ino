@@ -417,7 +417,7 @@ void drawWifiBars(int x, int y) {
 
 void drawBigClock(const char* timeStr) {
   tft.setTextSize(15);
-  tft.drawString("21:15", 172, 159);
+  tft.drawString("21:15", 22, 119);
 }
 
 void drawScreen_1() {
