@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "3.5"
+#define FW_VERSION          "3.6"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -436,7 +436,9 @@ void drawScreen_1() {
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
   tft.setTextColor(0xFFFF, 0x0000);
   tft.setTextSize(13);
-  tft.drawString(timeBuf, 45, 127);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(timeBuf, 240, 179);
+  tft.setTextDatum(TL_DATUM);
 }
 
 void showIdle() {
@@ -605,7 +607,9 @@ void updateClock() {
       tft.fillRect(82, 45, 200, 18, 0x0000);
       tft.drawString(dateBuf, 82, 45);
       tft.setTextSize(13);
-      tft.drawString(newOra, 45, 127);
+      tft.setTextDatum(MC_DATUM);
+      tft.drawString(newOra, 240, 179);
+      tft.setTextDatum(TL_DATUM);
     }
     if (minuteChanged || wifiChanged || internetChanged) {
       drawWifiBars(435, 11);
