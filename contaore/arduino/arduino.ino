@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "4.0"
+#define FW_VERSION          "4.1"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -415,6 +415,23 @@ void drawWifiBars(int x, int y) {
   }
 }
 
+// Orologio grande con Font 8 (font dedicato a cifre, ~75px size1, ~150px size2).
+// Auto-scala alla dimensione più grande che entra nella larghezza schermo.
+void drawBigClock(const char* timeStr) {
+  uint16_t bg = C_BG;
+  uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
+  tft.fillRect(0, 100, 480, 158, bg);
+  tft.setTextColor(fg, bg);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextFont(8);
+  tft.setTextSize(2);
+  if (tft.textWidth(timeStr) > 470) tft.setTextSize(1);
+  tft.drawString(timeStr, 240, 179);
+  tft.setTextFont(1);
+  tft.setTextSize(1);
+  tft.setTextDatum(TL_DATUM);
+}
+
 void drawScreen_1() {
   char dateBuf[16] = "--/--/----";
   char timeBuf[8]  = "--:--";
@@ -438,11 +455,7 @@ void drawScreen_1() {
   tft.drawString("Timbratura", 288, 284);
   drawWifiBars(435, 11);
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, fg);
-  tft.setTextColor(fg, bg);
-  tft.setTextSize(23);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(timeBuf, 240, 179);
-  tft.setTextDatum(TL_DATUM);
+  drawBigClock(timeBuf);
 }
 
 void showIdle() {
@@ -621,12 +634,7 @@ void updateClock() {
       tft.setTextSize(2);
       tft.fillRect(82, 45, 200, 18, bg);
       tft.drawString(dateBuf, 82, 45);
-      tft.fillRect(0, 127, 480, 104, bg);
-      tft.setTextColor(fg, bg);
-      tft.setTextSize(23);
-      tft.setTextDatum(MC_DATUM);
-      tft.drawString(newOra, 240, 179);
-      tft.setTextDatum(TL_DATUM);
+      drawBigClock(newOra.c_str());
     }
     if (minuteChanged || wifiChanged || internetChanged) {
       drawWifiBars(435, 11);
