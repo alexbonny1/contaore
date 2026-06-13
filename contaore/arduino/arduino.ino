@@ -1043,11 +1043,6 @@ void startProvisioning() {
   WiFiManagerParameter p_r("reader",  "Reader ID",       cfg.readerId,   63);
   WiFiManagerParameter p_c("company", "Company ID",      cfg.companyId,  63);
   WiFiManagerParameter p_s("sede",    "Sede / Ubicazione", cfg.sede,     63);
-  char themeStr[4];
-  snprintf(themeStr, sizeof(themeStr), "%d", cfg.theme);
-  WiFiManagerParameter p_t("theme",
-    "Tema: 0=Nero 1=Blu 2=Verde 3=Viola 4=Bianco 5=Grigio 6=Bordeaux 7=Arancio 8=Teal",
-    themeStr, 2);
 
   char debounceStr[8];
   snprintf(debounceStr, sizeof(debounceStr), "%lu", (unsigned long)cfg.debounce);
@@ -1067,7 +1062,6 @@ void startProvisioning() {
   wm.addParameter(&p_r);
   wm.addParameter(&p_c);
   wm.addParameter(&p_s);
-  wm.addParameter(&p_t);
   wm.addParameter(&p_d);
   wm.addParameter(&p_reset);
 
@@ -1093,9 +1087,6 @@ void startProvisioning() {
   strlcpy(cfg.readerId,  p_r.getValue(),     sizeof(cfg.readerId));
   strlcpy(cfg.companyId, p_c.getValue(),     sizeof(cfg.companyId));
   strlcpy(cfg.sede,      p_s.getValue(),     sizeof(cfg.sede));
-
-  int themeVal = atoi(p_t.getValue());
-  cfg.theme = (themeVal >= 0 && themeVal < THEME_COUNT) ? (uint8_t)themeVal : 0;
 
   unsigned long debounceVal = strtoul(p_d.getValue(), nullptr, 10);
   cfg.debounce = (debounceVal >= 500 && debounceVal <= 30000)
