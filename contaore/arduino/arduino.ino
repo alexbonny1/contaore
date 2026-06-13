@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "3.8"
+#define FW_VERSION          "3.9"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -435,9 +435,9 @@ void drawScreen_1() {
   drawWifiBars(435, 11);
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
   tft.setTextColor(0xFFFF, 0x0000);
-  tft.setTextSize(14);
+  tft.setTextSize(13);
   tft.setTextDatum(MC_DATUM);
-  tft.drawString(timeBuf, 240, 162);
+  tft.drawString(timeBuf, 240, 179);
   tft.setTextDatum(TL_DATUM);
 }
 
@@ -606,10 +606,10 @@ void updateClock() {
       tft.setTextSize(2);
       tft.fillRect(82, 45, 200, 18, 0x0000);
       tft.drawString(dateBuf, 82, 45);
-      tft.fillRect(0, 106, 480, 112, 0x0000);
-      tft.setTextSize(14);
+      tft.fillRect(0, 127, 480, 104, C_BG);
+      tft.setTextSize(13);
       tft.setTextDatum(MC_DATUM);
-      tft.drawString(newOra, 240, 162);
+      tft.drawString(newOra, 240, 179);
       tft.setTextDatum(TL_DATUM);
     }
     if (minuteChanged || wifiChanged || internetChanged) {
@@ -1033,6 +1033,12 @@ void startProvisioning() {
   // ── Portale WiFiManager ──
   WiFiManager wm;
   wm.setConfigPortalTimeout(300);
+  wm.setCustomHeadElement(
+    "<style>input[type=checkbox]{"
+    "width:auto!important;height:24px!important;"
+    "margin:6px 8px;vertical-align:middle}"
+    "</style>"
+  );
 
   WiFiManagerParameter p_b("backend", "Backend URL",     cfg.backend,   127);
   WiFiManagerParameter p_r("reader",  "Reader ID",       cfg.readerId,   63);
