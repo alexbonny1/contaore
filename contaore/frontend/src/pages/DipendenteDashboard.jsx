@@ -281,33 +281,27 @@ export default function DipendenteDashboard() {
 
   function logout() { localStorage.clear(); navigate("/"); }
 
-  function downloadMonthCSV(mese, giorni) {
-    const header = ["Data", "Giorno", "Stato", "Entrata 1", "Uscita 1", "Entrata 2", "Uscita 2", "Ore totali", "Giustificazione"];
-    const rows = giorni.map(g => {
-      const { label } = statoBadge(g.stato, g.ritardo_minuti);
-      const giust = giustificazioni.find(j => j.data === g.giorno);
-      return [
-        new Date(g.giorno).toLocaleDateString("it-IT"),
-        new Date(g.giorno).toLocaleDateString("it-IT", { weekday: "long" }),
-        label,
-        g.coppie[0]?.entrata || "",
-        g.coppie[0]?.uscita  || "",
-        g.coppie[1]?.entrata || "",
-        g.coppie[1]?.uscita  || "",
-        String(g.ore_totali).replace(".", ","),
-        giust?.motivo || "",
-      ];
-    });
-    const csv  = [header, ...rows].map(r => r.map(v => `"${v}"`).join(";")).join("\r\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = `ContaOre_${employee.cognome}_${employee.nome}_${mese}.csv`.replace(/\s+/g, "_");
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  async function downloadMonthPDF(mese) {
+    try {
+      const res = await fetch(API_URL + "/api/export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ employee_ids: [employee.id], month: mese })
+      });
+      if (!res.ok) { showToast("Errore generazione PDF", "error"); return; }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `Timbry_${employee.cognome}_${employee.nome}_${mese.replace(/\s+/g, "_")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.log(err);
+      showToast("Errore download PDF", "error");
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -464,12 +458,12 @@ export default function DipendenteDashboard() {
                       <span className="text-[10px] sm:text-xs text-zinc-400 whitespace-nowrap">{oreM}h</span>
                       {assM > 0 && <span className="text-[10px] sm:text-xs text-red-500 whitespace-nowrap hidden xs:inline">{assM} ass.</span>}
                       <button
-                        onClick={() => downloadMonthCSV(mese, giorni)}
+                        onClick={() => downloadMonthPDF(mese)}
                         className="flex items-center gap-1 h-8 px-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[11px] font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                        title={`Scarica ore ${mese}`}
+                        title={`Scarica PDF ${mese}`}
                       >
                         <Download size={12} />
-                        <span className="hidden sm:inline">CSV</span>
+                        <span className="hidden sm:inline">PDF</span>
                       </button>
                       <button onClick={() => setOpenMonth(isOpen ? null : mese)} className="flex items-center justify-center h-8 w-8 rounded-xl text-zinc-400">
                         {isOpen ? <ChevronUp size={14} className="sm:w-4 sm:h-4" /> : <ChevronDown size={14} className="sm:w-4 sm:h-4" />}
@@ -815,24 +809,24 @@ export default function DipendenteDashboard() {
               {missingScans.length === 0 ? (
                 <div className="text-center py-8 text-zinc-400 text-sm">Nessuna richiesta</div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {missingScans.map(m => {
                     const { label, color } = statoBadgeFerie(m.stato);
                     return (
-                      <div key={m.id} className="rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-5 py-4 flex items-center justify-between">
+                      <div key={m.id} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-4 sm:px-5 py-3 sm:py-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 xs:gap-0">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <Clock size={14} className="text-zinc-400" />
+                            <Clock size={14} className="text-zinc-400 shrink-0" />
                             <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                               {m.tipo === 'ENTRATA' ? '🟢' : '🔴'} {m.tipo || 'USCITA'} — {fmt(m.data)} alle {m.ora_uscita}
                             </span>
                           </div>
-                          {m.motivo && <p className="text-xs text-zinc-400">{m.motivo}</p>}
-                          <p className="text-xs text-zinc-400 mt-0.5">
+                          {m.motivo && <p className="text-xs text-zinc-400 ml-5">{m.motivo}</p>}
+                          <p className="text-xs text-zinc-400 mt-0.5 ml-5">
                             Richiesta il {fmt(m.created_at)}
                           </p>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 ml-5 xs:ml-0 shrink-0">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${color}`}>{label}</span>
                           {m.stato === "in_attesa" && (
                             <button onClick={() => cancellaMissingScan(m.id)} className="text-xs text-red-500 hover:text-red-700">
