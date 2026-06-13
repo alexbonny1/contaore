@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "5.2"
+#define FW_VERSION          "5.3"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -345,7 +345,12 @@ void drawWifiBars(int x, int y) {
   }
 }
 
-
+void drawBigClock(const char* timeStr) {
+  tft.fillRect(0, 109, 480, 140, 0x0000);
+  tft.setTextColor(0xFFFF);
+  tft.setTextSize(15);
+  tft.drawString(timeStr, 22, 119);
+}
 
 void drawScreen_1() {
   char dateBuf[16] = "--/--/----";
@@ -358,21 +363,16 @@ void drawScreen_1() {
     snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d",
       t->tm_hour, t->tm_min);
   }
-
-  uint16_t bg = C_BG;
-  uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
-  tft.fillScreen(bg);
+  tft.fillScreen(0x0000);
   tft.drawBitmap(14, 13, image_IMG_9600_bits, 58, 50, 0x02BA);
-  tft.setTextColor(fg, bg);
+  tft.setTextColor(0xFFFF);
   tft.setTextSize(2);
   tft.drawString(cfg.readerId[0] ? cfg.readerId : "TIMBRY", 83, 17);
   tft.drawString(dateBuf, 82, 45);
-  tft.drawString("Timbratura", 288, 284);
   drawWifiBars(435, 11);
-  tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, fg);
-      tft.setTextSize(15);
-    tft.drawString("21:15", 22, 119);
-
+  tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, 0xFFFF);
+  tft.drawString("Timbratura", 288, 284);
+  drawBigClock(timeBuf);
 }
 
 
