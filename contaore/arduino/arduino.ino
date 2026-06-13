@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "4.9"
+#define FW_VERSION          "5.0"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -418,11 +418,13 @@ void drawWifiBars(int x, int y) {
 void drawBigClock(const char* timeStr) {
   uint16_t bg = C_BG;
   uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
-  tft.fillRect(0, 55, 480, 200, bg);
+  tft.fillRect(0, 90, 480, 165, bg);
   tft.setTextFont(1);
   tft.setTextSize(15);
   tft.setTextColor(fg, bg);
-  tft.drawString(timeStr, 229, 59);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(timeStr, 240, 175);
+  tft.setTextDatum(TL_DATUM);
 }
 
 void drawScreen_1() {
