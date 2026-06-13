@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "3.1"
+#define FW_VERSION          "3.7"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -1077,11 +1077,8 @@ void startProvisioning() {
   WiFiManagerParameter p_r("reader",  "Reader ID",       cfg.readerId,   63);
   WiFiManagerParameter p_c("company", "Company ID",      cfg.companyId,  63);
   WiFiManagerParameter p_s("sede",    "Sede / Ubicazione", cfg.sede,     63);
-  char themeStr[4];
-  snprintf(themeStr, sizeof(themeStr), "%d", cfg.theme);
-  WiFiManagerParameter p_t("theme",
-    "Tema: 0=Nero 1=Blu 2=Verde 3=Viola 4=Bianco 5=Grigio 6=Bordeaux 7=Arancio 8=Teal",
-    themeStr, 2);
+  WiFiManagerParameter p_t("theme",   "Sfondo: 0=Scuro  1=Chiaro",
+    g_themeLight ? "1" : "0", 2);
 
   char debounceStr[8];
   snprintf(debounceStr, sizeof(debounceStr), "%lu", (unsigned long)cfg.debounce);
@@ -1129,7 +1126,8 @@ void startProvisioning() {
   strlcpy(cfg.sede,      p_s.getValue(),     sizeof(cfg.sede));
 
   int themeVal = atoi(p_t.getValue());
-  cfg.theme = (themeVal >= 0 && themeVal < THEME_COUNT) ? (uint8_t)themeVal : 0;
+  cfg.theme = (themeVal == 1) ? 4 : 0;
+  applyTheme(cfg.theme);
 
   unsigned long debounceVal = strtoul(p_d.getValue(), nullptr, 10);
   cfg.debounce = (debounceVal >= 500 && debounceVal <= 30000)
