@@ -38,7 +38,7 @@ export default function Pause() {
 
   const isFirstLoad = useRef(true)
   const user          = JSON.parse(localStorage.getItem('user') || '{}')
-  const portaleAttivo = user.portale_dipendenti !== false
+  const [portaleAttivo, setPortaleAttivo] = useState(user.portale_dipendenti !== false)
   const token         = localStorage.getItem('token')
 
   // THEME
@@ -60,11 +60,15 @@ export default function Pause() {
     return () => clearInterval(interval)
   }, [])
 
-  // LOAD PENDING COUNT
+  // LOAD PENDING COUNT + portal status
   useEffect(() => {
     fetch(`${API_URL}/api/requests/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => { if (d.success) setPendingCount(d.counts?.totali_in_attesa ?? 0) })
+      .catch(() => {})
+    fetch(`${API_URL}/api/company/info`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setPortaleAttivo(!!d.portale_dipendenti) })
       .catch(() => {})
   }, [])
 
