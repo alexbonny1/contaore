@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "4.3"
+#define FW_VERSION          "4.4"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -501,8 +501,10 @@ void showResult(String tipo, String nome, String orario) {
 
   tft.setTextColor(typeColor, bg);
   tft.setTextSize(8);
- //testo Entrata
-  tft.drawString(tipo, 110, 103);
+  //testo Entrata/Uscita centrato sullo schermo
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(tipo, 240, 135);
+  tft.setTextDatum(TL_DATUM);
 
   if (linea2.length() > 0) {
     tft.setTextColor(fg, bg);
