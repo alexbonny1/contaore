@@ -310,76 +310,6 @@ void rfidInit() {
   Serial.printf("RC522 version: 0x%02X %s\n", v, g_rfidOk ? "OK" : "WARN");
 }
 
-// ── DISPLAY ──────────────────────────
-void drawHeader() {
-  tft.fillRect(0, 0, 480, HDR_H, C_HEADER);
-
-  // Logo mini
-  int16_t lx = 6, ly = 8;
-  tft.drawRect(lx, ly, 12, 16, C_TIMBRY);
-  tft.fillRect(lx+1, ly+1, 10, 14, C_HEADER);
-  tft.drawRect(lx+3, ly+4, 6, 7, C_TIMBRY);
-  tft.drawCircle(lx+12, ly+8, 4, C_TIMBRY);
-  tft.drawCircle(lx+12, ly+8, 7, 0x02DF);
-  tft.fillRect(lx-1, ly-1, 14, 18, C_HEADER);
-  tft.drawRect(lx, ly, 12, 16, C_TIMBRY);
-  tft.drawRect(lx+3, ly+4, 6, 7, C_TIMBRY);
-
-  // Testi header: su temi chiari usa nero invece di bianco
-  uint16_t hTxt = g_themeLight ? C_BLACK : C_WHITE;
-
-  tft.setTextColor(C_TIMBRY, C_HEADER);
-  tft.setTextSize(1); tft.setCursor(22, 8);
-  tft.print("TIMBRY");
-
-  tft.setTextColor(hTxt, C_HEADER);
-  tft.setTextSize(1); tft.setCursor(22, 20);
-  tft.print(cfg.readerId[0] ? cfg.readerId : "reader");
-
-  tft.fillCircle(355, 20, 7, g_wifiOffline ? C_RED : C_GREEN);
-  tft.setTextColor(hTxt, C_HEADER);
-  tft.setTextSize(2); tft.setCursor(368, 12);
-  tft.print(g_wifiOffline ? "OFFLINE" : "ONLINE ");
-}
-
-void drawFooter() {
-  tft.fillRect(0, FTR_Y, 480, 320 - FTR_Y, C_HEADER);
-  uint16_t hTxt = g_themeLight ? C_BLACK : C_GRAY;
-  tft.setTextColor(hTxt, C_HEADER);
-  tft.setTextSize(1); tft.setCursor(162, FTR_Y + 12);
-  tft.print("Avvicina badge al lettore");
-  if (g_queueSize > 0) {
-    tft.setTextColor(C_YELLOW, C_HEADER);
-    tft.setCursor(340, FTR_Y + 12);
-    tft.print("Coda: "); tft.print(g_queueSize);
-  }
-}
-
-void drawClock() {
-  g_clockSprite.fillSprite(C_BG);
-  g_clockSprite.setTextColor(C_CLK_TEXT, C_BG);
-  g_clockSprite.setTextSize(CLK_SIZE);
-  int16_t tw = g_clockSprite.textWidth(ds.oraCorrente.length() > 0 ? ds.oraCorrente : "00:00");
-  g_clockSprite.setCursor((CLK_SPR_W - tw) / 2, 0);
-  if (ds.oraCorrente.length() > 0) g_clockSprite.print(ds.oraCorrente);
-  g_clockSprite.pushSprite(CLK_SPR_X, CLK_Y);
-}
-
-void drawDate() {
-  if (!g_ntpSynced) return;
-  time_t now = time(nullptr);
-  struct tm* t = localtime(&now);
-  char buf[16];
-  snprintf(buf, sizeof(buf), "%02d/%02d/%04d",
-    t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
-  g_dateSprite.fillSprite(C_BG);
-  g_dateSprite.setTextColor(C_DATE_TEXT, C_BG);
-  g_dateSprite.setTextSize(DATE_SIZE);
-  g_dateSprite.setCursor(0, 0);
-  g_dateSprite.print(buf);
-  g_dateSprite.pushSprite(DATE_X, DATE_Y);
-}
-
 // Disegna le barre WiFi dinamiche in base a RSSI e stato internet
 // x, y = angolo in alto a sinistra, occupa 30x32 px
 void drawWifiBars(int x, int y) {
@@ -415,10 +345,7 @@ void drawWifiBars(int x, int y) {
   }
 }
 
-void drawBigClock(const char* timeStr) {
-  tft.setTextSize(15);
-  tft.drawString("21:15", 22, 119);
-}
+
 
 void drawScreen_1() {
   char dateBuf[16] = "--/--/----";
@@ -443,8 +370,13 @@ void drawScreen_1() {
   tft.drawString("Timbratura", 288, 284);
   drawWifiBars(435, 11);
   tft.drawBitmap(427, 277, image_Pin_arrow_right_bits, 36, 28, fg);
-  drawBigClock(timeBuf);
+      tft.setTextSize(15);
+    tft.drawString("21:15", 22, 119);
+
 }
+
+
+
 
 void showIdle() {
   if (!g_ntpSynced) { g_waitingNtp = true; showWaitingNtp(); return; }
