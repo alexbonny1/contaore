@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "4.4"
+#define FW_VERSION          "4.5"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -418,7 +418,7 @@ void drawWifiBars(int x, int y) {
 // Orologio grande. Regola la dimensione cambiando CLOCK_SIZE qui sotto:
 // ogni unità = 8px di altezza. Più basso = più piccolo.
 // Massimo che entra nei 480px di larghezza per "00:00" = 16.
-#define CLOCK_SIZE 15
+#define CLOCK_SIZE 16
 void drawBigClock(const char* timeStr) {
   uint16_t bg = C_BG;
   uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
