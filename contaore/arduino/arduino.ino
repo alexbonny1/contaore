@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "4.8"
+#define FW_VERSION          "4.9"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -415,61 +415,14 @@ void drawWifiBars(int x, int y) {
   }
 }
 
-// 7-segment digit table: segments [top, TR, BR, bot, BL, TL, mid]
-static const bool SEG7[10][7] = {
-  {1,1,1,1,1,1,0}, // 0
-  {0,1,1,0,0,0,0}, // 1
-  {1,1,0,1,1,0,1}, // 2
-  {1,1,1,1,0,0,1}, // 3
-  {0,1,1,0,0,1,1}, // 4
-  {1,0,1,1,0,1,1}, // 5
-  {1,0,1,1,1,1,1}, // 6
-  {1,1,1,0,0,0,0}, // 7
-  {1,1,1,1,1,1,1}, // 8
-  {1,1,1,1,0,1,1}, // 9
-};
-
-// dim = colore segmenti "spenti" (grigio scuro su nero, grigio chiaro su bianco)
-void drawSegDigit(int x, int y, int w, int h, int t, int d, uint16_t fg, uint16_t bg, uint16_t dim) {
-  tft.fillRect(x, y, w, h, bg);
-  if (d < 0 || d > 9) return;
-  int hh = h / 2;
-  const int g = 2; // gap di 2px tra segmenti adiacenti
-  int bx   = x + t + g;
-  int bw   = w - 2*(t + g);
-  // lunghezza segmenti verticali: da subito dopo la barra oriz. fino a 2px prima della barra centrale
-  int vlen = hh - t - t/2 - 2*g;
-  int vy_t = y + t + g;          // inizio verticali metà superiore
-  int vy_b = y + hh + t/2 + g;  // inizio verticali metà inferiore
-  // barre orizzontali
-  tft.fillRect(bx, y,        bw, t, SEG7[d][0] ? fg : dim); // top
-  tft.fillRect(bx, y+hh-t/2, bw, t, SEG7[d][6] ? fg : dim); // middle
-  tft.fillRect(bx, y+h-t,   bw, t, SEG7[d][3] ? fg : dim); // bottom
-  // barre verticali
-  tft.fillRect(x+w-t, vy_t, t, vlen, SEG7[d][1] ? fg : dim); // top-right
-  tft.fillRect(x+w-t, vy_b, t, vlen, SEG7[d][2] ? fg : dim); // bot-right
-  tft.fillRect(x,     vy_b, t, vlen, SEG7[d][4] ? fg : dim); // bot-left
-  tft.fillRect(x,     vy_t, t, vlen, SEG7[d][5] ? fg : dim); // top-left
-}
-
 void drawBigClock(const char* timeStr) {
-  uint16_t bg  = C_BG;
-  uint16_t fg  = g_themeLight ? C_BLACK : C_WHITE;
-  uint16_t dim = g_themeLight ? 0xE71C : 0x1082; // segmenti spenti
-  const int DW = 90, DH = 170, T = 10, CW = 30;
-  int totalW = 4*DW + CW;
-  int startX = (480 - totalW) / 2;
-  int startY = 179 - DH / 2;
-  tft.fillRect(0, 90, 480, 184, bg);
-  if (strlen(timeStr) >= 5 && timeStr[2] == ':') {
-    drawSegDigit(startX,          startY, DW, DH, T, timeStr[0]-'0', fg, bg, dim);
-    drawSegDigit(startX+DW,       startY, DW, DH, T, timeStr[1]-'0', fg, bg, dim);
-    int cx = startX + 2*DW + (CW - T*2) / 2;
-    tft.fillRect(cx, startY + DH/3,   T*2, T*2, fg); // colon upper dot
-    tft.fillRect(cx, startY + 2*DH/3, T*2, T*2, fg); // colon lower dot
-    drawSegDigit(startX+2*DW+CW,  startY, DW, DH, T, timeStr[3]-'0', fg, bg, dim);
-    drawSegDigit(startX+3*DW+CW,  startY, DW, DH, T, timeStr[4]-'0', fg, bg, dim);
-  }
+  uint16_t bg = C_BG;
+  uint16_t fg = g_themeLight ? C_BLACK : C_WHITE;
+  tft.fillRect(0, 55, 480, 200, bg);
+  tft.setTextFont(1);
+  tft.setTextSize(15);
+  tft.setTextColor(fg, bg);
+  tft.drawString(timeStr, 229, 59);
 }
 
 void drawScreen_1() {
