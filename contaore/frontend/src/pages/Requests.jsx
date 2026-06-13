@@ -31,6 +31,8 @@ export default function Requests() {
   const [expandedId, setExpandedId] = useState(null)
   const [toast, setToast]           = useState(null)
   const [actionLoading, setActionLoading] = useState({})
+  const user0         = JSON.parse(localStorage.getItem('user') || '{}')
+  const [portaleAttivo, setPortaleAttivo] = useState(user0.portale_dipendenti !== false)
 
   const { pulling, refreshing, distance } = usePullToRefresh(loadRichieste)
 
@@ -45,6 +47,11 @@ export default function Requests() {
 
   useEffect(() => {
     loadRichieste()
+    const token = localStorage.getItem('token')
+    fetch(`${API_URL}/api/company/info`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setPortaleAttivo(!!d.portale_dipendenti) })
+      .catch(() => {})
     const interval = setInterval(loadRichieste, 15000)
     return () => clearInterval(interval)
   }, [])
@@ -126,8 +133,6 @@ export default function Requests() {
     </div>
   )
 
-  const user          = JSON.parse(localStorage.getItem('user') || '{}')
-  const portaleAttivo = user.portale_dipendenti !== false
   const { ferie, giustificazioni, richieste_timbratura } = richieste.richieste
 
   let richiesteFiltrate = []

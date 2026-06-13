@@ -18,7 +18,7 @@ export default function Dashboard() {
   const [pendingCount, setPendingCount]         = useState(0);
 
   const user           = JSON.parse(localStorage.getItem("user") || "{}");
-  const portaleAttivo  = user.portale_dipendenti !== false; // default true se non presente
+  const [portaleAttivo, setPortaleAttivo] = useState(user.portale_dipendenti !== false);
 
   /* THEME */
   useEffect(() => {
@@ -37,6 +37,11 @@ export default function Dashboard() {
   useEffect(() => {
     loadDashboard();
     loadPendingCount();
+    const token = localStorage.getItem("token");
+    fetch(`${API_URL}/api/company/info`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setPortaleAttivo(!!d.portale_dipendenti); })
+      .catch(() => {});
     const i1 = setInterval(loadDashboard, 5000);
     const i2 = setInterval(loadPendingCount, 30000);
     return () => { clearInterval(i1); clearInterval(i2); };
