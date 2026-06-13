@@ -81,7 +81,7 @@
 #define TFT_BL_PIN      32
 
 // ── CONFIG ───────────────────────────
-#define FW_VERSION          "3.6"
+#define FW_VERSION          "3.7"
 #define PREF_NAMESPACE      "timrbry"
 #define QUEUE_MAX           100
 #define HEARTBEAT_MS        60000UL
@@ -1043,6 +1043,18 @@ void startProvisioning() {
   WiFiManagerParameter p_r("reader",  "Reader ID",       cfg.readerId,   63);
   WiFiManagerParameter p_c("company", "Company ID",      cfg.companyId,  63);
   WiFiManagerParameter p_s("sede",    "Sede / Ubicazione", cfg.sede,     63);
+  String themeHtml = String(
+    "<br/><label style='display:flex;align-items:center;gap:10px;"
+    "cursor:pointer;margin:8px 0;font-size:15px'>"
+    "<input type='checkbox' id='tcb' style='width:20px;height:20px'"
+    " onchange=\"document.getElementById('theme').value=this.checked?'1':'0';\""
+  ) + (g_themeLight ? " checked" : "") +
+  "> Sfondo chiaro (bianco)</label>"
+  "<input type='hidden' id='theme' name='theme' value='"
+  + (g_themeLight ? "1" : "0") + "'>";
+  WiFiManagerParameter p_t(themeHtml.c_str());
+
+  int capturedTheme = g_themeLight ? 1 : 0;
 
   char debounceStr[8];
   snprintf(debounceStr, sizeof(debounceStr), "%lu", (unsigned long)cfg.debounce);
@@ -1064,6 +1076,10 @@ void startProvisioning() {
   wm.addParameter(&p_s);
   wm.addParameter(&p_d);
   wm.addParameter(&p_reset);
+
+  wm.setSaveParamsCallback([&]() {
+    if (wm.server) capturedTheme = wm.server->arg("theme").toInt();
+  });
 
   if (!wm.startConfigPortal(apName)) { ESP.restart(); return; }
 
@@ -1087,6 +1103,10 @@ void startProvisioning() {
   strlcpy(cfg.readerId,  p_r.getValue(),     sizeof(cfg.readerId));
   strlcpy(cfg.companyId, p_c.getValue(),     sizeof(cfg.companyId));
   strlcpy(cfg.sede,      p_s.getValue(),     sizeof(cfg.sede));
+
+  cfg.theme = (capturedTheme == 1) ? 4 : 0;
+  applyTheme(cfg.theme);
+
 
   unsigned long debounceVal = strtoul(p_d.getValue(), nullptr, 10);
   cfg.debounce = (debounceVal >= 500 && debounceVal <= 30000)
