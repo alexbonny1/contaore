@@ -61,6 +61,16 @@ export default function ResetPassword() {
         body:    JSON.stringify({ token, newPassword })
       });
       const data = await res.json();
+
+      // Check for 2FA requirement
+      if (data.status === 'TWO_FACTOR_REQUIRED') {
+        sessionStorage.setItem('2fa_tempToken', data.tempToken);
+        navigate('/verify-2fa-reset', {
+          state: { method: data.method, tempToken: data.tempToken }
+        });
+        return;
+      }
+
       if (!data.success) {
         const msgs = {
           INVALID_TOKEN:    "Il link non è valido.",

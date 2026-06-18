@@ -15,6 +15,8 @@ import Readers             from "./pages/Readers";
 import Admin               from "./pages/admin";
 import DipendenteDashboard from "./pages/DipendenteDashboard";
 import ResetPassword       from "./pages/ResetPassword";
+import TwoFactorVerify     from "./pages/TwoFactorVerify";
+import TwoFactorVerifyReset from "./pages/TwoFactorVerifyReset";
 import Notifications       from "./pages/Notifications";
 import Settings            from "./pages/Settings";
 import PrivacyPolicy       from "./pages/PrivacyPolicy";
@@ -41,6 +43,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
         <Route path="/" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-2fa" element={<TwoFactorVerify />} />
+        <Route path="/verify-2fa-reset" element={<TwoFactorVerifyReset />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
 
