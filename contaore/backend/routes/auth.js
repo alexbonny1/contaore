@@ -2,7 +2,13 @@ import bcrypt from 'bcrypt'
 import jwt    from 'jsonwebtoken'
 import crypto from 'crypto'
 import { supabase } from '../services/supabase.js'
-import { sendResetPassword } from '../services/email.js'
+import { sendResetPassword, sendTwoFactorEmail } from '../services/email.js'
+import {
+  generateTwoFactorCode,
+  sendTwoFactorCode,
+  sendTwoFactorSMS,
+  sendTwoFactorWhatsApp
+} from '../services/twilio.js'
 
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) throw new Error('Variabile d\'ambiente JWT_SECRET mancante')
@@ -44,6 +50,61 @@ export default async function authRoutes(fastify) {
         return reply.status(401).send({ error: 'INVALID_CREDENTIALS' })
       }
 
+      // ─── 2FA CHECK ─────────────────────────────────────────────────────────
+      if (user.two_factor_enabled === true) {
+        // Genera codice 2FA
+        const code = generateTwoFactorCode()
+        const method = user.two_factor_method || 'email'
+
+        // Salva tentativo in DB
+        const { error: insertError } = await supabase
+          .from('two_factor_attempts')
+          .insert({
+            user_id: user.id,
+            code,
+            method,
+            verified: false
+          })
+
+        if (insertError) {
+          console.error('2FA: errore salvataggio codice:', insertError.message)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        // Invia codice via metodo preferito
+        try {
+          await sendTwoFactorCode(
+            user.phone_number,
+            user.email,
+            code,
+            method,
+            sendTwoFactorEmail
+          )
+        } catch (sendErr) {
+          console.error('2FA: errore invio codice:', sendErr.message)
+          // Se email non fallisce, non blochiamo
+        }
+
+        // Genera tempToken per verificare il codice (valido 5 minuti)
+        const tempToken = jwt.sign(
+          {
+            userId: user.id,
+            type: '2fa_login',
+            method
+          },
+          JWT_SECRET,
+          { expiresIn: '5m' }
+        )
+
+        return reply.send({
+          status: 'TWO_FACTOR_REQUIRED',
+          tempToken,
+          method,
+          message: `Codice inviato via ${method}`
+        })
+      }
+
+      // ─── LOGIN SENZA 2FA ───────────────────────────────────────────────────
       const portale_dipendenti = user.company?.portale_dipendenti ?? false
 
       const token = jwt.sign(
@@ -72,6 +133,204 @@ export default async function authRoutes(fastify) {
           dipendente_id:       user.dipendente_id || null,
           portale_dipendenti
         }
+      })
+
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── VERIFY 2FA (login) ────────────────────────────────────────────────────
+  fastify.post('/api/auth/verify-2fa', {
+    config: {
+      rateLimit: {
+        max: 15,
+        timeWindow: '1 minute',
+        errorResponseBuilder: () => ({
+          error: 'TOO_MANY_REQUESTS'
+        })
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { tempToken, code } = request.body
+
+      if (!tempToken || !code) {
+        return reply.status(400).send({ error: 'MISSING_FIELDS' })
+      }
+
+      // Verifica tempToken
+      let decoded
+      try {
+        decoded = jwt.verify(tempToken, JWT_SECRET)
+      } catch {
+        return reply.status(401).send({ error: 'INVALID_TOKEN' })
+      }
+
+      if (decoded.type !== '2fa_login') {
+        return reply.status(401).send({ error: 'INVALID_TOKEN_TYPE' })
+      }
+
+      // Cerca il tentativo 2FA
+      const { data: attempt, error: findError } = await supabase
+        .from('two_factor_attempts')
+        .select('*, user:user_account(*)')
+        .eq('user_id', decoded.userId)
+        .eq('code', code)
+        .eq('verified', false)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (findError || !attempt) {
+        // Incrementa tentativo fallito
+        await supabase
+          .from('two_factor_attempts')
+          .update({ attempts_count: attempt?.attempts_count + 1 || 1 })
+          .eq('user_id', decoded.userId)
+
+        return reply.status(400).send({ error: 'INVALID_CODE' })
+      }
+
+      // Controlla limit tentativi
+      if (attempt.attempts_count >= 5) {
+        return reply.status(429).send({ error: 'TOO_MANY_ATTEMPTS' })
+      }
+
+      // Marca come verificato
+      const { error: updateError } = await supabase
+        .from('two_factor_attempts')
+        .update({ verified: true })
+        .eq('id', attempt.id)
+
+      if (updateError) {
+        console.error('2FA verify: errore update:', updateError.message)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+
+      // Genera JWT completo
+      const user = attempt.user
+      const portale_dipendenti = user.company?.portale_dipendenti ?? false
+
+      const token = jwt.sign(
+        {
+          id:                  user.id,
+          username:            user.username,
+          email:               user.email,
+          company_id:          user.company_id,
+          role:                user.role,
+          dipendente_id:       user.dipendente_id || null,
+          portale_dipendenti
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+
+      return reply.send({
+        success: true,
+        token,
+        user: {
+          id:                  user.id,
+          username:            user.username,
+          email:               user.email,
+          role:                user.role,
+          company_id:          user.company_id,
+          dipendente_id:       user.dipendente_id || null,
+          portale_dipendenti
+        }
+      })
+
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── RESEND 2FA CODE ───────────────────────────────────────────────────────
+  fastify.post('/api/auth/resend-2fa-code', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 minute',
+        errorResponseBuilder: () => ({
+          error: 'TOO_MANY_REQUESTS'
+        })
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { tempToken } = request.body
+
+      if (!tempToken) {
+        return reply.status(400).send({ error: 'MISSING_TOKEN' })
+      }
+
+      // Verifica tempToken
+      let decoded
+      try {
+        decoded = jwt.verify(tempToken, JWT_SECRET)
+      } catch {
+        return reply.status(401).send({ error: 'INVALID_TOKEN' })
+      }
+
+      if (decoded.type !== '2fa_login') {
+        return reply.status(401).send({ error: 'INVALID_TOKEN_TYPE' })
+      }
+
+      const { data: user } = await supabase
+        .from('user_account')
+        .select('*')
+        .eq('id', decoded.userId)
+        .single()
+
+      if (!user) {
+        return reply.status(404).send({ error: 'USER_NOT_FOUND' })
+      }
+
+      // Invalida vecchi codici
+      await supabase
+        .from('two_factor_attempts')
+        .update({ verified: true })
+        .eq('user_id', user.id)
+        .eq('verified', false)
+
+      // Genera nuovo codice
+      const code = generateTwoFactorCode()
+      const method = user.two_factor_method || 'email'
+
+      const { error: insertError } = await supabase
+        .from('two_factor_attempts')
+        .insert({
+          user_id: user.id,
+          code,
+          method,
+          verified: false
+        })
+
+      if (insertError) {
+        console.error('2FA resend: errore salvataggio:', insertError.message)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+
+      // Invia nuovo codice
+      try {
+        await sendTwoFactorCode(
+          user.phone_number,
+          user.email,
+          code,
+          method,
+          sendTwoFactorEmail
+        )
+      } catch (sendErr) {
+        console.error('2FA resend: errore invio:', sendErr.message)
+      }
+
+      return reply.send({
+        success: true,
+        method,
+        message: `Nuovo codice inviato via ${method}`
       })
 
     } catch (err) {
@@ -225,7 +484,7 @@ export default async function authRoutes(fastify) {
 
       const { data: user, error: findError } = await supabase
         .from('user_account')
-        .select('id, reset_token_expires_at')
+        .select('id, reset_token_expires_at, two_factor_enabled, two_factor_method, phone_number, email')
         .eq('reset_token', token)
         .maybeSingle()
 
@@ -237,8 +496,65 @@ export default async function authRoutes(fastify) {
         return reply.status(400).send({ error: 'TOKEN_EXPIRED' })
       }
 
+      // Hash della nuova password (ma non salvare ancora)
       const hashed = await bcrypt.hash(newPassword, 10)
 
+      // ─── 2FA CHECK PER RESET PASSWORD ──────────────────────────────────────
+      if (user.two_factor_enabled === true) {
+        // Genera codice 2FA per reset password
+        const code = generateTwoFactorCode()
+        const method = user.two_factor_method || 'email'
+
+        // Salva in DB con hashedPassword come metadata
+        const { error: insertError } = await supabase
+          .from('two_factor_attempts')
+          .insert({
+            user_id: user.id,
+            code,
+            method,
+            verified: false
+          })
+
+        if (insertError) {
+          console.error('2FA reset: errore salvataggio:', insertError.message)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        // Invia codice
+        try {
+          await sendTwoFactorCode(
+            user.phone_number,
+            user.email,
+            code,
+            method,
+            sendTwoFactorEmail
+          )
+        } catch (sendErr) {
+          console.error('2FA reset: errore invio:', sendErr.message)
+        }
+
+        // Genera tempToken2FA (include hashedPassword come payload)
+        const tempToken2FA = jwt.sign(
+          {
+            userId: user.id,
+            type: '2fa_reset',
+            hashedPassword: hashed,
+            resetToken: token,
+            method
+          },
+          JWT_SECRET,
+          { expiresIn: '5m' }
+        )
+
+        return reply.send({
+          status: 'TWO_FACTOR_REQUIRED',
+          tempToken: tempToken2FA,
+          method,
+          message: `Codice inviato via ${method}`
+        })
+      }
+
+      // ─── RESET SENZA 2FA ───────────────────────────────────────────────────
       const { error: updateError } = await supabase
         .from('user_account')
         .update({
@@ -254,6 +570,82 @@ export default async function authRoutes(fastify) {
       }
 
       return reply.send({ success: true })
+
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── VERIFY 2FA FOR RESET PASSWORD ─────────────────────────────────────────
+  fastify.post('/api/auth/verify-2fa-reset', async (request, reply) => {
+    try {
+      const { tempToken, code } = request.body
+
+      if (!tempToken || !code) {
+        return reply.status(400).send({ error: 'MISSING_FIELDS' })
+      }
+
+      // Verifica tempToken
+      let decoded
+      try {
+        decoded = jwt.verify(tempToken, JWT_SECRET)
+      } catch {
+        return reply.status(401).send({ error: 'INVALID_TOKEN' })
+      }
+
+      if (decoded.type !== '2fa_reset') {
+        return reply.status(401).send({ error: 'INVALID_TOKEN_TYPE' })
+      }
+
+      // Cerca il tentativo 2FA
+      const { data: attempt, error: findError } = await supabase
+        .from('two_factor_attempts')
+        .select('*')
+        .eq('user_id', decoded.userId)
+        .eq('code', code)
+        .eq('verified', false)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (findError || !attempt) {
+        return reply.status(400).send({ error: 'INVALID_CODE' })
+      }
+
+      // Controlla limit tentativi
+      if (attempt.attempts_count >= 5) {
+        return reply.status(429).send({ error: 'TOO_MANY_ATTEMPTS' })
+      }
+
+      // Marca come verificato
+      const { error: updateError } = await supabase
+        .from('two_factor_attempts')
+        .update({ verified: true })
+        .eq('id', attempt.id)
+
+      if (updateError) {
+        console.error('2FA reset verify: errore update:', updateError.message)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+
+      // Completa reset password con hashedPassword dal tempToken
+      const { error: resetError } = await supabase
+        .from('user_account')
+        .update({
+          password:               decoded.hashedPassword,
+          reset_token:            null,
+          reset_token_expires_at: null
+        })
+        .eq('id', decoded.userId)
+
+      if (resetError) {
+        console.error('2FA reset: errore update password:', resetError.message)
+        return reply.status(500).send({ error: 'UPDATE_ERROR' })
+      }
+
+      return reply.send({ success: true, message: 'Password resettata con successo' })
 
     } catch (err) {
       console.log(err)

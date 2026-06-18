@@ -395,3 +395,54 @@ export async function sendRiepilogoSettimanale({ emailOwner, companyNome, weekSt
   `)
   return send(emailOwner, `Riepilogo settimanale — ${companyNome}`, html)
 }
+
+// ─── 2FA: Codice di verifica ──────────────────────────────────────────────────
+
+export async function sendTwoFactorEmail(email, code) {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: 'Codice di verifica (2FA)',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#f5f4f0;">
+          <div style="background:#fff;border-radius:8px;padding:32px;border:1px solid #dddbd7;">
+            <p style="font-family:monospace;font-size:13px;color:#2563eb;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 16px;">VERIFICA IDENTITÀ</p>
+            <h2 style="font-size:22px;font-weight:600;color:#1a1a1a;margin:0 0 8px;">Il tuo codice di verifica</h2>
+            <p style="font-size:15px;color:#6b6b6b;margin:0 0 24px;line-height:1.6;">
+              Usa il codice qui sotto per verificare la tua identità. Questo codice è valido per 10 minuti.
+            </p>
+
+            <div style="background:#f5f4f0;border-radius:6px;padding:24px;margin-bottom:24px;text-align:center;">
+              <p style="margin:0;font-family:monospace;font-size:32px;font-weight:700;color:#2563eb;letter-spacing:6px;">${code}</p>
+            </div>
+
+            <p style="font-size:13px;color:#6b6b6b;margin:0 0 16px;line-height:1.6;">
+              <strong>Per la tua sicurezza:</strong>
+            </p>
+            <ul style="margin:0;padding:0 0 0 20px;font-size:13px;color:#6b6b6b;">
+              <li style="margin-bottom:8px;">Non condividere questo codice con nessuno</li>
+              <li style="margin-bottom:8px;">Il codice scade dopo 10 minuti</li>
+              <li>Se non hai richiesto questo codice, ignora questo messaggio</li>
+            </ul>
+
+            <p style="font-size:12px;color:#aaa;margin:24px 0 0;border-top:1px solid #eee;padding-top:16px;">
+              Contaore — Sistema di gestione presenze
+            </p>
+          </div>
+        </div>
+      `
+    })
+
+    if (error) {
+      console.error('2FA email send error:', error.message)
+      return false
+    }
+
+    console.log(`[2FA EMAIL] Inviato a ${email}`)
+    return true
+  } catch (err) {
+    console.error('2FA email send error:', err.message)
+    return false
+  }
+}
