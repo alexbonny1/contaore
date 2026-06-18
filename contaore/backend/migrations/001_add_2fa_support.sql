@@ -30,10 +30,7 @@ CREATE TABLE IF NOT EXISTS two_factor_attempts (
   created_at timestamptz DEFAULT now(),
   expires_at timestamptz DEFAULT now() + interval '10 minutes',
   verified boolean DEFAULT false,
-  attempts_count integer DEFAULT 0,
-  -- To prevent reuse of same code
-  CONSTRAINT unique_active_code UNIQUE (user_id, code, verified)
-    WHERE verified = false
+  attempts_count integer DEFAULT 0
 );
 
 -- Index per query veloci
@@ -55,8 +52,7 @@ ALTER TABLE user_account
 
 -- Index per cercare token di reset
 CREATE INDEX IF NOT EXISTS idx_user_account_reset_token
-  ON user_account(reset_token)
-  WHERE reset_token IS NOT NULL;
+  ON user_account(reset_token);
 
 -- ============================================================================
 -- 4. Optional: Create audit log table for 2FA events (for security tracking)
