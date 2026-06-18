@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import dotenv from 'dotenv'
+import { runMigrations } from './migrations/runMigrations.js'
 import deviceRoutes from './routes/devices.js'
 import scanRoutes from './routes/scan.js'
 import authRoutes from './routes/auth.js'
@@ -58,6 +59,9 @@ fastify.get('/', async () => {
 const start = async () => {
 
   try {
+
+    // Run database migrations
+    await runMigrations()
 
     await fastify.listen({
       port: process.env.PORT || 3000,
