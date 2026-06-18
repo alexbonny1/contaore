@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon, CheckCircle2, XCircle, ArrowLeft,
-  BarChart2
+  BarChart2, Lock, Shield
 } from "lucide-react";
 import { API_URL } from "../api";
+import TwoFactorSettings from "../components/TwoFactorSettings";
+import ChangePasswordModal from "../components/ChangePasswordModal";
 
 const STATI_GRAFICO = [
   { key: "presente",     label: "Presente",      color: "#22c55e" },
@@ -55,6 +57,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const [loading, setLoading]       = useState(true);
   const [toast, setToast]           = useState(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   // ── Tolleranza
   const [tolleranza,   setTolleranza]   = useState(10);
@@ -247,7 +250,47 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* ── Sezione 3: Cambio Password ──────────────────────────────────────── */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+              <Lock size={13} className="text-blue-500" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Cambio password</h2>
+              <p className="text-xs text-zinc-500">Aggiorna la tua password</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="w-full h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition duration-200"
+          >
+            Cambia password
+          </button>
+        </div>
+
+        {/* ── Sezione 4: 2FA ──────────────────────────────────────────────────── */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+              <Shield size={13} className="text-green-500" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Sicurezza</h2>
+              <p className="text-xs text-zinc-500">Autenticazione a due fattori</p>
+            </div>
+          </div>
+
+          <TwoFactorSettings />
+        </div>
+
       </div>
+
+      {/* Modal Cambio Password */}
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+      )}
     </div>
   );
 }

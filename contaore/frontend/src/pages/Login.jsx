@@ -35,6 +35,15 @@ export default function Login() {
 
       const data = await response.json();
 
+      // Check for 2FA requirement
+      if (data.status === 'TWO_FACTOR_REQUIRED') {
+        sessionStorage.setItem('2fa_tempToken', data.tempToken);
+        navigate('/verify-2fa', {
+          state: { method: data.method, tempToken: data.tempToken }
+        });
+        return;
+      }
+
       if (!data.success) {
         setError("Credenziali non valide");
         return;

@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import deviceRoutes from './routes/devices.js'
 import scanRoutes from './routes/scan.js'
 import authRoutes from './routes/auth.js'
+import userSettingsRoutes from './routes/user-settings.js'
 import employeeRoutes from './routes/employees.js'
 import tagRoutes from './routes/tags.js'
 import hardwareRoutes from './routes/hardware.js'
@@ -39,6 +40,7 @@ await fastify.register(tagRoutes)
 await fastify.register(employeeRoutes)
 await fastify.register(deviceRoutes)
 await fastify.register(authRoutes)
+await fastify.register(userSettingsRoutes)
 await fastify.register(scanRoutes)
 await fastify.register(adminRoutes)
 await fastify.register(dipendenteRoutes)   // ← nuovo
