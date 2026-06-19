@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import {
   Calendar, UserX, Clock, TrendingUp,
-  WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle
+  WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle, ChevronLeft
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
@@ -397,6 +398,10 @@ export default function Notifications() {
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
+
+        <Link to="/impostazioni" className="inline-flex items-center gap-0.5 -ml-1 mb-3 text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">
+          <ChevronLeft size={18} /> Impostazioni
+        </Link>
 
         <div className="mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Notifiche</h2>
