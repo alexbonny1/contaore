@@ -97,6 +97,33 @@ export default function DipendenteDashboard() {
   const [modifyMotivo, setModifyMotivo]               = useState("");
   const [savingModify, setSavingModify]               = useState(false);
 
+  // sottomenu richieste: "timbratura" | "permessi" | "turni"
+  const [requestsSubTab, setRequestsSubTab]           = useState("timbratura");
+
+  // form richiesta permesso
+  const [permesoDataUscita, setPermesoDataUscita]     = useState("");
+  const [permesoOraUscita, setPermesoOraUscita]       = useState("");
+  const [permesoDataEntrata, setPermesoDataEntrata]   = useState("");
+  const [permesoOraEntrata, setPermesoOraEntrata]     = useState("");
+  const [permesoTipo, setPermesoTipo]                 = useState("personale");
+  const [permesoMotivo, setPermesoMotivo]             = useState("");
+  const [savingPermeso, setSavingPermeso]             = useState(false);
+  const [showPermesoForm, setShowPermesoForm]         = useState(false);
+  const [permesi, setPermesi]                         = useState([]);
+
+  // form richiesta modifica turni
+  const [turniDataDal, setTurniDataDal]               = useState("");
+  const [turniDataAl, setTurniDataAl]                 = useState("");
+  const [turniGiorniSelezionati, setTurniGiorniSelezionati] = useState({
+    lunedi: false, martedi: false, mercoledi: false, giovedi: false,
+    venerdi: false, sabato: false, domenica: false
+  });
+  const [turniOrari, setTurniOrari]                   = useState({}); // { "lunedi": { ingresso, uscita }, ... }
+  const [turniMotivo, setTurniMotivo]                 = useState("");
+  const [savingTurni, setSavingTurni]                 = useState(false);
+  const [showTurniForm, setShowTurniForm]             = useState(false);
+  const [richiesteTurni, setRichiesteTurni]           = useState([]);
+
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
@@ -280,6 +307,112 @@ export default function DipendenteDashboard() {
     } catch (err) { console.log(err); showToast("Errore server", "error"); }
   }
 
+  // ── invia richiesta permesso ─────────────────────────────────────────────
+  async function inviPermesso(e) {
+    e.preventDefault();
+    if (!permesoMotivo.trim()) { showToast("Inserisci il motivo (obbligatorio)", "error"); return; }
+    if (!permesoDataUscita && !permesoDataEntrata) { showToast("Inserisci almeno una data", "error"); return; }
+    setSavingPermeso(true);
+    try {
+      const res = await fetch(API_URL + "/api/dipendente/richieste/permesso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          data_uscita: permesoDataUscita || null,
+          ora_uscita: permesoOraUscita || null,
+          data_entrata: permesoDataEntrata || null,
+          ora_entrata: permesoOraEntrata || null,
+          tipo: permesoTipo,
+          motivo: permesoMotivo.trim()
+        })
+      });
+      const json = await res.json();
+      if (!json.success) {
+        showToast(json.message || json.error || "Errore", "error");
+        return;
+      }
+      showToast("Richiesta permesso inviata — in attesa di approvazione");
+      setPermesoDataUscita(""); setPermesoOraUscita(""); setPermesoDataEntrata(""); setPermesoOraEntrata(""); setPermesoMotivo(""); setShowPermesoForm(false);
+      // Reload permessi se la funzione esiste
+      if (typeof loadPermesi === 'function') loadPermesi();
+    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    finally { setSavingPermeso(false); }
+  }
+
+  // ── cancella richiesta permesso ──────────────────────────────────────────
+  async function cancellaPermesso(id) {
+    if (!confirm("Cancellare questa richiesta?")) return;
+    try {
+      const res  = await fetch(API_URL + "/api/dipendente/richieste/permesso/" + id, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!json.success) { showToast(json.message || "Errore", "error"); return; }
+      showToast("Richiesta cancellata");
+      // Reload permessi se la funzione esiste
+      if (typeof loadPermesi === 'function') loadPermesi();
+    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+  }
+
+  // ── invia richiesta modifica turni ───────────────────────────────────────
+  async function inviRichiestaTurni(e) {
+    e.preventDefault();
+    if (!turniDataDal || !turniDataAl) { showToast("Seleziona il periodo", "error"); return; }
+    const giorniSelezionati = Object.entries(turniGiorniSelezionati).filter(([, selected]) => selected).map(([day, ]) => day);
+    if (giorniSelezionati.length === 0) { showToast("Seleziona almeno un giorno", "error"); return; }
+    if (!turniMotivo.trim()) { showToast("Inserisci il motivo (obbligatorio)", "error"); return; }
+    // Verifica che tutti i giorni selezionati abbiano orari
+    for (const day of giorniSelezionati) {
+      if (!turniOrari[day]?.ingresso || !turniOrari[day]?.uscita) {
+        showToast(`Inserisci orari per ${day}`, "error");
+        return;
+      }
+    }
+    setSavingTurni(true);
+    try {
+      const orariBody = {};
+      giorniSelezionati.forEach(day => {
+        orariBody[day] = { ingresso: turniOrari[day].ingresso, uscita: turniOrari[day].uscita };
+      });
+      const res = await fetch(API_URL + "/api/dipendente/richieste/modifica-turni", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          data_dal: turniDataDal,
+          data_al: turniDataAl,
+          giorni: giorniSelezionati,
+          orari: orariBody,
+          motivo: turniMotivo.trim()
+        })
+      });
+      const json = await res.json();
+      if (!json.success) {
+        showToast(json.message || json.error || "Errore", "error");
+        return;
+      }
+      showToast("Richiesta modifica turni inviata — in attesa di approvazione");
+      setTurniDataDal(""); setTurniDataAl(""); setTurniGiorniSelezionati({lunedi: false, martedi: false, mercoledi: false, giovedi: false, venerdi: false, sabato: false, domenica: false}); setTurniOrari({}); setTurniMotivo(""); setShowTurniForm(false);
+      // Reload richieste turni se la funzione esiste
+      if (typeof loadRichiesteTurni === 'function') loadRichiesteTurni();
+    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    finally { setSavingTurni(false); }
+  }
+
+  // ── cancella richiesta modifica turni ────────────────────────────────────
+  async function cancellaRichiestaTurni(id) {
+    if (!confirm("Cancellare questa richiesta?")) return;
+    try {
+      const res  = await fetch(API_URL + "/api/dipendente/richieste/modifica-turni/" + id, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!json.success) { showToast(json.message || "Errore", "error"); return; }
+      showToast("Richiesta cancellata");
+      // Reload richieste turni se la funzione esiste
+      if (typeof loadRichiesteTurni === 'function') loadRichiesteTurni();
+    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+  }
+
   function logout() { localStorage.clear(); navigate("/"); }
 
   async function downloadMonthPDF(mese) {
@@ -372,13 +505,16 @@ export default function DipendenteDashboard() {
             ...ferie.filter(f => f.stato === "approvata" && f.data_inizio > todayStr),
             ...pause.filter(p => p.data_inizio > todayStr)
           ].reduce((tot, f) => tot + Math.round((new Date(f.data_fine) - new Date(f.data_inizio)) / 86400000) + 1, 0);
+          const statsList = [
+            { icon: Clock,     label: "Ore questo mese",  value: `${stats.ore_mese_corrente}h` },
+          ];
+          if (data?.turni_attivi) {
+            statsList.push({ icon: UserCheck, label: "Giorni assenti", value: stats.giorni_assenti });
+          }
+          statsList.push({ icon: TrendingUp, label: "Ore straordinario", value: `${stats.ore_straordinario}h` });
           return (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          {[
-            { icon: Clock,     label: "Ore questo mese",  value: `${stats.ore_mese_corrente}h` },
-            { icon: UserCheck, label: "Giorni assenti",    value: stats.giorni_assenti },
-            { icon: TrendingUp,label: "Ore straordinario", value: `${stats.ore_straordinario}h` },
-          ].map((s) => {
+          {statsList.map((s) => {
             const Icon = s.icon;
             return (
               <div key={s.label} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-3 sm:p-4">
@@ -445,8 +581,22 @@ export default function DipendenteDashboard() {
                     </div>
                   </div>
 
-                  {/* giorni */}
+                  {/* riepilogo mese */}
                   {isOpen && (
+                    <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 sm:px-6 py-3 sm:py-4 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-zinc-600 dark:text-zinc-400">Ore lavorate:</span>
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">{oreM}h</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-zinc-600 dark:text-zinc-400">Giorni assenti:</span>
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">{assM}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* giorni (nascosti — commentato il vecchio codice) */}
+                  {false && isOpen && (
                     <div className="border-t border-zinc-100 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800">
                       {giorni.map(g => {
                         const { label, color } = statoBadge(g.stato, g.ritardo_minuti);
@@ -718,7 +868,44 @@ export default function DipendenteDashboard() {
         {/* ══════════ TAB: RICHIESTE ══════════ */}
         {tab === "richieste" && (
           <div className="space-y-6">
+            {/* SOTTOMENU RICHIESTE */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button
+                onClick={() => setRequestsSubTab("timbratura")}
+                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
+                  requestsSubTab === "timbratura"
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                Timbratura mancata
+              </button>
+              <button
+                onClick={() => setRequestsSubTab("permessi")}
+                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
+                  requestsSubTab === "permessi"
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                Permessi
+              </button>
+              {data?.turni_attivi && (
+                <button
+                  onClick={() => setRequestsSubTab("turni")}
+                  className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
+                    requestsSubTab === "turni"
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                  }`}
+                >
+                  Modifica turni
+                </button>
+              )}
+            </div>
+
             {/* SEZIONE TIMBRATURA MANCATA */}
+            {requestsSubTab === "timbratura" && (
             <div>
               <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiedi timbratura mancata</h3>
               
@@ -814,6 +1001,226 @@ export default function DipendenteDashboard() {
                 </div>
               )}
             </div>
+            )}
+
+            {/* SEZIONE PERMESSI DI USCITA/ENTRATA */}
+            {requestsSubTab === "permessi" && (
+            <div>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiedi permesso</h3>
+
+              {!showPermesoForm && (
+                <button onClick={() => setShowPermesoForm(true)}
+                  className="flex items-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium mb-5 sm:mb-6">
+                  <Clock size={14} className="sm:w-[15px] sm:h-[15px]" /> Nuova richiesta
+                </button>
+              )}
+
+              {showPermesoForm && (
+                <form onSubmit={inviPermesso} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
+                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta permesso</h3>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                    Richiedi un permesso di uscita o entrata anticipata/ritardata.
+                  </p>
+
+                  <div className="mb-4">
+                    <p className="text-xs text-zinc-400 mb-2">Tipo di permesso</p>
+                    <select value={permesoTipo} onChange={e => setPermesoTipo(e.target.value)}
+                      className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm">
+                      <option value="personale">Personale</option>
+                      <option value="medico">Medico</option>
+                      <option value="altro">Altro</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-1">Data uscita</p>
+                      <input type="date" value={permesoDataUscita} onChange={e => setPermesoDataUscita(e.target.value)}
+                        className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-1">Ora uscita</p>
+                      <input type="time" value={permesoOraUscita} onChange={e => setPermesoOraUscita(e.target.value)}
+                        className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-1">Data rientro</p>
+                      <input type="date" value={permesoDataEntrata} onChange={e => setPermesoDataEntrata(e.target.value)}
+                        className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-1">Ora rientro</p>
+                      <input type="time" value={permesoOraEntrata} onChange={e => setPermesoOraEntrata(e.target.value)}
+                        className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm" />
+                    </div>
+                  </div>
+
+                  <textarea rows={2} placeholder="Motivo del permesso (obbligatorio)" value={permesoMotivo} onChange={e => setPermesoMotivo(e.target.value)}
+                    className="w-full px-3 py-2 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none resize-none mb-4"
+                    required />
+
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={savingPermeso}
+                      className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium disabled:opacity-50">
+                      <Send size={14} /> {savingPermeso ? "Invio..." : "Invia richiesta"}
+                    </button>
+                    <button type="button" onClick={() => setShowPermesoForm(false)}
+                      className="h-11 px-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm">
+                      Annulla
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {permesi.length === 0 ? (
+                <div className="text-center py-8 text-zinc-400 text-sm">Nessuna richiesta</div>
+              ) : (
+                <div className="space-y-2 sm:space-y-3">
+                  {permesi.map(p => {
+                    const { label, color } = statoBadgeFerie(p.stato);
+                    return (
+                      <div key={p.id} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-4 sm:px-5 py-3 sm:py-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 xs:gap-0">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock size={14} className="text-zinc-400 shrink-0" />
+                            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                              {p.tipo} — {p.data_uscita} {p.ora_uscita && `alle ${p.ora_uscita}`}
+                            </span>
+                          </div>
+                          {p.motivo && <p className="text-xs text-zinc-400 ml-5">{p.motivo}</p>}
+                          <p className="text-xs text-zinc-400 mt-0.5 ml-5">
+                            Richiesta il {fmt(p.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 ml-5 xs:ml-0 shrink-0">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${color}`}>{label}</span>
+                          {p.stato === "in_attesa" && (
+                            <button onClick={() => cancellaPermesso(p.id)} className="text-xs text-red-500 hover:text-red-700">
+                              Cancella
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            )}
+
+            {/* SEZIONE MODIFICA TURNI */}
+            {data?.turni_attivi && requestsSubTab === "turni" && (
+            <div>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiedi modifica turni</h3>
+
+              {!showTurniForm && (
+                <button onClick={() => setShowTurniForm(true)}
+                  className="flex items-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium mb-5 sm:mb-6">
+                  <Clock size={14} className="sm:w-[15px] sm:h-[15px]" /> Nuova richiesta
+                </button>
+              )}
+
+              {showTurniForm && (
+                <form onSubmit={inviRichiestaTurni} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
+                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta modifica turni</h3>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                    Seleziona il periodo e i giorni della settimana che vuoi modificare.
+                  </p>
+
+                  <div className="mb-4">
+                    <p className="text-xs text-zinc-400 mb-2">Periodo (dal - al)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="date" value={turniDataDal} onChange={e => setTurniDataDal(e.target.value)}
+                        placeholder="Dal" className="h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm" required />
+                      <input type="date" value={turniDataAl} onChange={e => setTurniDataAl(e.target.value)}
+                        placeholder="Al" className="h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none text-sm" required />
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-xs text-zinc-400 mb-2">Giorni della settimana</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries({lunedi: "Lunedì", martedi: "Martedì", mercoledi: "Mercoledì", giovedi: "Giovedì", venerdi: "Venerdì", sabato: "Sabato", domenica: "Domenica"}).map(([key, label]) => (
+                        <label key={key} className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={turniGiorniSelezionati[key]} onChange={e => setTurniGiorniSelezionati({...turniGiorniSelezionati, [key]: e.target.checked})}
+                            className="w-4 h-4 rounded border-zinc-300 accent-zinc-900 dark:accent-zinc-100" />
+                          <span className="text-sm text-zinc-700 dark:text-zinc-300">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <p className="text-xs text-zinc-400 mb-3">Orari per i giorni selezionati</p>
+                    {Object.entries(turniGiorniSelezionati).filter(([, selected]) => selected).map(([day, ]) => (
+                      <div key={day} className="mb-3 pb-3 border-b border-zinc-200 dark:border-zinc-700 last:border-0">
+                        <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-2 capitalize">{day}</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input type="time" value={turniOrari[day]?.ingresso || ""} onChange={e => setTurniOrari({...turniOrari, [day]: {...turniOrari[day] || {}, ingresso: e.target.value}})}
+                            placeholder="Ingresso" className="h-9 px-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 outline-none text-xs" />
+                          <input type="time" value={turniOrari[day]?.uscita || ""} onChange={e => setTurniOrari({...turniOrari, [day]: {...turniOrari[day] || {}, uscita: e.target.value}})}
+                            placeholder="Uscita" className="h-9 px-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 outline-none text-xs" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <textarea rows={2} placeholder="Motivo della richiesta (obbligatorio)" value={turniMotivo} onChange={e => setTurniMotivo(e.target.value)}
+                    className="w-full px-3 py-2 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none resize-none mb-4"
+                    required />
+
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={savingTurni}
+                      className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium disabled:opacity-50">
+                      <Send size={14} /> {savingTurni ? "Invio..." : "Invia richiesta"}
+                    </button>
+                    <button type="button" onClick={() => setShowTurniForm(false)}
+                      className="h-11 px-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm">
+                      Annulla
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {richiesteTurni.length === 0 ? (
+                <div className="text-center py-8 text-zinc-400 text-sm">Nessuna richiesta</div>
+              ) : (
+                <div className="space-y-2 sm:space-y-3">
+                  {richiesteTurni.map(r => {
+                    const { label, color } = statoBadgeFerie(r.stato);
+                    return (
+                      <div key={r.id} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-4 sm:px-5 py-3 sm:py-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 xs:gap-0">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock size={14} className="text-zinc-400 shrink-0" />
+                            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                              Dal {r.data_dal} al {r.data_al}
+                            </span>
+                          </div>
+                          {r.motivo && <p className="text-xs text-zinc-400 ml-5">{r.motivo}</p>}
+                          <p className="text-xs text-zinc-400 mt-0.5 ml-5">
+                            Richiesta il {fmt(r.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 ml-5 xs:ml-0 shrink-0">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${color}`}>{label}</span>
+                          {r.stato === "in_attesa" && (
+                            <button onClick={() => cancellaRichiestaTurni(r.id)} className="text-xs text-red-500 hover:text-red-700">
+                              Cancella
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            )}
+
           </div>
         )}
 

@@ -1374,7 +1374,7 @@ export default async function employeeRoutes(fastify) {
         }
 
         try {
-          const loginUrl = process.env.FRONTEND_URL || 'https://timbry.it'
+          const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
           await sendCredenziali({ email: newEmail, nome: newNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
           credenziali_inviate = true
         } catch (e) { console.log('sendCredenziali error:', e?.message) }
