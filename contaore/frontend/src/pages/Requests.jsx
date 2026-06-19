@@ -149,26 +149,28 @@ export default function Requests({ initialView = 'richieste' }) {
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* TITLE */}
-        <h1 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 sm:mb-5">Ferie &amp; Permessi</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 sm:mb-5">{portaleAttivo ? 'Ferie & Permessi' : 'Ferie'}</h1>
 
-        {/* SEGMENTED CONTROL (Apple) */}
-        <div className="flex p-1 mb-5 sm:mb-6 rounded-2xl bg-zinc-200/70 dark:bg-zinc-800/60 backdrop-blur-sm">
-          {[
-            { id: 'richieste', label: 'Richieste' },
-            { id: 'pause',     label: 'Pause aziendali' },
-          ].map(seg => (
-            <button key={seg.id} onClick={() => setVista(seg.id)}
-              className={`flex-1 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
-                vista === seg.id
-                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}>
-              {seg.label}
-            </button>
-          ))}
-        </div>
+        {/* SEGMENTED CONTROL (Apple) — solo se portale dipendenti attivo */}
+        {portaleAttivo && (
+          <div className="flex p-1 mb-5 sm:mb-6 rounded-2xl bg-zinc-200/70 dark:bg-zinc-800/60 backdrop-blur-sm">
+            {[
+              { id: 'richieste', label: 'Richieste' },
+              { id: 'pause',     label: 'Ferie' },
+            ].map(seg => (
+              <button key={seg.id} onClick={() => setVista(seg.id)}
+                className={`flex-1 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                  vista === seg.id
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                    : 'text-zinc-500 dark:text-zinc-400'
+                }`}>
+                {seg.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {vista === 'pause' ? (
+        {!portaleAttivo || vista === 'pause' ? (
           <PauseManager />
         ) : loading ? (
           <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-8 text-center">
@@ -180,16 +182,6 @@ export default function Requests({ initialView = 'richieste' }) {
           </div>
         ) : (
         <>
-        {/* STATS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          {STATS.map(s => (
-            <div key={s.label} className="rounded-xl sm:rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-3 sm:p-5">
-              <p className="text-[10px] sm:text-sm text-zinc-500 dark:text-zinc-400">{s.label}</p>
-              <p className={`text-2xl sm:text-4xl font-bold mt-1 sm:mt-2 ${s.color}`}>{s.value}</p>
-            </div>
-          ))}
-        </div>
-
         {/* FILTER TABS */}
         <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
@@ -311,6 +303,18 @@ export default function Requests({ initialView = 'richieste' }) {
               )
             })
           )}
+        </div>
+
+        {/* RIEPILOGO CONTEGGI — card unica */}
+        <div className="mt-5 sm:mt-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
+          <div className="grid grid-cols-4 divide-x divide-zinc-200 dark:divide-zinc-800">
+            {STATS.map(s => (
+              <div key={s.label} className="flex flex-col items-center text-center px-1">
+                <span className={`text-2xl sm:text-4xl font-bold ${s.color}`}>{s.value}</span>
+                <span className="text-[10px] sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">{s.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
         </>
         )}
