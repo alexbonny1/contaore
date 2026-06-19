@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import DipendenteBottomNav from "../components/DipendenteBottomNav";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ function fmt(date) {
 function Toast({ message, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t); }, []);
   return (
-    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium ${type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+    <div className={`fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium ${type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
       {type === "success" ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
       {message}
     </div>
@@ -62,8 +63,8 @@ export default function DipendenteDashboard() {
   const [openMonth, setOpenMonth]       = useState(null);
   const [openDay, setOpenDay]           = useState(null);
 
-  // tab attiva: "storico" | "ferie" | "turni"
-  const [tab, setTab]                   = useState("storico");
+  // tab attiva: "presenze" | "ferie" | "richieste" | "profilo"
+  const [tab, setTab]                   = useState("presenze");
 
   // form giustificazione
   const [justDay, setJustDay]           = useState("");
@@ -334,31 +335,19 @@ export default function DipendenteDashboard() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* HEADER */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-4xl mx-auto px-4 sm:px-5 h-14 sm:h-16 flex items-center justify-between">
-          <div className="min-w-0 flex-1 pr-2">
-            <p className="text-[10px] sm:text-xs text-zinc-400 font-mono uppercase tracking-widest">Timbry</p>
-            <p className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-              {employee.nome} {employee.cognome}
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <button onClick={() => setShowChangePassword(true)} className="flex items-center gap-1 sm:gap-2 h-9 sm:h-10 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
-              <Lock size={12} className="sm:w-[14px] sm:h-[14px]" />
-              <span className="hidden xs:inline">Password</span>
-            </button>
-            <button onClick={() => setDark(d => !d)} className="flex items-center justify-center h-9 sm:h-10 w-9 sm:w-10 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
-              {dark ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-            <button onClick={logout} className="flex items-center gap-1 sm:gap-2 h-9 sm:h-10 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium">
-              <LogOut size={12} className="sm:w-[14px] sm:h-[14px]" />
-              <span className="hidden xs:inline">Esci</span>
-            </button>
+      <header className="sticky top-0 z-40 border-b border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-[#111113]/70 backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto px-4 sm:px-5 h-14 sm:h-16 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Timbry" className="h-7 sm:h-8 w-auto" />
+            <span className="text-lg sm:text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Timbry</span>
           </div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-5 py-5 sm:py-7">
+      <div className="max-w-4xl mx-auto px-4 sm:px-5 py-5 sm:py-7 pb-28">
+        <div className="mb-4 sm:mb-6">
+          <p className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Ciao, {employee.nome}</p>
+        </div>
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* PAUSA BANNER */}
@@ -373,7 +362,7 @@ export default function DipendenteDashboard() {
         )}
 
         {/* STATS */}
-        {(() => {
+        {tab === "presenze" && (() => {
           const todayStr = new Date().toISOString().split("T")[0];
           const ferieInCorso = [
             ...ferie.filter(f => f.stato === "approvata" && f.data_inizio <= todayStr && f.data_fine >= todayStr),
@@ -419,25 +408,10 @@ export default function DipendenteDashboard() {
           );
         })()}
 
-        {/* TABS */}
-        <div className="flex gap-1.5 sm:gap-2 mb-5 sm:mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-          {[
-            { id: "storico", label: "Storico presenze", shortLabel: "Storico" },
-            { id: "ferie",   label: "Ferie", shortLabel: "Ferie" },
-            { id: "richieste",   label: "Richieste", shortLabel: "Richieste" },
-            { id: "turni",   label: "I miei turni", shortLabel: "Turni" },
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${tab === t.id ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black" : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"}`}>
-              <span className="hidden sm:inline">{t.label}</span>
-              <span className="sm:hidden">{t.shortLabel}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ══════════ TAB: STORICO ══════════ */}
-        {tab === "storico" && (
+        {/* ══════════ TAB: PRESENZE (storico) ══════════ */}
+        {tab === "presenze" && (
           <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100">Storico presenze</h3>
             {Object.keys(months).length === 0 && (
               <div className="text-center py-12 sm:py-16 text-sm sm:text-base text-zinc-400">Nessuna presenza registrata</div>
             )}
@@ -843,9 +817,39 @@ export default function DipendenteDashboard() {
           </div>
         )}
 
-        {/* ══════════ TAB: TURNI ══════════ */}
-        {tab === "turni" && (
-          <div>
+        {/* ══════════ TAB: PROFILO ══════════ */}
+        {tab === "profilo" && (
+          <div className="space-y-5">
+
+            {/* ACCOUNT */}
+            <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-black text-base font-semibold shrink-0">
+                  {(employee.nome?.[0] || "").toUpperCase()}{(employee.cognome?.[0] || "").toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">{employee.nome} {employee.cognome}</p>
+                  {employee.email && <p className="text-xs text-zinc-500 truncate">{employee.email}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
+                <button onClick={() => setShowChangePassword(true)}
+                  className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-sm font-medium">
+                  <Lock size={15} /> Password
+                </button>
+                <button onClick={() => setDark(d => !d)}
+                  className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-sm font-medium">
+                  {dark ? <Sun size={15} /> : <Moon size={15} />} {dark ? "Chiaro" : "Scuro"}
+                </button>
+                <button onClick={logout}
+                  className="flex items-center justify-center gap-2 h-11 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
+                  <LogOut size={15} /> Esci
+                </button>
+              </div>
+            </div>
+
+            {/* I MIEI TURNI */}
+            <h3 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100">I miei turni</h3>
             {!employee.turni_attivi ? (
               <div className="text-center py-16 text-zinc-400">
                 <Clock size={32} className="mx-auto mb-3 opacity-30" />
@@ -883,6 +887,8 @@ export default function DipendenteDashboard() {
         )}
 
       </div>
+
+      <DipendenteBottomNav active={tab} onSelect={setTab} />
     </div>
 
     {showChangePassword && (
