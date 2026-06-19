@@ -7,7 +7,6 @@ import "./index.css";
 import Login               from "./pages/Login";
 import Dashboard           from "./pages/Dashboard";
 import Requests            from "./pages/Requests";
-import Pause               from "./pages/Pause";
 import Employees           from "./pages/Employees";
 import EmployeeDetails     from "./pages/EmployeeDetails";
 import Badges              from "./pages/Badges";
@@ -70,7 +69,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
         <Route path="/pause" element={
           <ProtectedRoute>
-            <Pause />
+            <Requests initialView="pause" />
           </ProtectedRoute>
         } />
 

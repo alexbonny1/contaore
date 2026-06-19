@@ -40,7 +40,7 @@ export default function BottomNav() {
 
   const navItems = [
     { title: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { title: "Richieste", icon: FileText,        path: "/requests", notifica: pendingCount, nascondiSeSenzaPortale: true },
+    { title: "Permessi",  icon: FileText,        path: "/requests", notifica: pendingCount, nascondiSeSenzaPortale: true },
     { title: "Lettori",   icon: Radio,           path: "/readers" },
     { title: "Account",   icon: Settings,        path: "/impostazioni" },
   ].filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo));

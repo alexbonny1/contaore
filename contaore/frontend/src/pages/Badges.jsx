@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  CreditCard, CheckCircle2, XCircle, Mail, Pencil, X
+  CreditCard, CheckCircle2, XCircle, Mail, Pencil, X, ArrowLeft
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
@@ -253,10 +254,15 @@ export default function Badges() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
+        {/* BACK */}
+        <Link to="/employees" className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+          <ArrowLeft size={16} /> Dipendenti
+        </Link>
+
         {/* TITLE */}
         <div className="mb-5 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Badge NFC</h2>
-          <p className="text-xs sm:text-sm text-zinc-500 mt-1 sm:mt-2">Registra un nuovo badge e associalo a un dipendente</p>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Aggiungi dipendente</h2>
+          <p className="text-xs sm:text-sm text-zinc-500 mt-1 sm:mt-2">Registra un nuovo badge NFC e associalo a un dipendente</p>
         </div>
 
         {/* BANNER PORTALE ATTIVO */}

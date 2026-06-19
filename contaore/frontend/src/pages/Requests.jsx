@@ -8,6 +8,7 @@ import { API_URL } from '../api'
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
 import OwnerHeader from '../components/OwnerHeader'
 import BottomNav from '../components/BottomNav'
+import PauseManager from '../components/PauseManager'
 
 function statoBadge(stato) {
   switch (stato) {
@@ -22,8 +23,9 @@ function fmt(date) {
   return new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export default function Requests() {
+export default function Requests({ initialView = 'richieste' }) {
   const navigate  = useNavigate()
+  const [vista, setVista]           = useState(initialView)
   const [dark, setDark]             = useState(false)
   const [activeTab, setActiveTab]   = useState('all')
   const [richieste, setRichieste]   = useState(null)
@@ -119,19 +121,7 @@ export default function Requests() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  if (loading) return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
-      <div className="w-10 h-10 rounded-full border-4 border-zinc-300 dark:border-zinc-700 border-t-zinc-900 dark:border-t-zinc-100 animate-spin" />
-    </div>
-  )
-
-  if (!richieste) return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
-      <p className="text-zinc-500 text-sm">Errore caricamento</p>
-    </div>
-  )
-
-  const { ferie, giustificazioni, richieste_timbratura } = richieste.richieste
+  const { ferie = [], giustificazioni = [], richieste_timbratura = [] } = richieste?.richieste || {}
 
   let richiesteFiltrate = []
   if      (activeTab === 'all')            richiesteFiltrate = [...ferie.map(r => ({...r,type:'ferie'})), ...giustificazioni.map(r => ({...r,type:'giustificazioni'})), ...richieste_timbratura.map(r => ({...r,type:'timbratura'}))]
@@ -140,11 +130,12 @@ export default function Requests() {
   else if (activeTab === 'timbratura')     richiesteFiltrate = richieste_timbratura.map(r => ({...r,type:'timbratura'}))
   richiesteFiltrate.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
+  const counts = richieste?.counts || {}
   const STATS = [
-    { label: 'In attesa',    value: richieste.counts.totali_in_attesa,      color: 'text-yellow-500' },
-    { label: 'Ferie',        value: richieste.counts.ferie_in_attesa,        color: 'text-blue-500'   },
-    { label: 'Giustifiche',  value: richieste.counts.giustificazioni_in_attesa, color: 'text-purple-500'},
-    { label: 'Timbrature',   value: richieste.counts.timbratura_in_attesa,   color: 'text-orange-500' },
+    { label: 'In attesa',    value: counts.totali_in_attesa ?? 0,         color: 'text-yellow-500' },
+    { label: 'Ferie',        value: counts.ferie_in_attesa ?? 0,           color: 'text-blue-500'   },
+    { label: 'Giustifiche',  value: counts.giustificazioni_in_attesa ?? 0, color: 'text-purple-500'},
+    { label: 'Timbrature',   value: counts.timbratura_in_attesa ?? 0,      color: 'text-orange-500' },
   ]
 
   return (
@@ -157,6 +148,38 @@ export default function Requests() {
         {/* PULL INDICATOR */}
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
+        {/* TITLE */}
+        <h1 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 sm:mb-5">Ferie &amp; Permessi</h1>
+
+        {/* SEGMENTED CONTROL (Apple) */}
+        <div className="flex p-1 mb-5 sm:mb-6 rounded-2xl bg-zinc-200/70 dark:bg-zinc-800/60 backdrop-blur-sm">
+          {[
+            { id: 'richieste', label: 'Richieste' },
+            { id: 'pause',     label: 'Pause aziendali' },
+          ].map(seg => (
+            <button key={seg.id} onClick={() => setVista(seg.id)}
+              className={`flex-1 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                vista === seg.id
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                  : 'text-zinc-500 dark:text-zinc-400'
+              }`}>
+              {seg.label}
+            </button>
+          ))}
+        </div>
+
+        {vista === 'pause' ? (
+          <PauseManager />
+        ) : loading ? (
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-8 text-center">
+            <div className="w-8 h-8 mx-auto rounded-full border-4 border-zinc-300 dark:border-zinc-700 border-t-zinc-900 dark:border-t-zinc-100 animate-spin" />
+          </div>
+        ) : !richieste ? (
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-8 text-center">
+            <p className="text-zinc-500 text-sm">Errore caricamento</p>
+          </div>
+        ) : (
+        <>
         {/* STATS */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           {STATS.map(s => (
@@ -289,6 +312,8 @@ export default function Requests() {
             })
           )}
         </div>
+        </>
+        )}
       </div>
 
       {/* TOAST */}
