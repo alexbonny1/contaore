@@ -19,11 +19,10 @@ export default function TwoFactorSettings() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const response = await apiFetch('/api/user/settings')
-        if (response.success && response.settings) {
-          setEnabled(response.settings.two_factor_enabled)
-          setMethod(response.settings.two_factor_method || 'email')
-          setPhoneNumber(response.settings.phone_number_full || '')
+        const response = await apiFetch('/api/auth/2fa-status')
+        if (response.success) {
+          setEnabled(response.enabled || false)
+          setMethod('email') // Default method
         }
       } catch (err) {
         console.error('Error loading settings:', err)
@@ -137,9 +136,9 @@ export default function TwoFactorSettings() {
 
     setSaving(true)
     try {
-      const response = await apiFetch('/api/user/toggle-2fa', {
+      const response = await apiFetch('/api/auth/2fa-settings', {
         method: 'PUT',
-        body: JSON.stringify({ enabled: newValue })
+        body: JSON.stringify({ two_factor_enabled: newValue })
       })
 
       if (response.success) {
@@ -188,7 +187,7 @@ export default function TwoFactorSettings() {
             <div>
               <p className="font-medium text-gray-900 dark:text-white">Abilita 2FA</p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Richiede verifica ad ogni login
+                Richiede verifica dopo 15 minuti di inattività
               </p>
             </div>
             <button

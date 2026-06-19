@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt'
 import { supabase } from '../services/supabase.js'
-import { authenticate } from '../middleware/auth.js'
+import { authenticate, authenticateWithInactivity } from '../middleware/auth.js'
 import { sendCredenziali } from '../services/email.js'
 
 function generatePassword(length = 10) {
@@ -449,7 +449,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.get(
     '/api/employees',
-    { preHandler: authenticate },
+    { preHandler: authenticateWithInactivity },
     async (request, reply) => {
 
       try {
