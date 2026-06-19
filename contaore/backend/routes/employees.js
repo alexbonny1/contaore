@@ -1364,7 +1364,8 @@ export default async function employeeRoutes(fastify) {
 
           const { error: insertError } = await supabase.from('user_account').insert({
             company_id: companyId, dipendente_id: id, username,
-            email: newEmail, password: hashedPwd, role: 'dipendente'
+            email: newEmail, password: hashedPwd, role: 'dipendente',
+            two_factor_enabled: false
           })
           if (insertError) {
             console.log('Error creating account:', insertError)
