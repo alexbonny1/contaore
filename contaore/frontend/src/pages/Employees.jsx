@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Download, X, CheckSquare, Square, FileText, Table2
+  Download, X, CheckSquare, Square, FileText, Table2, UserPlus
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
@@ -624,24 +624,31 @@ export default function Employees() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
-        <div className="flex items-center justify-end gap-2 sm:gap-3 mb-6 sm:mb-8">
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mb-6 sm:mb-8">
           <button
             onClick={() => setShowExport(true)}
-            className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="flex flex-col xs:flex-row items-center justify-center gap-1.5 xs:gap-2.5 h-16 xs:h-14 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-xs sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
           >
-            <Download size={14} className="sm:w-[15px] sm:h-[15px]" />
-            <span className="hidden xs:inline">Esporta</span>
+            <Download size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <span>Scarica</span>
           </button>
           <button
             onClick={() => { setSelectionMode(prev => !prev); setSelectedEmpIds([]); }}
-            className={`flex items-center gap-1.5 sm:gap-2 h-9 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium transition-all ${
+            className={`flex flex-col xs:flex-row items-center justify-center gap-1.5 xs:gap-2.5 h-16 xs:h-14 rounded-2xl sm:rounded-3xl border text-xs sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all ${
               selectionMode
                 ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
-                : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
+                : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100"
             }`}
           >
-            <CheckSquare size={14} className="sm:w-[15px] sm:h-[15px]" />
-            <span className="hidden xs:inline">Seleziona</span>
+            <CheckSquare size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <span>Seleziona</span>
+          </button>
+          <button
+            onClick={() => navigate("/badges")}
+            className="flex flex-col xs:flex-row items-center justify-center gap-1.5 xs:gap-2.5 h-16 xs:h-14 rounded-2xl sm:rounded-3xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-base font-semibold shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
+          >
+            <UserPlus size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <span>Aggiungi</span>
           </button>
         </div>
 
