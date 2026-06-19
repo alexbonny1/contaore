@@ -11,7 +11,7 @@ ALTER TABLE user_account
   ADD COLUMN IF NOT EXISTS phone_number varchar(20);
 
 ALTER TABLE user_account
-  ADD COLUMN IF NOT EXISTS two_factor_enabled boolean DEFAULT true;
+  ADD COLUMN IF NOT EXISTS two_factor_enabled boolean DEFAULT false;
 
 ALTER TABLE user_account
   ADD COLUMN IF NOT EXISTS two_factor_method varchar(10) DEFAULT 'email';
