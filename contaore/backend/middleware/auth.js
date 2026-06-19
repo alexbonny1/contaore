@@ -78,7 +78,50 @@ export async function authenticateDipendente(request, reply) {
   }
 }
 
-// ─── controlla inattività 2FA (15 minuti) ───────────────────────────────────
+// ─── autenticazione + controllo inattività 2FA (titolari/owner) ──────────────
+export async function authenticateWithInactivity(request, reply) {
+  try {
+    const authHeader = request.headers.authorization
+    if (!authHeader) {
+      return reply.status(401).send({ error: 'TOKEN_MISSING' })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const decoded = jwt.verify(token, JWT_SECRET)
+    request.user = decoded
+
+    // I dipendenti non hanno controllo inattività
+    if (decoded.role === 'dipendente') {
+      return
+    }
+
+    // Se 2FA non è abilitato, passa
+    if (!decoded.two_factor_enabled) {
+      return
+    }
+
+    // Calcola inattività
+    const lastActivityTime = new Date(decoded.last_activity_timestamp)
+    const now = new Date()
+    const inactivityMinutes = (now - lastActivityTime) / (1000 * 60)
+
+    // Se inattività <= 15 minuti, procedi
+    if (inactivityMinutes <= 15) {
+      return
+    }
+
+    // Inattività > 15 minuti: RICHIEDI 2FA
+    reply.status(403).send({
+      error: 'TWO_FACTOR_REQUIRED',
+      status: 'INACTIVITY_2FA_REQUIRED'
+    })
+  } catch (err) {
+    console.log(err)
+    return reply.status(401).send({ error: 'INVALID_TOKEN' })
+  }
+}
+
+// ─── controlla inattività 2FA (15 minuti) - endpoint helper ──────────────────
 export async function checkInactivity(request, reply) {
   try {
     const authHeader = request.headers.authorization
