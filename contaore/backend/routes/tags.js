@@ -188,12 +188,14 @@ export default async function tagRoutes(fastify) {
               console.error('Errore creazione account dipendente:', accountError)
             } else {
               accountCreato = true
+              const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
               await sendCredenziali({
                 email:       employee_email,
                 nome:        employee_name,
                 username,
                 password:    plainPwd,
-                companyNome: company.nome
+                companyNome: company.nome,
+                loginUrl
               })
             }
           } catch (accErr) {
@@ -323,7 +325,8 @@ export default async function tagRoutes(fastify) {
 
               if (!accErr) {
                 accountCreato = true
-                await sendCredenziali({ email, nome: empNome, username, password: plainPwd, companyNome: company.nome })
+                const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
+                await sendCredenziali({ email, nome: empNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
               }
             } else {
               await supabase.from('user_account').update({ email }).eq('dipendente_id', empId)
