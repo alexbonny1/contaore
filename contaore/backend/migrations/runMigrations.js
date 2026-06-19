@@ -40,6 +40,14 @@ export async function runMigrations() {
       console.log('[Migrations] ✅ phone_number column added')
     }
 
+    // Colonne per la pulizia automatica dello storico presenze
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_enabled boolean DEFAULT false;`
+    }).catch(() => ({ error: null }))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_retention_months integer DEFAULT 12;`
+    }).catch(() => ({ error: null }))
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)

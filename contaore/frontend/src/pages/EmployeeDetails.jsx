@@ -334,7 +334,6 @@ export default function EmployeeDetails() {
 
   const [historyMonths, setHistoryMonths] = useState([]);
   const [expandedMonth, setExpandedMonth] = useState(null);
-  const [showTurniEditor, setShowTurniEditor] = useState(false);
   const [showGrafici, setShowGrafici] = useState(false);
 
   const [waitingBadgeScan, setWaitingBadgeScan] = useState(false);
@@ -344,6 +343,13 @@ export default function EmployeeDetails() {
   const [toast, setToast] = useState(null);
 
   const [portaleAttivo, setPortaleAttivo]       = useState(true); // default true = nascosto finché non carica
+
+  const [showEditProfile, setShowEditProfile]   = useState(false);
+  const [profileNome, setProfileNome]           = useState("");
+  const [profileCognome, setProfileCognome]     = useState("");
+  const [profileEmail, setProfileEmail]         = useState("");
+  const [profileSaving, setProfileSaving]       = useState(false);
+
   const [showAddPresence, setShowAddPresence]   = useState(false);
   const [addTipo, setAddTipo]                   = useState("ENTRATA");
   const [addDate, setAddDate]                   = useState("");
@@ -359,6 +365,40 @@ export default function EmployeeDetails() {
 
   function showToast(message, type = "success") {
     setToast({ message, type });
+  }
+
+  function openEditProfile() {
+    setProfileNome(employee?.nome || "");
+    setProfileCognome(employee?.cognome || "");
+    setProfileEmail(employee?.email || "");
+    setShowEditProfile(true);
+  }
+
+  async function saveProfile() {
+    if (!profileNome.trim()) { showToast("Il nome è obbligatorio", "error"); return; }
+    setProfileSaving(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL + "/api/employees/" + id + "/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({
+          nome: profileNome.trim(),
+          cognome: profileCognome.trim(),
+          email: profileEmail.trim() || null
+        })
+      });
+      const data = await res.json();
+      if (!data.success) { showToast(data.error || "Errore salvataggio", "error"); return; }
+      showToast(data.credenziali_inviate ? `Credenziali inviate a ${profileEmail.trim()}` : "Anagrafica aggiornata");
+      setShowEditProfile(false);
+      loadData();
+    } catch (err) {
+      console.log(err);
+      showToast("Errore server", "error");
+    } finally {
+      setProfileSaving(false);
+    }
   }
 
   function startAddPresence(dateStr) {
@@ -665,33 +705,6 @@ export default function EmployeeDetails() {
 
   }
 
-  async function eliminaMese(monthName) {
-
-    if (!confirm("Eliminare tutte le presenze di " + monthName + "?")) return;
-
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        API_URL + "/api/employees/" + id + "/delete-month",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token
-          },
-          body: JSON.stringify({ month: monthName })
-        }
-      );
-      const data = await response.json();
-      if (!data.success) { showToast("Errore eliminazione mese", "error"); return; }
-      loadData();
-    } catch (err) {
-      console.log(err);
-      showToast("Errore server", "error");
-    }
-
-  }
-
   function startEditShift(shift) {
     setEditingShiftId(shift.id);
     setTurnoNome(shift.turno_nome || "");
@@ -769,13 +782,22 @@ export default function EmployeeDetails() {
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-            <div>
-              <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                {employee.nome} {employee.cognome}
-              </h1>
-              <p className="text-sm text-zinc-500 mt-1">
-                {employee.email || "Nessuna email"}
-              </p>
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                  {employee.nome} {employee.cognome}
+                </h1>
+                <p className="text-sm text-zinc-500 mt-1 truncate">
+                  {employee.email || "Nessuna email"}
+                </p>
+              </div>
+              <button
+                onClick={openEditProfile}
+                title="Modifica nome ed email"
+                className="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 shrink-0"
+              >
+                <Pencil size={15} />
+              </button>
             </div>
 
             <div className={`px-4 py-2 rounded-2xl text-sm font-semibold w-fit ${headerStato.cls}`}>
@@ -800,8 +822,8 @@ export default function EmployeeDetails() {
             </p>
           </div>
 
-          <button
-            onClick={() => { setShowTurniEditor(true); setTimeout(() => document.getElementById("turni-editor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60); }}
+          <Link
+            to={`/employees/${id}/turni`}
             className="text-left rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
@@ -827,7 +849,7 @@ export default function EmployeeDetails() {
               <p className="text-base font-semibold text-zinc-500">Riposo</p>
             )}
             <p className="text-xs text-zinc-400 mt-1">tocca per modificare i turni</p>
-          </button>
+          </Link>
 
           {turniAttivi && (
 
@@ -858,189 +880,6 @@ export default function EmployeeDetails() {
           )}
 
         </div>
-
-        {/* EDITOR TURNI (apribile dal riquadro "Turno di oggi") */}
-        {showTurniEditor && (
-        <div id="turni-editor">
-
-        {/* TURNI TOGGLE */}
-
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-5">
-
-          <div className="flex items-center justify-between">
-
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Gestione turni</h2>
-              <p className="text-sm text-zinc-500 mt-1">
-                {turniAttivi
-                  ? "Turni attivi — assenze e straordinari calcolati"
-                  : "Attiva per tracciare assenze e straordinari"
-                }
-              </p>
-            </div>
-
-            <button
-              onClick={toggleTurni}
-              className={`w-16 h-9 rounded-2xl text-sm font-semibold transition-all ${
-                turniAttivi
-                  ? "bg-green-500 text-white"
-                  : "bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200"
-              }`}
-            >
-              {turniAttivi ? "ON" : "OFF"}
-            </button>
-
-          </div>
-
-        </div>
-
-        {/* FORM TURNI */}
-
-        {turniAttivi && (
-
-          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-5">
-
-            <div className="flex items-center gap-2 mb-5">
-              <Briefcase size={18} className="text-zinc-500" />
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {editingShiftId ? "Modifica turno" : "Aggiungi turno"}
-              </h2>
-            </div>
-
-            <form onSubmit={salvaTurno} className="space-y-4">
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Nome turno (es. Mattina)"
-                  value={turnoNome}
-                  onChange={(e) => setTurnoNome(e.target.value)}
-                  className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
-                />
-              </div>
-
-              {/* SELEZIONE GIORNI - singolo in modifica, multi in creazione */}
-              <div>
-                <p className="text-xs text-zinc-400 mb-2">
-                  {editingShiftId ? "Giorno" : "Giorni (seleziona uno o più)"}
-                </p>
-                {editingShiftId ? (
-                  <select
-                    value={giorno}
-                    onChange={(e) => setGiorno(e.target.value)}
-                    className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
-                  >
-                    {giorni.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {giorni.map(g => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => toggleGiorno(g)}
-                        className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all ${
-                          giorniSelezionati.includes(g)
-                            ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent"
-                            : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {!editingShiftId && giorniSelezionati.length === 0 && (
-                  <p className="text-xs text-zinc-400 mt-1">Seleziona almeno un giorno, oppure verrà usato Lunedì</p>
-                )}
-              </div>
-
-              <div>
-                <p className="text-xs text-zinc-400 mb-2">Primo turno</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <input type="time" value={ingresso1} onChange={(e) => setIngresso1(e.target.value)}
-                    className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                  <input type="time" value={uscita1} onChange={(e) => setUscita1(e.target.value)}
-                    className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs text-zinc-400 mb-2">Secondo turno (opzionale)</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <input type="time" value={ingresso2} onChange={(e) => setIngresso2(e.target.value)}
-                    className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                  <input type="time" value={uscita2} onChange={(e) => setUscita2(e.target.value)}
-                    className="h-11 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="h-11 px-6 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
-                >
-                  {saving ? "Salvataggio..." : editingShiftId ? "Modifica" : "Aggiungi turno"}
-                </button>
-                {editingShiftId && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="h-11 px-6 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300"
-                  >
-                    Annulla
-                  </button>
-                )}
-              </div>
-
-            </form>
-
-          </div>
-
-        )}
-
-        {/* LISTA TURNI */}
-
-        {turniAttivi && turni.length > 0 && (
-
-          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-5">
-
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Turni assegnati</h2>
-
-            <div className="space-y-3">
-              {turni.map((t) => (
-                <div key={t.id} className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 flex-wrap">
-                        {t.turno_nome || "Turno"} — {t.giorno_settimana}
-                        {t.uscita_1 && t.ingresso_1 && t.uscita_1 < t.ingresso_1 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                            Notturno
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        {t.ingresso_1} - {t.uscita_1}
-                        {t.ingresso_2 && t.uscita_2 ? ` · ${t.ingresso_2} - ${t.uscita_2}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex gap-4">
-                      <button onClick={() => startEditShift(t)} className="text-xs text-blue-500 hover:text-blue-700">Modifica</button>
-                      <button onClick={() => eliminaTurno(t.id)} className="text-xs text-red-500 hover:text-red-700">Elimina</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-          </div>
-
-        )}
-
-        </div>
-        )}
 
         {/* STORICO ORE (inline) */}
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] overflow-hidden mb-5">
@@ -1121,12 +960,6 @@ export default function EmployeeDetails() {
                             ? <ChevronUp size={16} className="text-zinc-400" />
                             : <ChevronDown size={16} className="text-zinc-400" />
                           }
-                          <button
-                            onClick={(e) => { e.stopPropagation(); eliminaMese(month.mese); }}
-                            className="text-xs text-red-400 hover:text-red-600"
-                          >
-                            Elimina
-                          </button>
                         </div>
 
                       </div>
@@ -1334,6 +1167,53 @@ export default function EmployeeDetails() {
             </div>
           )}
         </div>
+
+      {/* MODALE MODIFICA ANAGRAFICA */}
+
+      {showEditProfile && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Modifica anagrafica</h3>
+            <p className="text-xs text-zinc-400 mb-5">
+              {portaleAttivo
+                ? "Con portale attivo, salvando verranno inviate nuove credenziali alla email indicata."
+                : "Aggiorna nome, cognome ed email del dipendente."}
+            </p>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-zinc-400 mb-1">Nome</p>
+                  <input type="text" value={profileNome} onChange={(e) => setProfileNome(e.target.value)}
+                    className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-400 mb-1">Cognome</p>
+                  <input type="text" value={profileCognome} onChange={(e) => setProfileCognome(e.target.value)}
+                    className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-zinc-400 mb-1">Email</p>
+                <input type="email" value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)}
+                  placeholder="email@esempio.it"
+                  className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={saveProfile} disabled={profileSaving}
+                className="flex-1 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
+                {profileSaving ? "Salvataggio..." : "Salva"}
+              </button>
+              <button onClick={() => setShowEditProfile(false)}
+                className="flex-1 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300">
+                Annulla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODALE AGGIUNGI TIMBRATURA MANUALE — solo se portale disattivo */}
 

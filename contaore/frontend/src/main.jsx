@@ -9,6 +9,7 @@ import Dashboard           from "./pages/Dashboard";
 import Requests            from "./pages/Requests";
 import Employees           from "./pages/Employees";
 import EmployeeDetails     from "./pages/EmployeeDetails";
+import EmployeeTurni       from "./pages/EmployeeTurni";
 import Badges              from "./pages/Badges";
 import Readers             from "./pages/Readers";
 import Admin               from "./pages/admin";
@@ -21,6 +22,7 @@ import Settings            from "./pages/Settings";
 import SettingsPresenze    from "./pages/SettingsPresenze";
 import SettingsGrafici     from "./pages/SettingsGrafici";
 import SettingsSicurezza   from "./pages/SettingsSicurezza";
+import SettingsDati        from "./pages/SettingsDati";
 import PrivacyPolicy       from "./pages/PrivacyPolicy";
 import CookiePolicy        from "./pages/CookiePolicy";
 
@@ -69,6 +71,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/pause"         element={<Requests initialView="pause" />} />
           <Route path="/employees"     element={<Employees />} />
           <Route path="/employees/:id" element={<EmployeeDetails />} />
+          <Route path="/employees/:id/turni" element={<EmployeeTurni />} />
           <Route path="/badges"        element={<Badges />} />
           <Route path="/readers"       element={<Readers />} />
           <Route path="/notifications" element={<Notifications />} />
@@ -77,6 +80,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/impostazioni/grafici"    element={<SettingsGrafici />} />
           <Route path="/impostazioni/notifiche"  element={<Notifications />} />
           <Route path="/impostazioni/sicurezza"  element={<SettingsSicurezza />} />
+          <Route path="/impostazioni/dati"       element={<SettingsDati />} />
         </Route>
 
         {/* portale dipendente */}
