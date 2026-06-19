@@ -599,22 +599,8 @@ export default function DipendenteDashboard() {
                     </div>
                   </div>
 
-                  {/* riepilogo mese */}
+                  {/* riepilogo mese NASCOSTO - mostro direttamente i giorni */}
                   {isOpen && (
-                    <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 sm:px-6 py-3 sm:py-4 space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-zinc-600 dark:text-zinc-400">Ore lavorate:</span>
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">{oreM}h</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-zinc-600 dark:text-zinc-400">Giorni assenti:</span>
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">{assM}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* giorni (nascosti — commentato il vecchio codice) */}
-                  {false && isOpen && (
                     <div className="border-t border-zinc-100 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800">
                       {giorni.map(g => {
                         const { label, color } = statoBadge(g.stato, g.ritardo_minuti);
