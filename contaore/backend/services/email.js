@@ -21,6 +21,10 @@ const FROM = process.env.EMAIL_FROM || 'Timbry <onboarding@resend.dev>'
 // ─── Invia credenziali al TITOLARE quando il superadmin crea l'azienda ───────
 export async function sendCredenzialiOwner({ email, username, password, companyNome, loginUrl }) {
   try {
+    const loginSection = loginUrl ? `
+              <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Sito di accesso</p>
+              <p style="margin:0;font-size:15px;font-weight:600;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>
+            ` : ''
     const { data, error } = await resend.emails.send({
       from:    FROM,
       to:      email,
@@ -40,7 +44,7 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
               <p style="margin:0 0 16px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${username}</p>
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Password</p>
               <p style="margin:0 0 24px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${password}</p>
-              ${loginUrl ? `<p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Sito di accesso</p><p style="margin:0;font-family:monospace;font-size:15px;font-weight:600;color:#2563eb;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>` : ''}
+              ${loginSection}
             </div>
 
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
@@ -74,6 +78,10 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
 // ─── Invia credenziali al dipendente appena creato ───────────────────────────
 export async function sendCredenziali({ email, nome, username, password, companyNome, loginUrl }) {
   try {
+    const loginSection = loginUrl ? `
+              <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Sito di accesso</p>
+              <p style="margin:0;font-size:15px;font-weight:600;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>
+            ` : ''
     const { data, error } = await resend.emails.send({
       from:    FROM,
       to:      email,
@@ -93,7 +101,7 @@ export async function sendCredenziali({ email, nome, username, password, company
               <p style="margin:0 0 16px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${username}</p>
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Password</p>
               <p style="margin:0 0 24px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${password}</p>
-              ${loginUrl ? `<p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Sito di accesso</p><p style="margin:0;font-family:monospace;font-size:15px;font-weight:600;color:#2563eb;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>` : ''}
+              ${loginSection}
             </div>
 
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
