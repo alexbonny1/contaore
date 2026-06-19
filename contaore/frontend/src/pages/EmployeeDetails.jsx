@@ -6,16 +6,21 @@ import {
 
 import {
   useParams,
-  useNavigate
+  useNavigate,
+  Link
 } from "react-router-dom";
 
 import {
   ArrowLeft,
   CalendarDays,
   Clock3,
+  Calendar,
   Briefcase,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  BarChart2,
   CreditCard,
   AlertCircle,
   TrendingUp,
@@ -35,7 +40,7 @@ function Toast({ message, type, onClose }) {
   }, []);
   return (
     <div className={`
-      fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+      fixed bottom-28 left-1/2 -translate-x-1/2 z-50
       flex items-center gap-2
       px-5 py-3 rounded-2xl shadow-lg
       text-sm font-medium
@@ -329,7 +334,8 @@ export default function EmployeeDetails() {
 
   const [historyMonths, setHistoryMonths] = useState([]);
   const [expandedMonth, setExpandedMonth] = useState(null);
-  const [showStorico, setShowStorico] = useState(false);
+  const [showTurniEditor, setShowTurniEditor] = useState(false);
+  const [showGrafici, setShowGrafici] = useState(false);
 
   const [waitingBadgeScan, setWaitingBadgeScan] = useState(false);
   const [changingBadge, setChangingBadge] = useState(false);
@@ -726,9 +732,24 @@ export default function EmployeeDetails() {
     );
   }
 
-  return (
+  const giorniIdx = ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
+  const todayName = giorniIdx[new Date().getDay()];
+  const todayStr  = new Date().toISOString().split("T")[0];
+  const turnoOggi = turni.filter(t => t.giorno_settimana === todayName);
+  let todayDay = null;
+  for (const m of historyMonths) {
+    const d = (m.giorni || []).find(g => g.giorno === todayStr);
+    if (d) { todayDay = d; break; }
+  }
+  const inFerieOggi = todayDay?.stato === "ferie";
+  const headerStato = inFerieOggi
+    ? { label: "In ferie",     cls: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" }
+    : employee.attivo
+    ? { label: "Presente ora", cls: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300" }
+    : { label: "Fuori orario", cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" };
 
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10]">
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
       {toast && (
         <Toast
@@ -738,17 +759,9 @@ export default function EmployeeDetails() {
         />
       )}
 
-      <div className="max-w-6xl mx-auto p-4 sm:p-6">
-        <div className="flex flex-col xl:flex-row gap-5 xl:items-start">
-        <div className="flex-1 min-w-0">
-
-        <button
-          onClick={() => navigate("/employees")}
-          className="mb-6 flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-        >
-          <ArrowLeft size={16} />
-          Torna ai dipendenti
-        </button>
+      <Link to="/employees" className="inline-flex items-center gap-0.5 -ml-1 mb-4 text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">
+        <ChevronLeft size={18} /> Dipendenti
+      </Link>
 
         {/* HEADER */}
 
@@ -765,28 +778,19 @@ export default function EmployeeDetails() {
               </p>
             </div>
 
-            <div className={`
-              px-4 py-2 rounded-2xl text-sm font-semibold w-fit
-              ${employee.attivo
-                ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300"
-                : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-              }
-            `}>
-              {employee.attivo ? "Presente ora" : "Assente"}
+            <div className={`px-4 py-2 rounded-2xl text-sm font-semibold w-fit ${headerStato.cls}`}>
+              {headerStato.label}
             </div>
 
           </div>
 
         </div>
 
-        {/* STATS */}
+        {/* RIQUADRI */}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
 
-          <div
-            onClick={() => setShowStorico(true)}
-            className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-all"
-          >
+          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5">
             <div className="flex items-center gap-2 mb-2">
               <Clock3 size={15} className="text-zinc-400" />
               <p className="text-xs text-zinc-500">Ore mese corrente</p>
@@ -794,18 +798,36 @@ export default function EmployeeDetails() {
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               {formatOre(employee.stats?.total_hours ?? 0)}
             </p>
-            <p className="text-xs text-zinc-400 mt-1">clicca per storico</p>
           </div>
 
-          <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarDays size={15} className="text-zinc-400" />
-              <p className="text-xs text-zinc-500">Letture</p>
+          <button
+            onClick={() => { setShowTurniEditor(true); setTimeout(() => document.getElementById("turni-editor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60); }}
+            className="text-left rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Calendar size={15} className="text-zinc-400" />
+                <p className="text-xs text-zinc-500">Turno di oggi</p>
+              </div>
+              <ChevronRight size={15} className="text-zinc-300 dark:text-zinc-600" />
             </div>
-            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              {employee.stats?.total_reads ?? 0}
-            </p>
-          </div>
+            {!turniAttivi ? (
+              <p className="text-base font-semibold text-zinc-400">Turni non attivi</p>
+            ) : inFerieOggi ? (
+              <p className="text-base font-semibold text-blue-500">In ferie</p>
+            ) : turnoOggi.length > 0 ? (
+              <div className="space-y-0.5">
+                {turnoOggi.map(t => (
+                  <p key={t.id} className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {t.ingresso_1} - {t.uscita_1}{t.ingresso_2 && t.uscita_2 ? ` · ${t.ingresso_2} - ${t.uscita_2}` : ""}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-base font-semibold text-zinc-500">Riposo</p>
+            )}
+            <p className="text-xs text-zinc-400 mt-1">tocca per modificare i turni</p>
+          </button>
 
           {turniAttivi && (
 
@@ -837,63 +859,9 @@ export default function EmployeeDetails() {
 
         </div>
 
-        {/* BADGE */}
-
-        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-6 mb-5">
-
-          <div className="flex items-center gap-2 mb-4">
-            <CreditCard size={18} className="text-zinc-500" />
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Badge NFC</h2>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-xs text-zinc-400 mb-1">UID attuale</p>
-            <p className="text-sm font-mono font-semibold text-zinc-900 dark:text-zinc-100">
-              {employee.badge_uid || "Nessun badge"}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-
-            <button
-              onClick={() => { setWaitingBadgeScan(true); setShowManualUid(false); }}
-              disabled={waitingBadgeScan || changingBadge}
-              className="h-10 px-5 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
-            >
-              {waitingBadgeScan ? "Scansiona badge..." : changingBadge ? "Aggiornamento..." : "Scansiona nuovo badge"}
-            </button>
-
-            <button
-              onClick={() => { setShowManualUid(prev => !prev); setWaitingBadgeScan(false); }}
-              className="h-10 px-5 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300"
-            >
-              Inserisci UID manuale
-            </button>
-
-          </div>
-
-          {showManualUid && (
-
-            <div className="mt-4 flex gap-3">
-              <input
-                type="text"
-                placeholder="Es. A1B2C3D4"
-                value={manualUid}
-                onChange={(e) => setManualUid(e.target.value.toUpperCase())}
-                className="flex-1 h-10 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none font-mono"
-              />
-              <button
-                onClick={() => changeBadge(manualUid)}
-                disabled={!manualUid || changingBadge}
-                className="h-10 px-5 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
-              >
-                Salva
-              </button>
-            </div>
-
-          )}
-
-        </div>
+        {/* EDITOR TURNI (apribile dal riquadro "Turno di oggi") */}
+        {showTurniEditor && (
+        <div id="turni-editor">
 
         {/* TURNI TOGGLE */}
 
@@ -1071,49 +1039,26 @@ export default function EmployeeDetails() {
 
         )}
 
-        </div>{/* end flex-1 main content */}
-
-        {/* PANNELLO LATERALE GRAFICI */}
-        <div className="w-full xl:w-80 xl:shrink-0 xl:sticky xl:top-6">
-          <ChartPanel historyMonths={historyMonths} turniAttivi={turniAttivi} />
         </div>
+        )}
 
-        </div>{/* end flex row */}
-      </div>
+        {/* STORICO ORE (inline) */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] overflow-hidden mb-5">
 
-      {/* MODALE STORICO */}
+          <div className="flex items-center justify-between p-5 sm:p-6 border-b border-zinc-200 dark:border-zinc-800">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Storico ore</h2>
+            {canManagePresence && (
+              <button
+                onClick={() => startAddPresence()}
+                className="h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium flex items-center gap-1.5"
+              >
+                <Plus size={14} />
+                Timbratura
+              </button>
+            )}
+          </div>
 
-      {showStorico && (
-
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center p-4">
-
-          <div className="w-full max-w-3xl max-h-[90vh] bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl flex flex-col">
-
-            <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-              <div>
-                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Storico presenze</h2>
-                <p className="text-sm text-zinc-500 mt-0.5">{employee.nome} {employee.cognome}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {canManagePresence && (
-                  <button
-                    onClick={() => startAddPresence()}
-                    className="h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium flex items-center gap-1.5"
-                  >
-                    <Plus size={14} />
-                    Timbratura
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowStorico(false)}
-                  className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300"
-                >
-                  Chiudi
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-y-auto p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-4">
 
               {historyMonths.length === 0 ? (
 
@@ -1367,13 +1312,28 @@ export default function EmployeeDetails() {
 
               )}
 
-            </div>
-
           </div>
 
-        </div>
+        </div>{/* end storico card */}
 
-      )}
+        {/* GRAFICI (comprimibile) */}
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] overflow-hidden mb-5">
+          <button
+            onClick={() => setShowGrafici(v => !v)}
+            className="w-full flex items-center justify-between p-5 sm:p-6"
+          >
+            <div className="flex items-center gap-2">
+              <BarChart2 size={18} className="text-zinc-500" />
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Statistiche</h2>
+            </div>
+            {showGrafici ? <ChevronUp size={18} className="text-zinc-400" /> : <ChevronDown size={18} className="text-zinc-400" />}
+          </button>
+          {showGrafici && (
+            <div className="px-4 sm:px-6 pb-6">
+              <ChartPanel historyMonths={historyMonths} turniAttivi={turniAttivi} />
+            </div>
+          )}
+        </div>
 
       {/* MODALE AGGIUNGI TIMBRATURA MANUALE — solo se portale disattivo */}
 

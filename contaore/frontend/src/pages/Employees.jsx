@@ -703,6 +703,13 @@ export default function Employees() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
             {employees.map((emp) => {
               const isSelected = selectedEmployeeIds.includes(emp.id);
+              const stato = emp.attivo
+                ? { dot: "bg-green-500", label: "Presente",     color: "text-green-600 dark:text-green-400" }
+                : emp.assente
+                ? { dot: "bg-red-500",   label: "Assente",      color: "text-red-600 dark:text-red-400" }
+                : emp.in_pausa
+                ? { dot: "bg-amber-500", label: "In pausa",     color: "text-amber-600 dark:text-amber-400" }
+                : { dot: "bg-zinc-400",  label: "Fuori orario", color: "text-zinc-500" };
               return (
                 <div
                   key={emp.id}
@@ -713,28 +720,29 @@ export default function Employees() {
                       : "border-zinc-200 dark:border-zinc-800"
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-4 sm:mb-5">
-                    <div className="min-w-0 flex-1 pr-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                         {emp.nome} {emp.cognome}
                       </h3>
-                      <p className="text-xs sm:text-sm text-zinc-500 mt-1 truncate">{emp.badge_uid || "Nessun badge"}</p>
+                      <p className="text-xs sm:text-sm text-zinc-500 mt-0.5 truncate">{emp.email || "Nessuna email"}</p>
                     </div>
                     {selectionMode
                       ? (isSelected
                           ? <CheckSquare size={20} className="sm:w-6 sm:h-6 text-indigo-500 mt-0.5 flex-shrink-0" />
                           : <Square size={20} className="sm:w-6 sm:h-6 text-zinc-400 mt-0.5 flex-shrink-0" />)
-                      : <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mt-1 sm:mt-2 flex-shrink-0 ${emp.attivo ? "bg-green-500" : "bg-zinc-400"}`} />
+                      : <span className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mt-1.5 flex-shrink-0 ${stato.dot}`} />
                     }
                   </div>
-                  <div className="space-y-2 sm:space-y-3">
-                    <Info label="Letture oggi"    value={emp.stats?.today_reads || 0} />
-                    <Info label="Letture mese"    value={emp.stats?.month_reads || 0} />
-                    <Info label="Ore totali"      value={formatOre(emp.stats?.total_hours || 0)} />
-                    <Info
-                      label="Ultima presenza"
-                      value={emp.stats?.last_read ? new Date(emp.stats.last_read).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "Mai"}
-                    />
+
+                  <div className="flex items-end justify-between gap-2 mt-4 sm:mt-5">
+                    <div className="min-w-0">
+                      <p className="text-[10px] sm:text-xs text-zinc-400">Ore totali</p>
+                      <p className="text-lg sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">{formatOre(emp.stats?.total_hours || 0)}</p>
+                    </div>
+                    {!selectionMode && (
+                      <span className={`text-xs sm:text-sm font-medium ${stato.color}`}>{stato.label}</span>
+                    )}
                   </div>
                 </div>
               );
@@ -743,14 +751,5 @@ export default function Employees() {
         )}
 
       </div>
-  );
-}
-
-function Info({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-xs sm:text-sm text-zinc-500 truncate">{label}</span>
-      <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{value}</span>
-    </div>
   );
 }
