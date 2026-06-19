@@ -3,18 +3,10 @@ import { Link } from "react-router-dom";
 import { CheckCircle, Coffee, XCircle, ChevronRight } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
-import OwnerHeader from "../components/OwnerHeader";
-import BottomNav from "../components/BottomNav";
 
 export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading]     = useState(true);
-
-  /* THEME: applica il tema salvato al mount */
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") document.documentElement.classList.add("dark");
-  }, []);
 
   const { pulling, refreshing, distance } = usePullToRefresh(loadDashboard);
 
@@ -41,11 +33,7 @@ export default function Dashboard() {
   const assenti   = employees.filter(emp => emp.assente);
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
-
-      <OwnerHeader />
-
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-28">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* RIQUADRO RIASSUNTIVO PRESENZE → Dipendenti */}
@@ -69,9 +57,6 @@ export default function Dashboard() {
         </Link>
 
       </div>
-
-      <BottomNav />
-    </div>
   );
 }
 

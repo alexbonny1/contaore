@@ -16,7 +16,7 @@ function countDays(a, b) {
  * Usato dentro la pagina combinata "Ferie & Permessi" (Requests.jsx).
  * Nessuna modifica alle API: /api/pausa-aziendale, /api/tags, /api/company/info.
  */
-export default function PauseManager() {
+export default function PauseManager({ portaleAttivo: portaleAttivoProp }) {
   const navigate  = useNavigate()
   const [pause, setPause]             = useState([])
   const [loading, setLoading]         = useState(true)
@@ -36,7 +36,8 @@ export default function PauseManager() {
 
   const isFirstLoad = useRef(true)
   const user          = JSON.parse(localStorage.getItem('user') || '{}')
-  const [portaleAttivo, setPortaleAttivo] = useState(user.portale_dipendenti !== false)
+  // stato portale: prop dal layout se passata, altrimenti fallback da localStorage
+  const portaleAttivo = portaleAttivoProp !== undefined ? portaleAttivoProp : (user.portale_dipendenti !== false)
   const token         = localStorage.getItem('token')
 
   // LOAD PAUSE
@@ -44,14 +45,6 @@ export default function PauseManager() {
     loadPause()
     const interval = setInterval(loadPause, 15000)
     return () => clearInterval(interval)
-  }, [])
-
-  // PORTAL STATUS
-  useEffect(() => {
-    fetch(`${API_URL}/api/company/info`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.success) setPortaleAttivo(!!d.portale_dipendenti) })
-      .catch(() => {})
   }, [])
 
   // LOAD EMPLOYEES (solo se portale inattivo)

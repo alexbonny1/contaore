@@ -7,8 +7,6 @@ import {
 import { API_URL } from "../api";
 import TwoFactorSettings from "../components/TwoFactorSettings";
 import ChangePasswordModal from "../components/ChangePasswordModal";
-import OwnerHeader from "../components/OwnerHeader";
-import BottomNav from "../components/BottomNav";
 
 const STATI_GRAFICO = [
   { key: "presente",     label: "Presente",      color: "#22c55e" },
@@ -124,18 +122,16 @@ export default function Settings() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
-      <p className="text-sm text-zinc-400">Caricamento...</p>
-    </div>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-8 text-center">
+          <p className="text-sm text-zinc-400">Caricamento...</p>
+        </div>
+      </div>
   );
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10]">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-      <OwnerHeader />
-
-      <div className="max-w-lg mx-auto p-4 sm:p-6 space-y-4 pb-28">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4">
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         {/* Title */}
         <div className="flex items-center gap-3">
@@ -284,14 +280,11 @@ export default function Settings() {
           <TwoFactorSettings />
         </div>
 
-      </div>
-
       {/* Modal Cambio Password */}
       {showChangePassword && (
         <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
       )}
 
-      <BottomNav />
-    </div>
+      </div>
   );
 }

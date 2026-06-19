@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import {
   Clock, CheckCircle, XCircle, ChevronDown, ChevronUp,
   Calendar, AlertCircle, FileText, Trash2, Pencil
 } from 'lucide-react'
 import { API_URL } from '../api'
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
-import OwnerHeader from '../components/OwnerHeader'
-import BottomNav from '../components/BottomNav'
 import PauseManager from '../components/PauseManager'
 
 function statoBadge(stato) {
@@ -24,53 +22,18 @@ function fmt(date) {
 }
 
 export default function Requests({ initialView = 'richieste' }) {
-  const navigate  = useNavigate()
+  const { portaleAttivo, requestsData, refreshRequests } = useOutletContext()
   const [vista, setVista]           = useState(initialView)
-  const [dark, setDark]             = useState(false)
   const [activeTab, setActiveTab]   = useState('all')
-  const [richieste, setRichieste]   = useState(null)
-  const [loading, setLoading]       = useState(true)
   const [expandedId, setExpandedId] = useState(null)
   const [toast, setToast]           = useState(null)
   const [actionLoading, setActionLoading] = useState({})
-  const user0         = JSON.parse(localStorage.getItem('user') || '{}')
-  const [portaleAttivo, setPortaleAttivo] = useState(user0.portale_dipendenti !== false)
 
-  const { pulling, refreshing, distance } = usePullToRefresh(loadRichieste)
+  // dati richieste dal layout persistente (render immediato, niente spinner ad ogni apertura)
+  const richieste = requestsData
+  const loading   = requestsData === null
 
-  useEffect(() => {
-    const saved = localStorage.getItem('theme')
-    if (saved === 'dark') { setDark(true); document.documentElement.classList.add('dark') }
-  }, [])
-  useEffect(() => {
-    if (dark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark') }
-    else      { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light') }
-  }, [dark])
-
-  useEffect(() => {
-    loadRichieste()
-    const token = localStorage.getItem('token')
-    fetch(`${API_URL}/api/company/info`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.success) setPortaleAttivo(!!d.portale_dipendenti) })
-      .catch(() => {})
-    const interval = setInterval(loadRichieste, 15000)
-    return () => clearInterval(interval)
-  }, [])
-
-  async function loadRichieste() {
-    try {
-      const token = localStorage.getItem('token')
-      const res   = await fetch(`${API_URL}/api/requests/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
-      if (res.status === 401 || res.status === 403) { navigate('/'); return }
-      const data  = await res.json()
-      if (data.success) setRichieste(data)
-    } catch (err) {
-      console.log(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { pulling, refreshing, distance } = usePullToRefresh(refreshRequests)
 
   async function approveRequest(type, id) {
     try {
@@ -81,7 +44,7 @@ export default function Requests({ initialView = 'richieste' }) {
                : `/api/requests/missing-scans/${id}/approva`
       const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
-      if (data.success) { showToast('Richiesta approvata ✓', 'success'); loadRichieste() }
+      if (data.success) { showToast('Richiesta approvata ✓', 'success'); refreshRequests() }
       else showToast('Errore approvazione', 'error')
     } catch { showToast('Errore', 'error') }
     finally { setActionLoading(p => ({ ...p, [id]: false })) }
@@ -96,7 +59,7 @@ export default function Requests({ initialView = 'richieste' }) {
                : `/api/requests/missing-scans/${id}/rifiuta`
       const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
-      if (data.success) { showToast('Richiesta rifiutata', 'success'); loadRichieste() }
+      if (data.success) { showToast('Richiesta rifiutata', 'success'); refreshRequests() }
       else showToast('Errore rifiuto', 'error')
     } catch { showToast('Errore', 'error') }
     finally { setActionLoading(p => ({ ...p, [id]: false })) }
@@ -110,7 +73,7 @@ export default function Requests({ initialView = 'richieste' }) {
       const ep = type === 'ferie' ? `/api/ferie/${id}/admin` : `/api/requests/missing-scans/${id}/admin`
       const res  = await fetch(`${API_URL}${ep}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
-      if (data.success) { showToast('Richiesta eliminata', 'success'); loadRichieste() }
+      if (data.success) { showToast('Richiesta eliminata', 'success'); refreshRequests() }
       else showToast('Errore eliminazione', 'error')
     } catch { showToast('Errore', 'error') }
     finally { setActionLoading(p => ({ ...p, [`del_${id}`]: false })) }
@@ -139,11 +102,7 @@ export default function Requests({ initialView = 'richieste' }) {
   ]
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
-
-      <OwnerHeader />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
         {/* PULL INDICATOR */}
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
@@ -171,7 +130,7 @@ export default function Requests({ initialView = 'richieste' }) {
         )}
 
         {!portaleAttivo || vista === 'pause' ? (
-          <PauseManager />
+          <PauseManager portaleAttivo={portaleAttivo} />
         ) : loading ? (
           <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-8 text-center">
             <div className="w-8 h-8 mx-auto rounded-full border-4 border-zinc-300 dark:border-zinc-700 border-t-zinc-900 dark:border-t-zinc-100 animate-spin" />
@@ -318,7 +277,6 @@ export default function Requests({ initialView = 'richieste' }) {
         </div>
         </>
         )}
-      </div>
 
       {/* TOAST */}
       {toast && (
@@ -329,8 +287,6 @@ export default function Requests({ initialView = 'richieste' }) {
           {toast.message}
         </div>
       )}
-
-      <BottomNav />
-    </div>
+      </div>
   )
 }
