@@ -430,7 +430,7 @@ export default async function dipendenteRoutes(fastify) {
             giorni_assenti:    days.filter(d => d.assente).length,
             giorni_ferie:      days.filter(d => d.stato === 'ferie').length,
             ore_straordinario: (() => {
-              if (!turniAttivi) return 0
+              if (!employee.turni_attivi) return 0
               const totLav  = days.reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali), 0)
               const totPrev = days.reduce((s, d) => s + d.ore_previste, 0)
               return Number(Math.max(0, totLav - totPrev).toFixed(2))
