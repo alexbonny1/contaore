@@ -1311,27 +1311,8 @@ export default async function employeeRoutes(fastify) {
         .from('company').select('nome, portale_dipendenti').eq('id', companyId).single()
 
       if (company?.portale_dipendenti && newEmail) {
-        // Primo: cerca account per email (più affidabile)
-        let account = null
-        const { data: existingByEmail } = await supabase
-          .from('user_account')
-          .select('id, username')
-          .eq('email', newEmail)
-          .eq('company_id', companyId)
-          .maybeSingle()
-
-        // Se non trovato per email, cerca per dipendente_id
-        if (!existingByEmail) {
-          const { data: existingByDipendente } = await supabase
-            .from('user_account')
-            .select('id, username')
-            .eq('dipendente_id', id)
-            .eq('company_id', companyId)
-            .maybeSingle()
-          account = existingByDipendente
-        } else {
-          account = existingByEmail
-        }
+        const { data: account } = await supabase
+          .from('user_account').select('id, username').eq('dipendente_id', id).maybeSingle()
 
         let username
         if (account && !nameChanged) {
@@ -1344,31 +1325,21 @@ export default async function employeeRoutes(fastify) {
 
         if (account) {
           const { error: updateError } = await supabase.from('user_account')
-            .update({ username, email: newEmail, password: hashedPwd, dipendente_id: id })
+            .update({ username, email: newEmail, password: hashedPwd })
             .eq('id', account.id)
+            .eq('company_id', companyId)
           if (updateError) {
             console.log('Error updating account:', updateError)
-            return reply.send({ success: false, error: 'ACCOUNT_UPDATE_FAILED', detail: updateError.message })
+            return reply.send({ success: false, error: 'ACCOUNT_UPDATE_FAILED' })
           }
         } else {
-          // Controlla se un account con la stessa email già esiste in un'altra azienda
-          const { data: conflicting } = await supabase
-            .from('user_account')
-            .select('id, email, company_id')
-            .eq('email', newEmail)
-            .maybeSingle()
-
-          if (conflicting) {
-            return reply.send({ success: false, error: 'EMAIL_ALREADY_IN_USE' })
-          }
-
           const { error: insertError } = await supabase.from('user_account').insert({
             company_id: companyId, dipendente_id: id, username,
             email: newEmail, password: hashedPwd, role: 'dipendente'
           })
           if (insertError) {
             console.log('Error creating account:', insertError)
-            return reply.send({ success: false, error: 'ACCOUNT_CREATE_FAILED', detail: insertError.message })
+            return reply.send({ success: false, error: 'ACCOUNT_CREATE_FAILED' })
           }
         }
 
