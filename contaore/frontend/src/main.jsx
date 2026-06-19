@@ -68,6 +68,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/requests"      element={<Requests />} />
           <Route path="/pause"         element={<Requests initialView="pause" />} />
           <Route path="/employees"     element={<Employees />} />
+          <Route path="/employees/:id" element={<EmployeeDetails />} />
           <Route path="/badges"        element={<Badges />} />
           <Route path="/readers"       element={<Readers />} />
           <Route path="/notifications" element={<Notifications />} />
@@ -77,13 +78,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/impostazioni/notifiche"  element={<Notifications />} />
           <Route path="/impostazioni/sicurezza"  element={<SettingsSicurezza />} />
         </Route>
-
-        {/* dettaglio dipendente (drill-down, fuori dal layout) */}
-        <Route path="/employees/:id" element={
-          <ProtectedRoute>
-            <EmployeeDetails />
-          </ProtectedRoute>
-        } />
 
         {/* portale dipendente */}
         <Route path="/portale" element={
