@@ -1335,12 +1335,40 @@ export default async function employeeRoutes(fastify) {
         }
 
         try {
-          await sendCredenziali({ email: newEmail, nome: newNome, username, password: plainPwd, companyNome: company.nome })
+          const loginUrl = process.env.FRONTEND_URL || 'https://timbry.it'
+          await sendCredenziali({ email: newEmail, nome: newNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
           credenziali_inviate = true
         } catch (e) { console.log('sendCredenziali error:', e?.message) }
       }
 
       return reply.send({ success: true, credenziali_inviate })
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* DELETE /api/employees/:id/2fa — disabilita 2FA per dipendente (owner only) */
+  fastify.delete('/api/employees/:id/2fa', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      if (req.user.role === 'dipendente') return reply.status(403).send({ success: false })
+      const { id } = req.params
+      const companyId = req.user.company_id
+
+      const { data: emp } = await supabase
+        .from('dipendenti').select('id').eq('id', id).eq('company_id', companyId).single()
+      if (!emp) return reply.send({ success: false, error: 'NOT_FOUND' })
+
+      const { data: account } = await supabase
+        .from('user_account').select('id').eq('dipendente_id', id).maybeSingle()
+      if (!account) return reply.send({ success: false, error: 'NO_ACCOUNT' })
+
+      const { error } = await supabase.from('user_account')
+        .update({ two_factor_enabled: false, two_factor_method: null })
+        .eq('id', account.id)
+      if (error) return reply.send({ success: false, error: error.message })
+
+      return reply.send({ success: true })
     } catch (err) {
       console.log(err)
       return reply.status(500).send({ success: false })

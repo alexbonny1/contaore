@@ -144,11 +144,13 @@ export default async function adminRoutes(fastify) {
         // Invia email con credenziali al titolare
         let emailInviata = false
         try {
+          const loginUrl = process.env.FRONTEND_URL || 'https://timbry.it'
           emailInviata = await sendCredenzialiOwner({
             email,
             username,
             password:    passwordInChiaro,
-            companyNome: company_name
+            companyNome: company_name,
+            loginUrl
           })
           if (emailInviata) {
             console.log('Email credenziali owner inviata a', email)
@@ -256,11 +258,13 @@ export default async function adminRoutes(fastify) {
               .eq('id', userInfo.company_id)
               .maybeSingle()
 
+            const loginUrl = process.env.FRONTEND_URL || 'https://timbry.it'
             emailInviata = await sendCredenzialiOwner({
               email:       userInfo.email,
               username:    userInfo.username,
               password:    passwordInChiaro,
-              companyNome: company?.nome || ''
+              companyNome: company?.nome || '',
+              loginUrl
             })
           } catch (mailErr) {
             console.error('Errore invio email reset password:', mailErr.message)
