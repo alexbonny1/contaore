@@ -55,16 +55,6 @@ export default function OwnerLayout() {
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
 
-      {/* Filtro SVG per l'effetto liquid glass "a goccia" (refrazione).
-          Dove non supportato in backdrop-filter (iOS Safari) decade sul vetro base. */}
-      <svg aria-hidden="true" width="0" height="0" style={{ position: "absolute" }}>
-        <filter id="liquid-glass" x="-20%" y="-20%" width="140%" height="140%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="7" result="noise" />
-          <feGaussianBlur in="noise" stdDeviation="1.2" result="softNoise" />
-          <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="14" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-      </svg>
-
       <OwnerHeader />
 
       <main className="pb-28">

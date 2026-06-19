@@ -2,50 +2,82 @@ import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, FileText, Radio, Settings } from "lucide-react";
 
 /**
- * Barra di navigazione inferiore in stile Apple "liquid glass".
- * Presentazionale: riceve portaleAttivo e pendingCount dal layout persistente.
+ * Barra di navigazione inferiore con indicatore "a goccia" elastico:
+ * l'indicatore attivo cola tra le voci con un effetto gooey + molla.
+ * Vetro leggero (poca trasparenza), affidabile anche su iPhone.
  */
 export default function BottomNav({ portaleAttivo = true, pendingCount = 0 }) {
   const location = useLocation();
+  const path = location.pathname;
 
   const navItems = [
-    { title: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { title: portaleAttivo ? "Permessi" : "Ferie", icon: FileText, path: "/requests", notifica: pendingCount },
-    { title: "Lettori",   icon: Radio,           path: "/readers" },
-    { title: "Account",   icon: Settings,        path: "/impostazioni" },
+    { title: "Dashboard", icon: LayoutDashboard, path: "/dashboard", match: p => p === "/dashboard" },
+    { title: portaleAttivo ? "Permessi" : "Ferie", icon: FileText, path: "/requests", notifica: pendingCount,
+      match: p => p.startsWith("/requests") || p.startsWith("/pause") },
+    { title: "Lettori",   icon: Radio,    path: "/readers", match: p => p.startsWith("/readers") },
+    { title: "Account",   icon: Settings, path: "/impostazioni", match: p => p.startsWith("/impostazioni") },
   ];
+
+  const activeIndex = navItems.findIndex(it => it.match(path));
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 pointer-events-none pb-safe-bottom">
+      {/* filtro gooey per l'effetto goccia liquida (supportato anche da iOS Safari) */}
+      <svg aria-hidden="true" width="0" height="0" className="absolute">
+        <filter id="goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+          <feColorMatrix in="blur" mode="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -11" result="goo" />
+          <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+        </filter>
+      </svg>
+
       <div className="mx-auto max-w-md px-4 pb-3 sm:pb-4">
-        <div className="liquid-glass pointer-events-auto relative flex items-center justify-around gap-1 overflow-hidden rounded-[28px] border border-white/50 dark:border-white/10 ring-1 ring-inset ring-white/40 dark:ring-white/5 bg-gradient-to-b from-white/70 to-white/40 dark:from-white/12 dark:to-white/[0.04] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] px-2 py-2">
-          {/* riflesso speculare sul bordo superiore */}
-          <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-[28px] bg-gradient-to-b from-white/40 to-transparent dark:from-white/10" />
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.title}
-                to={item.path}
-                className={`relative z-10 flex flex-1 flex-col items-center justify-center gap-1 rounded-3xl px-2 py-2 text-[10px] font-medium transition-all ${
-                  isActive
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
-                    : "text-zinc-600 dark:text-zinc-300 hover:bg-white/50 dark:hover:bg-white/5"
-                }`}
-              >
-                <span className="relative">
-                  <Icon size={22} strokeWidth={2} />
-                  {item.notifica > 0 && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
-                      {item.notifica > 9 ? "9+" : item.notifica}
-                    </span>
-                  )}
-                </span>
-                <span>{item.title}</span>
-              </Link>
-            );
-          })}
+        <div className="pointer-events-auto relative rounded-[28px] border border-black/5 dark:border-white/10 bg-white/85 dark:bg-[#1c1c1e]/90 backdrop-blur-md shadow-[0_6px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_6px_24px_rgba(0,0,0,0.5)] px-2 py-2">
+          {/* riflesso speculare leggero */}
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 top-0 h-1/2 rounded-t-[28px] bg-gradient-to-b from-white/50 to-transparent dark:from-white/5" />
+
+          {/* GOCCIA elastica (indicatore attivo) */}
+          <div className="pointer-events-none absolute inset-y-2 left-2 right-2" style={{ filter: "url(#goo)" }}>
+            <div
+              className="absolute top-0 h-full rounded-3xl bg-zinc-900 dark:bg-zinc-100"
+              style={{
+                width: "25%",
+                transform: `translateX(${activeIndex < 0 ? 0 : activeIndex * 100}%)`,
+                opacity: activeIndex < 0 ? 0 : 1,
+                transition: "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease",
+              }}
+            />
+          </div>
+
+          {/* VOCI */}
+          <div className="relative z-10 flex">
+            {navItems.map((item, i) => {
+              const Icon = item.icon;
+              const isActive = i === activeIndex;
+              return (
+                <Link
+                  key={item.title}
+                  to={item.path}
+                  className={`relative flex flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-3xl px-2 py-2 text-[10px] font-medium transition-colors duration-300 ${
+                    isActive
+                      ? "text-white dark:text-black"
+                      : "text-zinc-500 dark:text-zinc-400"
+                  }`}
+                >
+                  <span className="relative">
+                    <Icon size={22} strokeWidth={2} />
+                    {item.notifica > 0 && (
+                      <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                        {item.notifica > 9 ? "9+" : item.notifica}
+                      </span>
+                    )}
+                  </span>
+                  <span>{item.title}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
     </nav>
