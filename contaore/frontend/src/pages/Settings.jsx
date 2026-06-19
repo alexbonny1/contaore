@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Settings as SettingsIcon, CheckCircle2, XCircle, ArrowLeft,
+  Settings as SettingsIcon, CheckCircle2, XCircle,
   BarChart2, Lock, Shield
 } from "lucide-react";
 import { API_URL } from "../api";
 import TwoFactorSettings from "../components/TwoFactorSettings";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import OwnerHeader from "../components/OwnerHeader";
+import BottomNav from "../components/BottomNav";
 
 const STATI_GRAFICO = [
   { key: "presente",     label: "Presente",      color: "#22c55e" },
@@ -30,7 +32,7 @@ function loadChartPrefs() {
 function Toast({ message, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
   return (
-    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium w-[calc(100%-32px)] sm:w-auto ${type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+    <div className={`fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium w-[calc(100%-32px)] sm:w-auto ${type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
       {type === "success" ? <CheckCircle2 size={16} className="shrink-0" /> : <XCircle size={16} className="shrink-0" />}
       <span>{message}</span>
     </div>
@@ -131,12 +133,9 @@ export default function Settings() {
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10]">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="max-w-lg mx-auto p-4 sm:p-6 space-y-4 pb-12">
+      <OwnerHeader />
 
-        {/* Back */}
-        <button onClick={() => navigate("/dashboard")} className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
-          <ArrowLeft size={16} /> Dashboard
-        </button>
+      <div className="max-w-lg mx-auto p-4 sm:p-6 space-y-4 pb-28">
 
         {/* Title */}
         <div className="flex items-center gap-3">
@@ -291,6 +290,8 @@ export default function Settings() {
       {showChangePassword && (
         <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
       )}
+
+      <BottomNav />
     </div>
   );
 }

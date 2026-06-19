@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   Clock, CheckCircle, XCircle, ChevronDown, ChevronUp,
-  Calendar, AlertCircle, FileText, Sun, Moon,
-  LayoutDashboard, Users, CreditCard, Radio, Trash2, Bell, Pencil, Settings
+  Calendar, AlertCircle, FileText, Trash2, Pencil
 } from 'lucide-react'
 import { API_URL } from '../api'
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
+import OwnerHeader from '../components/OwnerHeader'
+import BottomNav from '../components/BottomNav'
 
 function statoBadge(stato) {
   switch (stato) {
@@ -23,7 +24,6 @@ function fmt(date) {
 
 export default function Requests() {
   const navigate  = useNavigate()
-  const location  = useLocation()
   const [dark, setDark]             = useState(false)
   const [activeTab, setActiveTab]   = useState('all')
   const [richieste, setRichieste]   = useState(null)
@@ -119,8 +119,6 @@ export default function Requests() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/') }
-
   if (loading) return (
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
       <div className="w-10 h-10 rounded-full border-4 border-zinc-300 dark:border-zinc-700 border-t-zinc-900 dark:border-t-zinc-100 animate-spin" />
@@ -152,65 +150,12 @@ export default function Requests() {
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
 
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-          <div>
-            <h1 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">Richieste</h1>
-            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">Ferie, giustificazioni e timbrature</p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={() => setDark(p => !p)}
-              className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center">
-              {dark ? <Sun size={16} className="text-zinc-200" /> : <Moon size={16} className="text-zinc-700" />}
-            </button>
-            <button onClick={logout}
-              className="h-9 sm:h-11 px-3 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium">
-              <span className="hidden sm:inline">Logout</span><span className="sm:hidden">Esci</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <OwnerHeader />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
 
         {/* PULL INDICATOR */}
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
-
-        {/* NAV */}
-        <div className="flex gap-2 sm:gap-3 mb-4 sm:mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-          {[
-            { title: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
-            { title: "Richieste",       icon: FileText,        path: "/requests",  notifica: richieste.counts.totali_in_attesa, nascondiSeSenzaPortale: true },
-            { title: "Pausa aziendale", icon: Calendar,        path: "/pause"      },
-            { title: "Dipendenti",      icon: Users,           path: "/employees"  },
-            { title: "Badge",           icon: CreditCard,      path: "/badges"     },
-            { title: "Lettori NFC",     icon: Radio,           path: "/readers"    },
-            { title: "Notifiche",       icon: Bell,            path: "/notifications" },
-            { title: "Impostazioni",    icon: Settings,        path: "/impostazioni"  }
-          ]
-            .filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo))
-            .map(item => {
-              const Icon     = item.icon
-              const isActive = location.pathname === item.path
-              return (
-                <Link key={item.title} to={item.path}
-                  className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
-                    isActive
-                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100'
-                      : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
-                  }`}>
-                  <Icon size={14} className="sm:w-4 sm:h-4" />
-                  <span className="hidden xs:inline">{item.title}</span>
-                  {!isActive && item.notifica > 0 && (
-                    <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                      {item.notifica > 9 ? '9+' : item.notifica}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
-        </div>
 
         {/* STATS */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
@@ -348,13 +293,15 @@ export default function Requests() {
 
       {/* TOAST */}
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium ${
+        <div className={`fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium ${
           toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
         }`}>
           {toast.type === 'success' ? <CheckCircle size={16} /> : <XCircle size={16} />}
           {toast.message}
         </div>
       )}
+
+      <BottomNav />
     </div>
   )
 }

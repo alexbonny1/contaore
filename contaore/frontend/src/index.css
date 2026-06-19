@@ -56,6 +56,11 @@ header {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* iOS PWA: keep the bottom nav above the home indicator */
+.pb-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Disable iOS rubber-band scroll so pull-to-refresh feels intentional */
 html, body {
   overscroll-behavior-y: none;
