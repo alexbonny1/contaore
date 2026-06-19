@@ -1324,14 +1324,23 @@ export default async function employeeRoutes(fastify) {
         const hashedPwd = await bcrypt.hash(plainPwd, 10)
 
         if (account) {
-          await supabase.from('user_account')
+          const { error: updateError } = await supabase.from('user_account')
             .update({ username, email: newEmail, password: hashedPwd })
-            .eq('dipendente_id', id)
+            .eq('id', account.id)
+            .eq('company_id', companyId)
+          if (updateError) {
+            console.log('Error updating account:', updateError)
+            return reply.send({ success: false, error: 'ACCOUNT_UPDATE_FAILED' })
+          }
         } else {
-          await supabase.from('user_account').insert({
+          const { error: insertError } = await supabase.from('user_account').insert({
             company_id: companyId, dipendente_id: id, username,
             email: newEmail, password: hashedPwd, role: 'dipendente'
           })
+          if (insertError) {
+            console.log('Error creating account:', insertError)
+            return reply.send({ success: false, error: 'ACCOUNT_CREATE_FAILED' })
+          }
         }
 
         try {
