@@ -19,7 +19,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.EMAIL_FROM || 'Timbry <onboarding@resend.dev>'
 
 // ─── Invia credenziali al TITOLARE quando il superadmin crea l'azienda ───────
-export async function sendCredenzialiOwner({ email, username, password, companyNome }) {
+export async function sendCredenzialiOwner({ email, username, password, companyNome, loginUrl }) {
   try {
     const { data, error } = await resend.emails.send({
       from:    FROM,
@@ -39,7 +39,8 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Username</p>
               <p style="margin:0 0 16px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${username}</p>
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Password</p>
-              <p style="margin:0;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${password}</p>
+              <p style="margin:0 0 24px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${password}</p>
+              ${loginUrl ? `<p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Sito di accesso</p><p style="margin:0;font-family:monospace;font-size:15px;font-weight:600;color:#2563eb;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>` : ''}
             </div>
 
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
@@ -71,7 +72,7 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
 }
 
 // ─── Invia credenziali al dipendente appena creato ───────────────────────────
-export async function sendCredenziali({ email, nome, username, password, companyNome }) {
+export async function sendCredenziali({ email, nome, username, password, companyNome, loginUrl }) {
   try {
     const { data, error } = await resend.emails.send({
       from:    FROM,
@@ -91,7 +92,8 @@ export async function sendCredenziali({ email, nome, username, password, company
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Username</p>
               <p style="margin:0 0 16px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${username}</p>
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Password</p>
-              <p style="margin:0;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${password}</p>
+              <p style="margin:0 0 24px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${password}</p>
+              ${loginUrl ? `<p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Sito di accesso</p><p style="margin:0;font-family:monospace;font-size:15px;font-weight:600;color:#2563eb;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>` : ''}
             </div>
 
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
@@ -100,8 +102,8 @@ export async function sendCredenziali({ email, nome, username, password, company
             </p>
 
             <p style="font-size:12px;color:#aaa;margin:0;line-height:1.5;">
-              Conserva questa email in un posto sicuro. 
-              Per motivi di sicurezza non possiamo recuperare la password — 
+              Conserva questa email in un posto sicuro.
+              Per motivi di sicurezza non possiamo recuperare la password —
               se la perdi contatta il tuo responsabile.
             </p>
           </div>
