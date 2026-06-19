@@ -173,9 +173,11 @@ MODALE EXPORT
 ────────────────────────────────────
 */
 
-function ExportModal({ employees, onClose, token }) {
+function ExportModal({ employees, onClose, token, initialIds }) {
 
-  const [selectedIds, setSelectedIds] = useState(employees.map(e => e.id));
+  const [selectedIds, setSelectedIds] = useState(
+    initialIds && initialIds.length ? initialIds : employees.map(e => e.id)
+  );
   const [selectedMonth, setSelectedMonth] = useState("tutti");
   const [availableMonths, setAvailableMonths] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -575,6 +577,10 @@ export default function Employees() {
     setSelectedEmpIds([]);
   }
 
+  function toggleSelectAll() {
+    setSelectedEmpIds(prev => prev.length === employees.length ? [] : employees.map(e => e.id));
+  }
+
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
@@ -608,7 +614,7 @@ export default function Employees() {
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
 
       {showExport && (
-        <ExportModal employees={employees} onClose={() => setShowExport(false)} token={token} />
+        <ExportModal employees={employees} onClose={() => setShowExport(false)} token={token} initialIds={selectedEmployeeIds} />
       )}
 
       {showAssignShift && (
@@ -624,19 +630,12 @@ export default function Employees() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mb-6 sm:mb-8">
-          <button
-            onClick={() => setShowExport(true)}
-            className="flex flex-col xs:flex-row items-center justify-center gap-1.5 xs:gap-2.5 h-16 xs:h-14 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-xs sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
-          >
-            <Download size={20} className="sm:w-[22px] sm:h-[22px]" />
-            <span>Scarica</span>
-          </button>
+        <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
           <button
             onClick={() => { setSelectionMode(prev => !prev); setSelectedEmpIds([]); }}
-            className={`flex flex-col xs:flex-row items-center justify-center gap-1.5 xs:gap-2.5 h-16 xs:h-14 rounded-2xl sm:rounded-3xl border text-xs sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all ${
+            className={`flex items-center gap-2 h-12 sm:h-14 px-5 sm:px-6 rounded-2xl sm:rounded-3xl border text-sm sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all ${
               selectionMode
-                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-zinc-900 dark:border-zinc-100"
+                ? "bg-zinc-100 dark:bg-zinc-800 border-indigo-400 dark:border-indigo-500 text-zinc-900 dark:text-zinc-100"
                 : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100"
             }`}
           >
@@ -645,7 +644,7 @@ export default function Employees() {
           </button>
           <button
             onClick={() => navigate("/badges")}
-            className="flex flex-col xs:flex-row items-center justify-center gap-1.5 xs:gap-2.5 h-16 xs:h-14 rounded-2xl sm:rounded-3xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-base font-semibold shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
+            className="flex items-center gap-2 h-12 sm:h-14 px-5 sm:px-6 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-sm sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
           >
             <UserPlus size={20} className="sm:w-[22px] sm:h-[22px]" />
             <span>Aggiungi</span>
@@ -653,20 +652,35 @@ export default function Employees() {
         </div>
 
         {selectionMode && (
-          <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-900 dark:bg-zinc-100">
-            <p className="text-xs sm:text-sm font-medium text-white dark:text-black">
-              {selectedEmployeeIds.length === 0 ? "Tocca una scheda per selezionare" : `${selectedEmployeeIds.length} selezionat${selectedEmployeeIds.length === 1 ? "o" : "i"}`}
-            </p>
+          <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/70 dark:bg-[#161618]/70 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-2 h-9 sm:h-10 px-3 sm:px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-xs sm:text-sm font-medium"
+            >
+              {selectedEmployeeIds.length === employees.length && employees.length > 0
+                ? <><CheckSquare size={16} className="text-indigo-500" /> Deseleziona tutti</>
+                : <><Square size={16} /> Seleziona tutti</>}
+            </button>
             <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                {selectedEmployeeIds.length} selezionat{selectedEmployeeIds.length === 1 ? "o" : "i"}
+              </span>
+              <button
+                onClick={() => setShowExport(true)}
+                disabled={selectedEmployeeIds.length === 0}
+                className="flex items-center gap-1.5 h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
+              >
+                <Download size={15} /> Esporta
+              </button>
               <button
                 onClick={() => setShowAssignShift(true)}
                 disabled={selectedEmployeeIds.length === 0}
-                className="h-8 sm:h-9 px-3 sm:px-4 rounded-xl bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
+                className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
               >
                 Assegna turno
               </button>
-              <button onClick={exitSelectionMode} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/20 dark:bg-black/20 flex items-center justify-center">
-                <X size={14} className="sm:w-4 sm:h-4 text-white dark:text-black" />
+              <button onClick={exitSelectionMode} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                <X size={16} className="text-zinc-500 dark:text-zinc-400" />
               </button>
             </div>
           </div>

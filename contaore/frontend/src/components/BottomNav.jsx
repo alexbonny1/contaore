@@ -40,15 +40,15 @@ export default function BottomNav() {
 
   const navItems = [
     { title: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { title: "Permessi",  icon: FileText,        path: "/requests", notifica: pendingCount, nascondiSeSenzaPortale: true },
+    { title: portaleAttivo ? "Permessi" : "Ferie", icon: FileText, path: "/requests", notifica: pendingCount },
     { title: "Lettori",   icon: Radio,           path: "/readers" },
     { title: "Account",   icon: Settings,        path: "/impostazioni" },
-  ].filter(item => !(item.nascondiSeSenzaPortale && !portaleAttivo));
+  ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 pointer-events-none pb-safe-bottom">
       <div className="mx-auto max-w-md px-4 pb-3 sm:pb-4">
-        <div className="pointer-events-auto flex items-center justify-around gap-1 rounded-[28px] border border-white/40 dark:border-white/10 bg-white/60 dark:bg-[#161618]/60 backdrop-blur-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] px-2 py-2">
+        <div className="pointer-events-auto flex items-center justify-around gap-1 rounded-[28px] border border-white/50 dark:border-white/10 ring-1 ring-inset ring-white/40 dark:ring-white/5 bg-gradient-to-b from-white/70 to-white/40 dark:from-white/10 dark:to-white/[0.04] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] px-2 py-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;

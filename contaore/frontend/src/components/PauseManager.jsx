@@ -176,12 +176,12 @@ export default function PauseManager() {
     <div>
       {/* HEADER ROW */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">Pause aziendali</h2>
+        <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">Ferie</h2>
         {!showForm && (
           <button onClick={() => setShowForm(true)}
             className="flex items-center gap-1.5 h-9 sm:h-10 px-3 sm:px-4 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium">
             <Plus size={14} />
-            <span className="hidden xs:inline">Nuova pausa</span>
+            <span className="hidden xs:inline">Nuova</span>
           </button>
         )}
       </div>
@@ -346,7 +346,7 @@ export default function PauseManager() {
         !showForm && (
           <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 text-center">
             <Calendar size={28} className="sm:w-8 sm:h-8 mx-auto mb-2 sm:mb-3 text-zinc-400" />
-            <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1.5">Nessuna pausa aziendale</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1.5">Nessuna ferie programmata</h3>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-md mx-auto">
               {portaleAttivo
                 ? 'Crea una pausa aziendale per segnare tutti i dipendenti come in ferie durante un periodo specifico.'
