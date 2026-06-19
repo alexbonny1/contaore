@@ -167,13 +167,31 @@ export default function DipendenteDashboard() {
     } catch (err) { console.log(err); }
   }
 
-  const { pulling, refreshing, distance } = usePullToRefresh(() => Promise.all([loadMe(), loadFerie(), loadMissingScans()]))
+  async function loadPermesi() {
+    try {
+      const res  = await fetch(API_URL + "/api/dipendente/richieste/permessi", { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (json.success) setPermesi(json.richieste || []);
+    } catch (err) { console.log(err); }
+  }
+
+  async function loadRichiesteTurni() {
+    try {
+      const res  = await fetch(API_URL + "/api/dipendente/richieste/turni", { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (json.success) setRichiesteTurni(json.richieste || []);
+    } catch (err) { console.log(err); }
+  }
+
+  const { pulling, refreshing, distance } = usePullToRefresh(() => Promise.all([loadMe(), loadFerie(), loadMissingScans(), loadPermesi(), loadRichiesteTurni()]))
 
   useEffect(() => {
     if (user.role !== "dipendente") { navigate("/"); return; }
     loadMe();
     loadFerie();
     loadMissingScans();
+    loadPermesi();
+    loadRichiesteTurni();
   }, []);
 
   // ── giustifica assenza ───────────────────────────────────────────────────

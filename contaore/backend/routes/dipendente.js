@@ -713,4 +713,245 @@ export default async function dipendenteRoutes(fastify) {
       }
     }
   )
+
+  /*
+    GET /api/dipendente/richieste/permessi
+    Recupera le richieste permessi del dipendente
+  */
+  fastify.get(
+    '/api/dipendente/richieste/permessi',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const { dipendente_id } = request.user
+
+        const { data: richieste, error } = await supabase
+          .from('richieste_permessi')
+          .select('*')
+          .eq('dipendente_id', dipendente_id)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.log('Error fetching richieste_permessi:', error)
+          return reply.send({ success: true, richieste: [] })
+        }
+
+        return reply.send({ success: true, richieste: richieste || [] })
+
+      } catch (err) {
+        console.log(err)
+        return reply.send({ success: true, richieste: [] })
+      }
+    }
+  )
+
+  /*
+    GET /api/dipendente/richieste/turni
+    Recupera le richieste modifica turni del dipendente
+  */
+  fastify.get(
+    '/api/dipendente/richieste/turni',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const { dipendente_id } = request.user
+
+        const { data: richieste, error } = await supabase
+          .from('richieste_turni')
+          .select('*')
+          .eq('dipendente_id', dipendente_id)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.log('Error fetching richieste_turni:', error)
+          return reply.send({ success: true, richieste: [] })
+        }
+
+        return reply.send({ success: true, richieste: richieste || [] })
+
+      } catch (err) {
+        console.log(err)
+        return reply.send({ success: true, richieste: [] })
+      }
+    }
+  )
+
+  /*
+    POST /api/dipendente/richieste/permesso
+    Il dipendente richiede un permesso di uscita/entrata
+  */
+  fastify.post(
+    '/api/dipendente/richieste/permesso',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const { dipendente_id, company_id } = request.user
+        const { data_uscita, ora_uscita, data_entrata, ora_entrata, tipo, motivo } = request.body
+
+        if (!motivo?.trim()) {
+          return reply.status(400).send({ error: 'MOTIVO_REQUIRED', message: 'Il motivo è obbligatorio' })
+        }
+
+        if (!data_uscita && !data_entrata) {
+          return reply.status(400).send({ error: 'DATES_REQUIRED', message: 'Almeno una data è obbligatoria' })
+        }
+
+        const { error } = await supabase.from('richieste_permessi').insert({
+          company_id,
+          dipendente_id,
+          data_uscita: data_uscita || null,
+          ora_uscita: ora_uscita || null,
+          data_entrata: data_entrata || null,
+          ora_entrata: ora_entrata || null,
+          tipo: tipo || 'personale',
+          motivo: motivo.trim(),
+          stato: 'in_attesa',
+          created_at: new Date().toISOString()
+        })
+
+        if (error) {
+          console.log('Insert richiesta_permesso error:', error)
+          return reply.status(500).send({ error: 'INSERT_FAILED' })
+        }
+
+        return reply.send({ success: true, message: 'Richiesta permesso inviata' })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
+    DELETE /api/dipendente/richieste/permesso/:id
+    Il dipendente cancella una richiesta permesso (solo se in_attesa)
+  */
+  fastify.delete(
+    '/api/dipendente/richieste/permesso/:id',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const { id }            = request.params
+        const { dipendente_id } = request.user
+
+        const { data: richiesta } = await supabase
+          .from('richieste_permessi')
+          .select('id, stato')
+          .eq('id', id)
+          .eq('dipendente_id', dipendente_id)
+          .single()
+
+        if (!richiesta) {
+          return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        if (richiesta.stato !== 'in_attesa') {
+          return reply.status(400).send({
+            error: 'CANNOT_DELETE',
+            message: 'Puoi cancellare solo le richieste ancora in attesa'
+          })
+        }
+
+        await supabase.from('richieste_permessi').delete().eq('id', id)
+
+        return reply.send({ success: true })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
+    POST /api/dipendente/richieste/modifica-turni
+    Il dipendente richiede una modifica dei turni per un periodo specifico
+  */
+  fastify.post(
+    '/api/dipendente/richieste/modifica-turni',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const { dipendente_id, company_id } = request.user
+        const { data_dal, data_al, giorni, orari, motivo } = request.body
+
+        if (!motivo?.trim()) {
+          return reply.status(400).send({ error: 'MOTIVO_REQUIRED', message: 'Il motivo è obbligatorio' })
+        }
+
+        if (!data_dal || !data_al) {
+          return reply.status(400).send({ error: 'DATES_REQUIRED', message: 'Entrambe le date sono obbligatorie' })
+        }
+
+        if (!giorni || giorni.length === 0) {
+          return reply.status(400).send({ error: 'GIORNI_REQUIRED', message: 'Seleziona almeno un giorno' })
+        }
+
+        const { error } = await supabase.from('richieste_turni').insert({
+          company_id,
+          dipendente_id,
+          data_dal,
+          data_al,
+          giorni: giorni.join(','),
+          orari: JSON.stringify(orari || {}),
+          motivo: motivo.trim(),
+          stato: 'in_attesa',
+          created_at: new Date().toISOString()
+        })
+
+        if (error) {
+          console.log('Insert richiesta_turni error:', error)
+          return reply.status(500).send({ error: 'INSERT_FAILED' })
+        }
+
+        return reply.send({ success: true, message: 'Richiesta modifica turni inviata' })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
+    DELETE /api/dipendente/richieste/modifica-turni/:id
+    Il dipendente cancella una richiesta modifica turni (solo se in_attesa)
+  */
+  fastify.delete(
+    '/api/dipendente/richieste/modifica-turni/:id',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const { id }            = request.params
+        const { dipendente_id } = request.user
+
+        const { data: richiesta } = await supabase
+          .from('richieste_turni')
+          .select('id, stato')
+          .eq('id', id)
+          .eq('dipendente_id', dipendente_id)
+          .single()
+
+        if (!richiesta) {
+          return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        if (richiesta.stato !== 'in_attesa') {
+          return reply.status(400).send({
+            error: 'CANNOT_DELETE',
+            message: 'Puoi cancellare solo le richieste ancora in attesa'
+          })
+        }
+
+        await supabase.from('richieste_turni').delete().eq('id', id)
+
+        return reply.send({ success: true })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
 }
