@@ -77,3 +77,58 @@ export async function authenticateDipendente(request, reply) {
     return reply.status(401).send({ error: 'INVALID_TOKEN' })
   }
 }
+
+// ─── controlla inattività 2FA (15 minuti) ───────────────────────────────────
+export async function checkInactivity(request, reply) {
+  try {
+    const authHeader = request.headers.authorization
+    if (!authHeader) {
+      return reply.status(401).send({ error: 'TOKEN_MISSING' })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const decoded = jwt.verify(token, JWT_SECRET)
+
+    // I dipendenti non hanno 2FA
+    if (decoded.role === 'dipendente') {
+      request.user = decoded
+      return // Continua senza controllo
+    }
+
+    // Se 2FA non è abilitato, passa
+    if (!decoded.two_factor_enabled) {
+      request.user = decoded
+      return
+    }
+
+    // Calcola inattività
+    const lastActivityTime = new Date(decoded.last_activity_timestamp)
+    const now = new Date()
+    const inactivityMinutes = (now - lastActivityTime) / (1000 * 60)
+
+    // Se inattività <= 15 minuti, aggiorna timestamp e procedi
+    if (inactivityMinutes <= 15) {
+      const jwt_module = (await import('jsonwebtoken')).default
+      const newToken = jwt_module.sign(
+        {
+          ...decoded,
+          last_activity_timestamp: new Date().toISOString()
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+      request.user = decoded
+      request.newToken = newToken // Ritorna il nuovo token al client
+      return
+    }
+
+    // Inattività > 15 minuti: RICHIEDI 2FA
+    reply.status(403).send({
+      error: 'TWO_FACTOR_REQUIRED',
+      status: 'INACTIVITY_2FA_REQUIRED'
+    })
+  } catch (err) {
+    console.log(err)
+    return reply.status(401).send({ error: 'INVALID_TOKEN' })
+  }
+}
