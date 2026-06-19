@@ -1,5 +1,31 @@
+import bcrypt from 'bcrypt'
 import { supabase } from '../services/supabase.js'
 import { authenticate } from '../middleware/auth.js'
+import { sendCredenziali } from '../services/email.js'
+
+function generatePassword(length = 10) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  let pwd = ''
+  for (let i = 0; i < length; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length))
+  return pwd
+}
+
+function buildUsername(nome, cognome) {
+  const normalize = s =>
+    (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+  return `${normalize(nome)}.${normalize(cognome)}`
+}
+
+async function findAvailableUsername(base) {
+  let username = base
+  let attempt  = 1
+  while (true) {
+    const { data } = await supabase.from('user_account').select('id').eq('username', username).maybeSingle()
+    if (!data) return username
+    attempt++
+    username = `${base}${attempt}`
+  }
+}
 
 const GIORNI_SETTIMANA = [
   'Domenica','Lunedì','Martedì','Mercoledì',
@@ -1170,13 +1196,15 @@ export default async function employeeRoutes(fastify) {
     try {
       const { data } = await supabase
         .from('company')
-        .select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno')
+        .select('*')
         .eq('id', req.user.company_id)
         .single()
       return reply.send({
         success: true,
         tolleranza_straordinario_minuti: data?.tolleranza_straordinario_minuti ?? 10,
-        arrotonda_ore_al_turno:          data?.arrotonda_ore_al_turno ?? false
+        arrotonda_ore_al_turno:          data?.arrotonda_ore_al_turno ?? false,
+        auto_cleanup_enabled:            data?.auto_cleanup_enabled ?? false,
+        auto_cleanup_retention_months:   data?.auto_cleanup_retention_months ?? 12
       })
     } catch (err) {
       console.log(err)
@@ -1195,7 +1223,124 @@ export default async function employeeRoutes(fastify) {
         .update({ tolleranza_straordinario_minuti: val, arrotonda_ore_al_turno: snap })
         .eq('id', req.user.company_id)
       if (error) return reply.send({ success: false, error: error.message })
+
+      // pulizia automatica — best-effort (colonne potrebbero non esistere ancora)
+      if (req.body?.auto_cleanup_enabled !== undefined || req.body?.auto_cleanup_retention_months !== undefined) {
+        const cleanup = {}
+        if (req.body.auto_cleanup_enabled !== undefined) cleanup.auto_cleanup_enabled = !!req.body.auto_cleanup_enabled
+        if (req.body.auto_cleanup_retention_months !== undefined) {
+          const m = parseInt(req.body.auto_cleanup_retention_months)
+          cleanup.auto_cleanup_retention_months = isNaN(m) ? 12 : Math.max(1, Math.min(120, m))
+        }
+        const { error: cErr } = await supabase.from('company').update(cleanup).eq('id', req.user.company_id)
+        if (cErr) console.log('auto_cleanup settings skipped (migration pending):', cErr.message)
+      }
+
       return reply.send({ success: true })
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* POST /api/admin/cleanup-presences — elimina storico per dipendenti + mese/periodo (owner) */
+  fastify.post('/api/admin/cleanup-presences', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      if (req.user.role === 'dipendente') return reply.status(403).send({ success: false })
+      const companyId = req.user.company_id
+      const { employee_ids = [], month, before } = req.body || {}
+      if (!month && !before) return reply.send({ success: false, error: 'NO_CRITERIA' })
+
+      let q = supabase.from('dipendenti').select('id, badge_uid').eq('company_id', companyId)
+      if (Array.isArray(employee_ids) && employee_ids.length) q = q.in('id', employee_ids)
+      const { data: emps } = await q
+      const badgeUids = (emps || []).map(e => e.badge_uid).filter(Boolean)
+      if (!badgeUids.length) return reply.send({ success: true, deleted: 0 })
+
+      const { data: reads } = await supabase
+        .from('presenza')
+        .select('id, created_at')
+        .eq('company_id', companyId)
+        .in('tag_uid', badgeUids)
+
+      const beforeDate = before ? new Date(before + 'T00:00:00') : null
+      const idsToDelete = (reads || []).filter(r => {
+        if (month) {
+          const monthName = new Date(r.created_at).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+          return monthName === month
+        }
+        return new Date(r.created_at) < beforeDate
+      }).map(r => r.id)
+
+      for (let i = 0; i < idsToDelete.length; i += 500) {
+        await supabase.from('presenza').delete().in('id', idsToDelete.slice(i, i + 500))
+      }
+      return reply.send({ success: true, deleted: idsToDelete.length })
+    } catch (err) {
+      console.log(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* PATCH /api/employees/:id/profile — aggiorna anagrafica + (ri)genera credenziali portale */
+  fastify.patch('/api/employees/:id/profile', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      if (req.user.role === 'dipendente') return reply.status(403).send({ success: false })
+      const { id }    = req.params
+      const companyId = req.user.company_id
+      const { nome, cognome, email } = req.body || {}
+
+      const { data: emp } = await supabase
+        .from('dipendenti')
+        .select('id, nome, cognome, email')
+        .eq('id', id).eq('company_id', companyId)
+        .single()
+      if (!emp) return reply.send({ success: false, error: 'NOT_FOUND' })
+
+      const newNome    = (nome    ?? emp.nome) || ''
+      const newCognome = (cognome ?? emp.cognome) || ''
+      const newEmail   = (email   ?? emp.email) || null
+      const nameChanged = newNome !== (emp.nome || '') || newCognome !== (emp.cognome || '')
+
+      await supabase.from('dipendenti')
+        .update({ nome: newNome, cognome: newCognome, email: newEmail })
+        .eq('id', id).eq('company_id', companyId)
+
+      let credenziali_inviate = false
+      const { data: company } = await supabase
+        .from('company').select('nome, portale_dipendenti').eq('id', companyId).single()
+
+      if (company?.portale_dipendenti && newEmail) {
+        const { data: account } = await supabase
+          .from('user_account').select('id, username').eq('dipendente_id', id).maybeSingle()
+
+        let username
+        if (account && !nameChanged) {
+          username = account.username
+        } else {
+          username = await findAvailableUsername(buildUsername(newNome, newCognome))
+        }
+        const plainPwd  = generatePassword(10)
+        const hashedPwd = await bcrypt.hash(plainPwd, 10)
+
+        if (account) {
+          await supabase.from('user_account')
+            .update({ username, email: newEmail, password: hashedPwd })
+            .eq('dipendente_id', id)
+        } else {
+          await supabase.from('user_account').insert({
+            company_id: companyId, dipendente_id: id, username,
+            email: newEmail, password: hashedPwd, role: 'dipendente'
+          })
+        }
+
+        try {
+          await sendCredenziali({ email: newEmail, nome: newNome, username, password: plainPwd, companyNome: company.nome })
+          credenziali_inviate = true
+        } catch (e) { console.log('sendCredenziali error:', e?.message) }
+      }
+
+      return reply.send({ success: true, credenziali_inviate })
     } catch (err) {
       console.log(err)
       return reply.status(500).send({ success: false })

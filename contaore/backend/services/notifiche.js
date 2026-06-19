@@ -508,6 +508,40 @@ export async function checkAlertSuperadmin() {
   }
 }
 
+// ─── pulizia automatica storico presenze ───────────────────────────────────────
+
+async function autoCleanupPresenze() {
+  // Per ogni company con pulizia automatica attiva, elimina le presenze
+  // più vecchie di retention_months.
+  let companies
+  try {
+    const { data, error } = await supabase
+      .from('company')
+      .select('id, auto_cleanup_enabled, auto_cleanup_retention_months')
+      .eq('auto_cleanup_enabled', true)
+    if (error) { return } // colonne non ancora presenti → nessuna pulizia
+    companies = data || []
+  } catch (_) { return }
+
+  for (const c of companies) {
+    try {
+      const months = Math.max(1, parseInt(c.auto_cleanup_retention_months) || 12)
+      const cutoff = new Date()
+      cutoff.setMonth(cutoff.getMonth() - months)
+      const { data: old } = await supabase
+        .from('presenza')
+        .select('id')
+        .eq('company_id', c.id)
+        .lt('created_at', cutoff.toISOString())
+      const ids = (old || []).map(r => r.id)
+      for (let i = 0; i < ids.length; i += 500) {
+        await supabase.from('presenza').delete().in('id', ids.slice(i, i + 500))
+      }
+      if (ids.length) console.log(`[autoCleanup] company ${c.id}: eliminate ${ids.length} presenze (> ${months} mesi)`)
+    } catch (e) { console.error('autoCleanupPresenze company:', e) }
+  }
+}
+
 // ─── scheduler ───────────────────────────────────────────────────────────────
 
 export function startScheduler() {
@@ -529,6 +563,11 @@ export function startScheduler() {
     checkRiepilogoGiornaliero().catch(e => console.error('checkRiepilogoGiornaliero:', e))
     checkRiepilogoSettimanale().catch(e => console.error('checkRiepilogoSettimanale:', e))
   }, 30 * 60 * 1000)
+
+  // Every 24h: pulizia automatica storico presenze
+  setInterval(() => {
+    autoCleanupPresenze().catch(e => console.error('autoCleanupPresenze:', e))
+  }, 24 * 60 * 60 * 1000)
 
   console.log('Notification scheduler started')
 }
