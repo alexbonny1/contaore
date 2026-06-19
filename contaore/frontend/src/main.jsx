@@ -22,6 +22,7 @@ import PrivacyPolicy       from "./pages/PrivacyPolicy";
 import CookiePolicy        from "./pages/CookiePolicy";
 
 import ProtectedRoute from "./ProtectedRoute";
+import OwnerLayout from "./components/OwnerLayout";
 
 // fix ngrok in dev
 const originalFetch = window.fetch;
@@ -54,58 +55,26 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           </ProtectedRoute>
         } />
 
-        {/* owner */}
-        <Route path="/dashboard" element={
+        {/* owner — layout persistente (header + barra montati una sola volta) */}
+        <Route element={
           <ProtectedRoute>
-            <Dashboard />
+            <OwnerLayout />
           </ProtectedRoute>
-        } />
+        }>
+          <Route path="/dashboard"     element={<Dashboard />} />
+          <Route path="/requests"      element={<Requests />} />
+          <Route path="/pause"         element={<Requests initialView="pause" />} />
+          <Route path="/employees"     element={<Employees />} />
+          <Route path="/badges"        element={<Badges />} />
+          <Route path="/readers"       element={<Readers />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/impostazioni"  element={<Settings />} />
+        </Route>
 
-        <Route path="/requests" element={
-          <ProtectedRoute>
-            <Requests />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/pause" element={
-          <ProtectedRoute>
-            <Requests initialView="pause" />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/employees" element={
-          <ProtectedRoute>
-            <Employees />
-          </ProtectedRoute>
-        } />
-
+        {/* dettaglio dipendente (drill-down, fuori dal layout) */}
         <Route path="/employees/:id" element={
           <ProtectedRoute>
             <EmployeeDetails />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/badges" element={
-          <ProtectedRoute>
-            <Badges />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/readers" element={
-          <ProtectedRoute>
-            <Readers />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/notifications" element={
-          <ProtectedRoute>
-            <Notifications />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/impostazioni" element={
-          <ProtectedRoute>
-            <Settings />
           </ProtectedRoute>
         } />
 

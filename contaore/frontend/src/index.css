@@ -61,6 +61,16 @@ header {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Liquid glass "a goccia": enhancement con rifrazione SVG dove supportato.
+   Il vetro base (blur/saturate via classi Tailwind) resta sempre come fallback;
+   tipicamente iOS Safari ignora il filtro url() e mantiene il fallback. */
+@supports (backdrop-filter: url("#liquid-glass")) {
+  .liquid-glass {
+    -webkit-backdrop-filter: url("#liquid-glass") blur(14px) saturate(1.5);
+    backdrop-filter: url("#liquid-glass") blur(14px) saturate(1.5);
+  }
+}
+
 /* Disable iOS rubber-band scroll so pull-to-refresh feels intentional */
 html, body {
   overscroll-behavior-y: none;

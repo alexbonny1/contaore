@@ -5,8 +5,6 @@ import {
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
-import OwnerHeader from "../components/OwnerHeader";
-import BottomNav from "../components/BottomNav";
 
 // ─── notification type definitions ───────────────────────────────────────────
 
@@ -394,13 +392,10 @@ export default function Notifications() {
   }, [token]);
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      <OwnerHeader />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         <div className="mb-6 sm:mb-8">
@@ -431,8 +426,5 @@ export default function Notifications() {
         )}
 
       </div>
-
-      <BottomNav />
-    </div>
   );
 }

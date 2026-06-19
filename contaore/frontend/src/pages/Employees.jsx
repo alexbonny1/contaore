@@ -5,8 +5,6 @@ import {
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
-import OwnerHeader from "../components/OwnerHeader";
-import BottomNav from "../components/BottomNav";
 
 /*
 ────────────────────────────────────
@@ -611,7 +609,7 @@ export default function Employees() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
       {showExport && (
         <ExportModal employees={employees} onClose={() => setShowExport(false)} token={token} initialIds={selectedEmployeeIds} />
@@ -625,9 +623,6 @@ export default function Employees() {
         />
       )}
 
-      <OwnerHeader />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
@@ -748,9 +743,6 @@ export default function Employees() {
         )}
 
       </div>
-
-      <BottomNav />
-    </div>
   );
 }
 

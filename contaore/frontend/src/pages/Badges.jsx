@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import {
   CreditCard, CheckCircle2, XCircle, Mail, Pencil, X, ArrowLeft
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
-import OwnerHeader from "../components/OwnerHeader";
-import BottomNav from "../components/BottomNav";
 
 function Toast({ message, type, onClose }) {
   useEffect(() => {
@@ -61,8 +59,7 @@ export default function Badges() {
   const [waitingScan, setWaitingScan]       = useState(false);
   const [toast, setToast]                   = useState(null);
   const [confirm, setConfirm]               = useState(null);
-  const [portaleAttivo, setPortaleAttivo]   = useState(false);
-  const [pendingCount, setPendingCount]     = useState(0);
+  const { portaleAttivo } = useOutletContext();
   const [editingId, setEditingId]           = useState(null);
   const [editForm, setEditForm]             = useState({ nome: '', cognome: '', email: '' });
   const [editSaving, setEditSaving]         = useState(false);
@@ -85,15 +82,9 @@ export default function Badges() {
 
   const { pulling, refreshing, distance } = usePullToRefresh(loadBadges)
 
-  // ─── carica badge + info portale ────────────────────────────────────────────
+  // ─── carica badge ─────────────────────────────────────────────────────────
   useEffect(() => {
     loadBadges();
-    checkPortale();
-    const token = localStorage.getItem("token");
-    fetch(`${API_URL}/api/requests/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.success) setPendingCount(d.counts?.totali_in_attesa ?? 0); })
-      .catch(() => {});
   }, []);
 
   async function loadBadges() {
@@ -103,20 +94,6 @@ export default function Badges() {
       const data  = await res.json();
       if (data.success) setBadges(data.tags || []);
     } catch (err) { console.log(err); }
-  }
-
-  async function checkPortale() {
-    try {
-      const token = localStorage.getItem("token");
-      const res   = await fetch(API_URL + "/api/company/info", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.success) setPortaleAttivo(!!data.portale_dipendenti);
-    } catch (err) {
-      // silenzioso
-    }
   }
 
   // ─── polling NFC ────────────────────────────────────────────────────────────
@@ -238,7 +215,7 @@ export default function Badges() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {confirm && (
@@ -249,9 +226,6 @@ export default function Badges() {
         />
       )}
 
-      <OwnerHeader />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* BACK */}
@@ -445,8 +419,5 @@ export default function Badges() {
         </div>
 
       </div>
-
-      <BottomNav />
-    </div>
   );
 }

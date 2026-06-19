@@ -4,8 +4,6 @@ import { Radio } from "lucide-react";
 
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
-import OwnerHeader from "../components/OwnerHeader";
-import BottomNav from "../components/BottomNav";
 
 export default function Readers() {
 
@@ -123,12 +121,7 @@ export default function Readers() {
   }, []);
 
   return (
-
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
-
-      <OwnerHeader />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pb-28">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         {/* TITLE */}
@@ -240,10 +233,6 @@ export default function Readers() {
         </div>
 
       </div>
-
-      <BottomNav />
-
-    </div>
 
   );
 
