@@ -334,6 +334,7 @@ export default function EmployeeDetails() {
 
   const [historyMonths, setHistoryMonths] = useState([]);
   const [expandedMonth, setExpandedMonth] = useState(null);
+  const [expandedDay, setExpandedDay] = useState(null);
   const [showGrafici, setShowGrafici] = useState(false);
 
   const [waitingBadgeScan, setWaitingBadgeScan] = useState(false);
@@ -966,176 +967,144 @@ export default function EmployeeDetails() {
 
                     </button>
 
-                    {/* GIORNI */}
+                    {/* GIORNI - accordion style come nel dipendente */}
 
                     {expandedMonth === month.mese && (
 
-                      <table className="w-full">
+                      <div className="border-t border-zinc-100 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {month.giorni.map(day => {
+                          const isDayOpen = expandedDay === day.giorno;
 
-                        <thead>
-                          <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                            <th className="text-left px-5 py-3 text-xs font-medium text-zinc-400">Data</th>
-                            <th className="text-left px-5 py-3 text-xs font-medium text-zinc-400">Entrata</th>
-                            <th className="text-left px-5 py-3 text-xs font-medium text-zinc-400">Uscita</th>
-                            <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Ore</th>
-                            {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Previste</th>}
-                            {turniAttivi && <th className="text-right px-5 py-3 text-xs font-medium text-zinc-400">Stato</th>}
-                            {canManagePresence && <th className="px-3 py-3"></th>}
-                          </tr>
-                        </thead>
+                          // Get status badge
+                          let badgeColor = 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+                          let badgeLabel = 'Presente'
+                          if (day.assente) {
+                            badgeColor = 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                            badgeLabel = 'Assente'
+                          } else if (day.stato === 'ferie') {
+                            badgeColor = 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                            badgeLabel = 'Ferie'
+                          } else if (day.stato === 'giustificata') {
+                            badgeColor = 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+                            badgeLabel = 'Giustificata'
+                          } else if (day.stato === 'parziale') {
+                            badgeColor = 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                            badgeLabel = 'Parziale'
+                          } else if (day.ore_straordinario > 0) {
+                            badgeColor = 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                            badgeLabel = 'Straord.'
+                          }
 
-                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-
-                          {month.giorni.map((day) => (
-
-                            <tr
-                              key={day.giorno}
-                              className={`align-top ${
-                                day.stato === 'ferie'
-                                  ? "bg-blue-50/50 dark:bg-blue-900/10"
-                                  : day.stato === 'giustificata'
-                                  ? "bg-purple-50/50 dark:bg-purple-900/10"
-                                  : day.assente
-                                  ? "bg-red-50/50 dark:bg-red-900/10"
-                                  : "hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
-                              }`}
-                            >
-
-                              <td className="px-5 py-3 text-sm text-zinc-900 dark:text-zinc-100">
-                                {new Date(day.giorno + "T00:00:00").toLocaleDateString("it-IT", {
-                                  weekday: "short", day: "2-digit", month: "short", timeZone: "Europe/Rome"
-                                })}
-                              </td>
-
-                              <td className="px-5 py-3 text-sm">
-                                <div className="flex flex-col gap-1">
-                                  {(day.assente || day.stato === 'ferie' || day.stato === 'giustificata')
-                                    ? <span className="text-zinc-400">—</span>
-                                    : (day.coppie || []).map((coppia, i) => (
-                                        <div key={i} className="flex items-center gap-1">
-                                          <span className={coppia.entrata_automatica ? "text-purple-600 dark:text-purple-400 font-medium" : coppia.entrata_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-green-600 dark:text-green-400 font-medium"}>
-                                            {coppia.entrata || "—"}
-                                          </span>
-                                          {coppia.entrata_automatica && <span className="text-[9px] text-purple-500 font-bold leading-none">A</span>}
-                                          {canManagePresence && coppia.entrata_id && (
-                                            <button onClick={(e) => { e.stopPropagation(); startEditPresence(coppia.entrata_id, "ENTRATA", day.giorno, coppia.entrata); }}
-                                              className={`transition-colors flex-shrink-0 ${coppia.entrata_manuale ? "text-amber-400 hover:text-blue-500" : "text-zinc-300 hover:text-blue-500"}`}>
-                                              <Pencil size={10} />
-                                            </button>
-                                          )}
-                                          {canManagePresence && (coppia.entrata_manuale || coppia.entrata_automatica) && coppia.entrata_id && (
-                                            <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.entrata_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
-                                              <X size={10} />
-                                            </button>
-                                          )}
-                                        </div>
-                                      ))
-                                  }
+                          return (
+                            <div key={day.giorno}>
+                              <div className="w-full flex items-center justify-between px-6 py-3 gap-4 flex-wrap hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm text-zinc-700 dark:text-zinc-300 w-32">
+                                    {new Date(day.giorno + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                                  </span>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeColor}`}>{badgeLabel}</span>
                                 </div>
-                              </td>
-
-                              <td className="px-5 py-3 text-sm">
-                                <div className="flex flex-col gap-1">
-                                  {(day.assente || day.stato === 'ferie' || day.stato === 'giustificata')
-                                    ? <span className="text-zinc-400">—</span>
-                                    : (day.coppie || []).map((coppia, i) => (
-                                        <div key={i} className="flex items-center gap-1">
-                                          <span className={coppia.uscita_automatica ? "text-purple-600 dark:text-purple-400 font-medium" : coppia.uscita_manuale ? "text-amber-600 dark:text-amber-400 font-medium" : "text-red-500 dark:text-red-400 font-medium"}>
-                                            {coppia.uscita || "—"}
-                                          </span>
-                                          {coppia.uscita_automatica && <span className="text-[9px] text-purple-500 font-bold leading-none">A</span>}
-                                          {coppia.uscita && coppia.uscita_giorno_dopo && (
-                                            <span className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
-                                          )}
-                                          {canManagePresence && coppia.uscita_id && (
-                                            <button onClick={(e) => { e.stopPropagation(); startEditPresence(coppia.uscita_id, "USCITA", day.giorno, coppia.uscita_giorno_dopo ? null : coppia.uscita); }}
-                                              className={`transition-colors flex-shrink-0 ${coppia.uscita_manuale ? "text-amber-400 hover:text-blue-500" : "text-zinc-300 hover:text-blue-500"}`}>
-                                              <Pencil size={10} />
-                                            </button>
-                                          )}
-                                          {canManagePresence && (coppia.uscita_manuale || coppia.uscita_automatica) && coppia.uscita_id && (
-                                            <button onClick={(e) => { e.stopPropagation(); deletePresence(coppia.uscita_id); }} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
-                                              <X size={10} />
-                                            </button>
-                                          )}
-                                        </div>
-                                      ))
-                                  }
+                                <div className="flex items-center gap-3 text-xs text-zinc-500">
+                                  {day.coppie.length > 0 ? (
+                                    day.coppie.map((c, i) => (
+                                      <div key={i} className="flex items-center gap-2">
+                                        <span className="text-green-600 dark:text-green-400 font-medium">↑ {c.entrata || "—"}</span>
+                                        <span className="text-zinc-300">|</span>
+                                        <span className="text-red-500 dark:text-red-400 font-medium">↓ {c.uscita || "..."}</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span className="text-zinc-400">Nessuna timbratura</span>
+                                  )}
                                 </div>
-                              </td>
-
-                              <td className="px-5 py-3 text-sm text-right font-semibold text-zinc-900 dark:text-zinc-100">
-                                {day.ore_totali > 0
-                                  ? formatOre(day.ore_totali)
-                                  : <span className="text-zinc-400 font-normal">—</span>
-                                }
-                              </td>
-
-                              {turniAttivi && (
-                                <td className="px-5 py-3 text-sm text-right text-zinc-400">
-                                  {day.ore_previste > 0 ? formatOre(day.ore_previste) : "—"}
-                                </td>
-                              )}
-
-                              {turniAttivi && (
-                                <td className="px-5 py-3 text-right">
-                                  {day.assente && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                                      Assente
-                                    </span>
-                                  )}
-                                  {day.stato === 'ferie' && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                                      Ferie
-                                    </span>
-                                  )}
-                                  {day.stato === 'giustificata' && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-                                      Giustificata
-                                    </span>
-                                  )}
-                                  {day.stato === 'parziale' && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
-                                      Parziale
-                                    </span>
-                                  )}
-                                  {(day.stato === 'presente' || day.stato === 'straordinario') && !day.assente && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
-                                      Presente
-                                    </span>
-                                  )}
-                                  {day.ore_straordinario > 0 && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-                                      +{formatOre(day.ore_straordinario)}
-                                    </span>
-                                  )}
-                                  {day.ritardo_minuti > 0 && day.stato === 'ritardo' && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-                                      Ritardo {day.ritardo_minuti}m
-                                    </span>
-                                  )}
-                                </td>
-                              )}
-
-                              {canManagePresence && (
-                                <td className="px-3 py-3 text-right">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); startAddPresence(day.giorno); }}
-                                    title="Aggiungi timbratura"
-                                    className="text-zinc-300 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-                                  >
-                                    <Plus size={14} />
+                                <div className="flex items-center gap-4 ml-auto">
+                                  {day.ore_totali > 0 && <span className="text-xs text-zinc-400">{formatOre(day.ore_totali)}h</span>}
+                                  <button onClick={() => setExpandedDay(isDayOpen ? null : day.giorno)} className="flex items-center justify-center h-8 w-8 text-zinc-400">
+                                    {isDayOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                   </button>
-                                </td>
+                                </div>
+                              </div>
+
+                              {/* dettaglio giorno */}
+                              {isDayOpen && (
+                                <div className="px-6 pb-4 bg-zinc-50 dark:bg-zinc-900/50 space-y-3">
+
+                                  {/* timbrature */}
+                                  {day.coppie.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {day.coppie.map((c, i) => (
+                                        <div key={i} className="flex items-center gap-2 text-xs text-zinc-500">
+                                          <span className="text-green-600 dark:text-green-400 font-medium">↑ {c.entrata || "—"}</span>
+                                          {c.entrata_id && (
+                                            <button onClick={() => startEditPresence(c.entrata_id, "ENTRATA", day.giorno, c.entrata)}
+                                              className="text-zinc-300 hover:text-blue-500 transition-colors flex-shrink-0">
+                                              <Pencil size={10} />
+                                            </button>
+                                          )}
+                                          {canManagePresence && (c.entrata_manuale || c.entrata_automatica) && c.entrata_id && (
+                                            <button onClick={() => deletePresence(c.entrata_id)} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
+                                              <X size={10} />
+                                            </button>
+                                          )}
+                                          <span className="text-zinc-300">|</span>
+                                          <span className="text-red-500 dark:text-red-400 font-medium">↓ {c.uscita || "ancora dentro"}</span>
+                                          {c.uscita && c.uscita_giorno_dopo && (
+                                            <span className="text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
+                                          )}
+                                          {c.uscita_id && (
+                                            <button onClick={() => startEditPresence(c.uscita_id, "USCITA", day.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
+                                              className="text-zinc-300 hover:text-blue-500 transition-colors flex-shrink-0">
+                                              <Pencil size={10} />
+                                            </button>
+                                          )}
+                                          {canManagePresence && (c.uscita_manuale || c.uscita_automatica) && c.uscita_id && (
+                                            <button onClick={() => deletePresence(c.uscita_id)} className="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0">
+                                              <X size={10} />
+                                            </button>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-zinc-400">Nessuna timbratura</p>
+                                  )}
+
+                                  {/* ore e stato */}
+                                  <div className="text-xs text-zinc-500 pt-2 border-t border-zinc-200 dark:border-zinc-700">
+                                    <div className="flex gap-4">
+                                      <div>
+                                        <span className="text-zinc-400">Ore: </span>
+                                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">{formatOre(day.ore_totali)}</span>
+                                      </div>
+                                      {turniAttivi && day.ore_previste > 0 && (
+                                        <div>
+                                          <span className="text-zinc-400">Previste: </span>
+                                          <span className="font-semibold text-zinc-900 dark:text-zinc-100">{formatOre(day.ore_previste)}</span>
+                                        </div>
+                                      )}
+                                      {turniAttivi && day.ore_straordinario > 0 && (
+                                        <div>
+                                          <span className="text-zinc-400">Straord: </span>
+                                          <span className="font-semibold text-amber-600 dark:text-amber-400">{formatOre(day.ore_straordinario)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* pulsante aggiungi timbratura */}
+                                  {canManagePresence && (
+                                    <button onClick={() => startAddPresence(day.giorno)}
+                                      className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 mt-2">
+                                      <Plus size={13} /> Aggiungi timbratura
+                                    </button>
+                                  )}
+
+                                </div>
                               )}
-
-                            </tr>
-
-                          ))}
-
-                        </tbody>
-
-                      </table>
+                            </div>
+                          )
+                        })}
+                      </div>
 
                     )}
 
