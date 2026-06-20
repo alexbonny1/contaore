@@ -32,10 +32,9 @@ function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
   let deductionMins   = 0
   let lastEntrataMins = null
   const now     = new Date()
-  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const nowMins = getLocalTimeMinutes(now.toISOString())
   for (const read of sortedReads) {
-    const dt       = new Date(read.created_at)
-    const readMins = dt.getHours() * 60 + dt.getMinutes()
+    const readMins = getLocalTimeMinutes(read.created_at)
     if (read.tipo === 'ENTRATA') {
       lastEntrataMins = readMins
     } else if (read.tipo === 'USCITA' && lastEntrataMins !== null) {
@@ -63,7 +62,7 @@ function calculateHoursWithBreaks(reads, empShifts) {
   let totalMins = 0
   for (const [day, daySessions] of Object.entries(byDate)) {
     let dayMins     = daySessions.reduce((sum, s) => sum + s.hours, 0) * 60
-    const dayName   = GIORNI[new Date(day).getDay()]
+    const dayName   = GIORNI[getLocalDayOfWeek(day + 'T00:00:00Z')]
     const dayShifts = empShifts.filter(s => s.giorno_settimana === dayName)
     for (const s of dayShifts) {
       if (s.uscita_1 && s.ingresso_2) {
@@ -95,8 +94,47 @@ function shiftExpectedHours(shift) {
   return Number((mins / 60).toFixed(2))
 }
 
-function getLocalDateStr(dateStr) {
-  return new Date(dateStr).toISOString().split('T')[0]
+function getLocalDateStr(dateStr, timezone = 'Europe/Rome') {
+  const date = new Date(dateStr)
+  const formatter = new Intl.DateTimeFormat('it-IT', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: timezone
+  })
+  const parts = formatter.formatToParts(date)
+  const year = parts.find(p => p.type === 'year').value
+  const month = parts.find(p => p.type === 'month').value
+  const day = parts.find(p => p.type === 'day').value
+  return `${year}-${month}-${day}`
+}
+
+function getLocalTimeMinutes(dateStr, timezone = 'Europe/Rome') {
+  const date = new Date(dateStr)
+  const formatter = new Intl.DateTimeFormat('it-IT', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: timezone
+  })
+  const parts = formatter.formatToParts(date)
+  const hours = parseInt(parts.find(p => p.type === 'hour').value)
+  const minutes = parseInt(parts.find(p => p.type === 'minute').value)
+  return hours * 60 + minutes
+}
+
+function getLocalDayOfWeek(dateStr, timezone = 'Europe/Rome') {
+  const date = new Date(dateStr)
+  const formatter = new Intl.DateTimeFormat('it-IT', {
+    weekday: 'long',
+    timeZone: timezone
+  })
+  const dayName = formatter.format(date)
+  const dayMap = {
+    'domenica': 0, 'lunedì': 1, 'martedì': 2, 'mercoledì': 3,
+    'giovedì': 4, 'venerdì': 5, 'sabato': 6
+  }
+  return dayMap[dayName.toLowerCase()] ?? new Date(dateStr).getDay()
 }
 
 function buildSessions(scans) {
@@ -180,7 +218,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
     let ore_previste = 0, ore_straordinario = 0, stato = 'presente', ritardo_minuti = 0
 
     if (turniAttivi && shifts.length > 0) {
-      const dayName   = GIORNI[new Date(giorno).getDay()]
+      const dayName   = GIORNI[getLocalDayOfWeek(giorno + 'T00:00:00Z')]
       const dayShifts = shifts.filter(s => s.giorno_settimana === dayName)
       ore_previste    = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
 
@@ -234,8 +272,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
           .sort((a, b) => timeToMinutes(a.ingresso_1) - timeToMinutes(b.ingresso_1))[0]
         if (firstEntrata && firstShift) {
           const expectedMins = timeToMinutes(firstShift.ingresso_1)
-          const dt           = new Date(firstEntrata.created_at)
-          const actualMins   = dt.getHours() * 60 + dt.getMinutes()
+          const actualMins   = getLocalTimeMinutes(firstEntrata.created_at)
           const delay        = actualMins - expectedMins
           if (delay > 5) {
             ritardo_minuti = delay
@@ -251,8 +288,8 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
   const absentDays = []
   if (turniAttivi && shifts.length > 0) {
     const now     = new Date()
-    const today   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
-    const nowMins = now.getHours() * 60 + now.getMinutes()
+    const today   = getLocalDateStr(now.toISOString())
+    const nowMins = getLocalTimeMinutes(now.toISOString())
     const start   = dataInizio ? new Date(dataInizio) : new Date()
     const endDate = new Date()
     endDate.setHours(23, 59, 59, 999)
@@ -267,7 +304,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
         String(cursor.getMonth() + 1).padStart(2, '0'),
         String(cursor.getDate()).padStart(2, '0')
       ].join('-')
-      const dayName = GIORNI[cursor.getDay()]
+      const dayName = GIORNI[getLocalDayOfWeek(dateStr + 'T00:00:00Z')]
       const isToday = dateStr === today
 
       if (shiftDays.has(dayName) && !presentSet.has(dateStr)) {
@@ -388,10 +425,10 @@ export default async function dipendenteRoutes(fastify) {
         )
 
         const now       = new Date()
-        const today     = now.toISOString().split('T')[0]
-        const nowMins   = now.getHours() * 60 + now.getMinutes()
-        const todayName = GIORNI[now.getDay()]
-        const thisMonth = now.toISOString().slice(0, 7)
+        const today     = getLocalDateStr(now.toISOString())
+        const nowMins   = getLocalTimeMinutes(now.toISOString())
+        const todayName = GIORNI[getLocalDayOfWeek(now.toISOString())]
+        const thisMonth = getLocalDateStr(now.toISOString()).slice(0, 7)
         const monthReads = (reads || []).filter(r => getLocalDateStr(r.created_at).slice(0, 7) === thisMonth)
 
         const empSessions = buildSessions(reads || [])
