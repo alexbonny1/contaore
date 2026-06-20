@@ -1,8 +1,15 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
+import helmet from '@fastify/helmet'
+import pino from 'pino'
+import pinoHttp from 'pino-http'
 import dotenv from 'dotenv'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+import path from 'path'
 import { runMigrations } from './migrations/runMigrations.js'
+import { createAuditLogger } from './middleware/audit.js'
 import deviceRoutes from './routes/devices.js'
 import scanRoutes from './routes/scan.js'
 import authRoutes from './routes/auth.js'
@@ -22,17 +29,65 @@ import { startScheduler } from './services/notifiche.js'
 
 dotenv.config()
 
-const fastify = Fastify({
-  logger: true
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport: {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'SYS:standard',
+      ignore: 'pid,hostname'
+    }
+  }
 })
+
+const options = {
+  logger: logger
+}
+
+if (process.env.NODE_ENV === 'production' && process.env.TLS_KEY_PATH && process.env.TLS_CERT_PATH) {
+  options.https = {
+    key: fs.readFileSync(process.env.TLS_KEY_PATH),
+    cert: fs.readFileSync(process.env.TLS_CERT_PATH)
+  }
+}
+
+const fastify = Fastify(options)
 
 await fastify.register(cors, {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173'
 })
 
-await fastify.register(rateLimit, {
-  global: false
+await fastify.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 })
+
+await fastify.register(rateLimit, {
+  max: 30,
+  timeWindow: '1 minute',
+  cache: 10000,
+  allowList: ['127.0.0.1']
+})
+
+await fastify.register(pinoHttp, { logger })
+
+fastify.addHook('preHandler', createAuditLogger())
 
 await fastify.register(exportRoutes)
 await fastify.register(presenzeRoutes)
