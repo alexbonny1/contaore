@@ -528,8 +528,8 @@ export default function DipendenteDashboard() {
           ];
           if (data?.turni_attivi) {
             statsList.push({ icon: UserCheck, label: "Giorni assenti", value: stats.giorni_assenti });
+            statsList.push({ icon: TrendingUp, label: "Ore straordinario", value: `${stats.ore_straordinario}h` });
           }
-          statsList.push({ icon: TrendingUp, label: "Ore straordinario", value: `${stats.ore_straordinario}h` });
           return (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {statsList.map((s) => {
@@ -609,7 +609,7 @@ export default function DipendenteDashboard() {
                         const giust = giustificazioni.find(j => j.data === g.giorno);
                         return (
                           <div key={g.giorno}>
-                            <button className="w-full flex items-center justify-between px-6 py-3" onClick={() => setOpenDay(isDayOpen ? null : g.giorno)}>
+                            <div className="w-full flex items-center justify-between px-6 py-3">
                               <div className="flex items-center gap-3">
                                 <span className="text-sm text-zinc-700 dark:text-zinc-300 w-24 text-left">
                                   {new Date(g.giorno).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
@@ -618,9 +618,8 @@ export default function DipendenteDashboard() {
                               </div>
                               <div className="flex items-center gap-4">
                                 {g.ore_totali > 0 && <span className="text-xs text-zinc-400">{g.ore_totali}h</span>}
-                                {isDayOpen ? <ChevronUp size={14} className="text-zinc-400" /> : <ChevronDown size={14} className="text-zinc-400" />}
                               </div>
-                            </button>
+                            </div>
 
                             {/* dettaglio giorno */}
                             {isDayOpen && (
