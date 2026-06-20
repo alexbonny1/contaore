@@ -57,6 +57,26 @@ export async function runMigrations() {
       sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS temporary_credentials_used_at timestamptz DEFAULT null;`
     }).catch(() => ({ error: null }))
 
+    // Colonne opzionali tabella dispositivo (migration 005)
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS nome varchar(100);`
+    }).catch(() => ({ error: null }))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS firmware_version varchar(50);`
+    }).catch(() => ({ error: null }))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS sede varchar(100);`
+    }).catch(() => ({ error: null }))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS nfc_ok boolean;`
+    }).catch(() => ({ error: null }))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS display_ok boolean;`
+    }).catch(() => ({ error: null }))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS ota_pending boolean DEFAULT false;`
+    }).catch(() => ({ error: null }))
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)
