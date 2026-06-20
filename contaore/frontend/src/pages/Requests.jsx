@@ -88,13 +88,15 @@ export default function Requests({ initialView = 'richieste' }) {
     setTimeout(() => setToast(null), 3000)
   }
 
-  const { ferie = [], giustificazioni = [], richieste_timbratura = [] } = richieste?.richieste || {}
+  const { ferie = [], giustificazioni = [], richieste_timbratura = [], richieste_permessi = [], richieste_turni = [] } = richieste?.richieste || {}
 
   let richiesteFiltrate = []
-  if      (activeTab === 'all')            richiesteFiltrate = [...ferie.map(r => ({...r,type:'ferie'})), ...giustificazioni.map(r => ({...r,type:'giustificazioni'})), ...richieste_timbratura.map(r => ({...r,type:'timbratura'}))]
+  if      (activeTab === 'all')            richiesteFiltrate = [...ferie.map(r => ({...r,type:'ferie'})), ...giustificazioni.map(r => ({...r,type:'giustificazioni'})), ...richieste_timbratura.map(r => ({...r,type:'timbratura'})), ...richieste_permessi.map(r => ({...r,type:'permessi'})), ...richieste_turni.map(r => ({...r,type:'modifica-turni'}))]
   else if (activeTab === 'ferie')          richiesteFiltrate = ferie.map(r => ({...r,type:'ferie'}))
   else if (activeTab === 'giustificazioni')richiesteFiltrate = giustificazioni.map(r => ({...r,type:'giustificazioni'}))
   else if (activeTab === 'timbratura')     richiesteFiltrate = richieste_timbratura.map(r => ({...r,type:'timbratura'}))
+  else if (activeTab === 'permessi')       richiesteFiltrate = richieste_permessi.map(r => ({...r,type:'permessi'}))
+  else if (activeTab === 'modifica-turni') richiesteFiltrate = richieste_turni.map(r => ({...r,type:'modifica-turni'}))
   richiesteFiltrate.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
   const counts = richieste?.counts || {}
@@ -103,6 +105,8 @@ export default function Requests({ initialView = 'richieste' }) {
     { label: 'Ferie',        value: counts.ferie_in_attesa ?? 0,           color: 'text-blue-500'   },
     { label: 'Giustifiche',  value: counts.giustificazioni_in_attesa ?? 0, color: 'text-purple-500'},
     { label: 'Timbrature',   value: counts.timbratura_in_attesa ?? 0,      color: 'text-orange-500' },
+    { label: 'Permessi',     value: counts.permessi_in_attesa ?? 0,        color: 'text-green-500'  },
+    { label: 'Modifica turni', value: counts.turni_in_attesa ?? 0,        color: 'text-indigo-500' },
   ]
 
   return (
@@ -151,7 +155,9 @@ export default function Requests({ initialView = 'richieste' }) {
             { id: 'all',            label: 'Tutte',         icon: FileText    },
             { id: 'ferie',          label: 'Ferie',         icon: Calendar    },
             { id: 'giustificazioni',label: 'Giustifiche',   icon: AlertCircle },
-            { id: 'timbratura',     label: 'Timbrature',    icon: Clock       }
+            { id: 'timbratura',     label: 'Timbrature',    icon: Clock       },
+            { id: 'permessi',       label: 'Permessi',      icon: AlertCircle },
+            { id: 'modifica-turni', label: 'Modifica turni', icon: Clock     }
           ].map(tab => {
             const Icon = tab.icon
             return (
@@ -184,6 +190,10 @@ export default function Requests({ initialView = 'richieste' }) {
                 ? { icon: Calendar,    label: 'Ferie',             color: 'bg-blue-500/15 text-blue-600 dark:text-blue-300' }
                 : req.type === 'giustificazioni'
                 ? { icon: AlertCircle, label: 'Giustificazione',   color: 'bg-purple-500/15 text-purple-600 dark:text-purple-300' }
+                : req.type === 'permessi'
+                ? { icon: AlertCircle, label: 'Permesso',          color: 'bg-green-500/15 text-green-600 dark:text-green-300' }
+                : req.type === 'modifica-turni'
+                ? { icon: Clock,       label: 'Modifica turni',    color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300' }
                 : req.presenza_id
                 ? { icon: Pencil,      label: 'Modifica timbratura', color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300' }
                 : { icon: Clock,       label: 'Timbratura mancante', color: 'bg-orange-500/15 text-orange-600 dark:text-orange-300' }
@@ -207,6 +217,14 @@ export default function Requests({ initialView = 'richieste' }) {
                       <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">
                         {req.type === 'ferie'          && `${fmt(req.data_inizio)} → ${fmt(req.data_fine)}`}
                         {req.type === 'giustificazioni' && fmt(req.data)}
+                        {req.type === 'permessi' && (
+                          req.data_uscita && req.ora_uscita
+                            ? `${fmt(req.data_uscita)} ${req.ora_uscita} (uscita)`
+                            : req.data_entrata && req.ora_entrata
+                            ? `${fmt(req.data_entrata)} ${req.ora_entrata} (entrata)`
+                            : 'Permesso'
+                        )}
+                        {req.type === 'modifica-turni' && `${fmt(req.data_dal)} → ${fmt(req.data_al)}`}
                         {req.type === 'timbratura' && req.presenza_id  && `${fmt(req.data)} — ${req.tipo} → ${req.ora_uscita}`}
                         {req.type === 'timbratura' && !req.presenza_id && `${fmt(req.data)} — ${req.tipo || 'USCITA'} ore ${req.ora_uscita}`}
                       </p>

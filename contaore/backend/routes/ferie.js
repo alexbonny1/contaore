@@ -314,7 +314,7 @@ export default async function ferieRoutes(fastify) {
 
   /*
     GET /api/requests/dashboard
-    Il titolare visualizza tutte le richieste pendenti: ferie, giustificazioni, timbratura
+    Il titolare visualizza tutte le richieste pendenti: ferie, giustificazioni, timbratura, permessi, modifica turni
     Utilizzato per la sezione richieste della dashboard
   */
   fastify.get(
@@ -352,20 +352,44 @@ export default async function ferieRoutes(fastify) {
         if (stato) queryTimb = queryTimb.eq('stato', stato)
         const { data: richieste_timbratura } = await queryTimb
 
+        // Recupera le richieste di permessi (uscita/entrata)
+        let queryPermessi = supabase
+          .from('richieste_permessi')
+          .select('*, dipendenti(nome, cognome)')
+          .eq('company_id', company_id)
+          .order('created_at', { ascending: false })
+        if (stato) queryPermessi = queryPermessi.eq('stato', stato)
+        const { data: richieste_permessi } = await queryPermessi
+
+        // Recupera le richieste di modifica turni
+        let queryModTurni = supabase
+          .from('richieste_turni')
+          .select('*, dipendenti(nome, cognome)')
+          .eq('company_id', company_id)
+          .order('created_at', { ascending: false })
+        if (stato) queryModTurni = queryModTurni.eq('stato', stato)
+        const { data: richieste_turni } = await queryModTurni
+
         return reply.send({
           success: true,
           richieste: {
             ferie:                 ferie || [],
             giustificazioni:       giustificazioni || [],
-            richieste_timbratura:  richieste_timbratura || []
+            richieste_timbratura:  richieste_timbratura || [],
+            richieste_permessi:    richieste_permessi || [],
+            richieste_turni:       richieste_turni || []
           },
           counts: {
             ferie_in_attesa:           (ferie || []).filter(f => f.stato === 'in_attesa').length,
             giustificazioni_in_attesa: (giustificazioni || []).filter(g => g.stato === 'in_attesa').length,
             timbratura_in_attesa:      (richieste_timbratura || []).filter(t => t.stato === 'in_attesa').length,
+            permessi_in_attesa:        (richieste_permessi || []).filter(p => p.stato === 'in_attesa').length,
+            turni_in_attesa:           (richieste_turni || []).filter(t => t.stato === 'in_attesa').length,
             totali_in_attesa:          (ferie || []).filter(f => f.stato === 'in_attesa').length +
                                         (giustificazioni || []).filter(g => g.stato === 'in_attesa').length +
-                                        (richieste_timbratura || []).filter(t => t.stato === 'in_attesa').length
+                                        (richieste_timbratura || []).filter(t => t.stato === 'in_attesa').length +
+                                        (richieste_permessi || []).filter(p => p.stato === 'in_attesa').length +
+                                        (richieste_turni || []).filter(t => t.stato === 'in_attesa').length
           }
         })
 
