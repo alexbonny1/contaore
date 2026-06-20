@@ -73,10 +73,7 @@ await fastify.register(helmet, {
 })
 
 await fastify.register(rateLimit, {
-  max: 30,
-  timeWindow: '1 minute',
-  cache: 10000,
-  allowList: ['127.0.0.1']
+  global: false
 })
 
 fastify.addHook('preHandler', createAuditLogger())
