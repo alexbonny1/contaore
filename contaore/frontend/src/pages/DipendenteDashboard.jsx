@@ -609,14 +609,27 @@ export default function DipendenteDashboard() {
                         const giust = giustificazioni.find(j => j.data === g.giorno);
                         return (
                           <div key={g.giorno}>
-                            <div className="w-full flex items-center justify-between px-6 py-3">
+                            <div className="w-full flex items-center justify-between px-6 py-3 gap-4 flex-wrap">
                               <div className="flex items-center gap-3">
                                 <span className="text-sm text-zinc-700 dark:text-zinc-300 w-24 text-left">
                                   {new Date(g.giorno).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
                                 </span>
                                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${color}`}>{label}</span>
                               </div>
-                              <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-3 text-xs text-zinc-500">
+                                {g.coppie.length > 0 ? (
+                                  g.coppie.map((c, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                      <span className="text-green-600 font-medium">↑ {c.entrata || "—"}</span>
+                                      <span className="text-zinc-300">|</span>
+                                      <span className="text-red-500 font-medium">↓ {c.uscita || "..."}</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <span className="text-zinc-400">Nessuna timbratura</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-4 ml-auto">
                                 {g.ore_totali > 0 && <span className="text-xs text-zinc-400">{g.ore_totali}h</span>}
                               </div>
                             </div>
