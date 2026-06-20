@@ -1,11 +1,8 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
-import helmet from '@fastify/helmet'
 import dotenv from 'dotenv'
-import fs from 'fs'
 import { runMigrations } from './migrations/runMigrations.js'
-import { createAuditLogger } from './middleware/audit.js'
 import deviceRoutes from './routes/devices.js'
 import scanRoutes from './routes/scan.js'
 import authRoutes from './routes/auth.js'
@@ -25,58 +22,17 @@ import { startScheduler } from './services/notifiche.js'
 
 dotenv.config()
 
-const options = {
-  logger: {
-    level: process.env.LOG_LEVEL || 'info',
-    transport: process.env.NODE_ENV === 'production' ? undefined : {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:standard',
-        ignore: 'pid,hostname'
-      }
-    }
-  }
-}
-
-if (process.env.NODE_ENV === 'production' && process.env.TLS_KEY_PATH && process.env.TLS_CERT_PATH) {
-  options.https = {
-    key: fs.readFileSync(process.env.TLS_KEY_PATH),
-    cert: fs.readFileSync(process.env.TLS_CERT_PATH)
-  }
-}
-
-const fastify = Fastify(options)
+const fastify = Fastify({
+  logger: true
+})
 
 await fastify.register(cors, {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173'
 })
 
-await fastify.register(helmet, {
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-    },
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  },
-  frameguard: { action: 'deny' },
-  noSniff: true,
-  xssFilter: true,
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
-})
-
 await fastify.register(rateLimit, {
   global: false
 })
-
-fastify.addHook('preHandler', createAuditLogger())
 
 await fastify.register(exportRoutes)
 await fastify.register(presenzeRoutes)
