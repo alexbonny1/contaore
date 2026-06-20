@@ -27,13 +27,56 @@ async function findAvailableUsername(base) {
   }
 }
 
+function getLocalDateStr(dateStr, timezone = 'Europe/Rome') {
+  const date = new Date(dateStr)
+  const formatter = new Intl.DateTimeFormat('it-IT', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: timezone
+  })
+  const parts = formatter.formatToParts(date)
+  const year = parts.find(p => p.type === 'year').value
+  const month = parts.find(p => p.type === 'month').value
+  const day = parts.find(p => p.type === 'day').value
+  return `${year}-${month}-${day}`
+}
+
+function getLocalTimeMinutes(dateStr, timezone = 'Europe/Rome') {
+  const date = new Date(dateStr)
+  const formatter = new Intl.DateTimeFormat('it-IT', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: timezone
+  })
+  const parts = formatter.formatToParts(date)
+  const hours = parseInt(parts.find(p => p.type === 'hour').value)
+  const minutes = parseInt(parts.find(p => p.type === 'minute').value)
+  return hours * 60 + minutes
+}
+
+function getLocalDayOfWeek(dateStr, timezone = 'Europe/Rome') {
+  const date = new Date(dateStr)
+  const formatter = new Intl.DateTimeFormat('it-IT', {
+    weekday: 'long',
+    timeZone: timezone
+  })
+  const dayName = formatter.format(date)
+  const dayMap = {
+    'domenica': 0, 'lunedì': 1, 'martedì': 2, 'mercoledì': 3,
+    'giovedì': 4, 'venerdì': 5, 'sabato': 6
+  }
+  return dayMap[dayName.toLowerCase()] ?? new Date(dateStr).getDay()
+}
+
 const GIORNI_SETTIMANA = [
   'Domenica','Lunedì','Martedì','Mercoledì',
   'Giovedì','Venerdì','Sabato'
 ]
 
 function getDayName(dateStr) {
-  return GIORNI_SETTIMANA[new Date(dateStr).getDay()]
+  return GIORNI_SETTIMANA[getLocalDayOfWeek(dateStr)]
 }
 
 function timeToMinutes(t) {
@@ -88,11 +131,10 @@ function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
   let deductionMins  = 0
   let lastEntrataMins = null
   const now     = new Date()
-  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const nowMins = getLocalTimeMinutes(now.toISOString())
 
   for (const read of sortedReads) {
-    const dt       = new Date(read.created_at)
-    const readMins = dt.getHours() * 60 + dt.getMinutes()
+    const readMins = getLocalTimeMinutes(read.created_at)
     if (read.tipo === 'ENTRATA') {
       lastEntrataMins = readMins
     } else if (read.tipo === 'USCITA' && lastEntrataMins !== null) {
@@ -139,10 +181,6 @@ function calculateHoursWithBreaks(reads, empShifts) {
     totalMins += Math.max(0, dayMins)
   }
   return Number((totalMins / 60).toFixed(2))
-}
-
-function getLocalDateStr(dateStr) {
-  return new Date(dateStr).toISOString().split('T')[0]
 }
 
 function buildSessions(scans) {
@@ -314,8 +352,7 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
           .sort((a, b) => timeToMinutes(a.ingresso_1) - timeToMinutes(b.ingresso_1))[0]
         if (firstEntrata && firstShift) {
           const expectedMins = timeToMinutes(firstShift.ingresso_1)
-          const dt           = new Date(firstEntrata.created_at)
-          const actualMins   = dt.getHours() * 60 + dt.getMinutes()
+          const actualMins   = getLocalTimeMinutes(firstEntrata.created_at)
           const delay        = actualMins - expectedMins
           if (delay > 5) {
             ritardo_minuti = delay
@@ -343,8 +380,8 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
   if (turniAttivi && shifts.length > 0) {
 
     const now     = new Date()
-    const today   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
-    const nowMins = now.getHours() * 60 + now.getMinutes()
+    const today   = getLocalDateStr(now.toISOString())
+    const nowMins = getLocalTimeMinutes(now.toISOString())
 
     const start = dataInizio ? new Date(dataInizio) : new Date()
 
@@ -360,12 +397,8 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
 
     while (cursor <= endDate) {
 
-      const dateStr = [
-        cursor.getFullYear(),
-        String(cursor.getMonth() + 1).padStart(2, '0'),
-        String(cursor.getDate()).padStart(2, '0')
-      ].join('-')
-      const dayName = GIORNI_SETTIMANA[cursor.getDay()]
+      const dateStr = getLocalDateStr(cursor.toISOString())
+      const dayName = getDayName(dateStr)
       const isToday = dateStr === today
 
       if (shiftDays.has(dayName) && !presentSet.has(dateStr)) {
@@ -479,10 +512,10 @@ export default async function employeeRoutes(fastify) {
         }
 
         const now       = new Date()
-        const today     = now.toISOString().split('T')[0]
+        const today     = getLocalDateStr(now.toISOString())
         const thisMonth = today.slice(0, 7)
-        const nowMins   = now.getHours() * 60 + now.getMinutes()
-        const todayName = GIORNI_SETTIMANA[now.getDay()]
+        const nowMins   = getLocalTimeMinutes(now.toISOString())
+        const todayName = GIORNI_SETTIMANA[getLocalDayOfWeek(now.toISOString())]
 
         const { data: allShifts } = await supabase
           .from('turni')
@@ -514,7 +547,7 @@ export default async function employeeRoutes(fastify) {
               const todaySorted = todayReads.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
               const lastTodayRead = todaySorted[todaySorted.length - 1]
               if (lastTodayRead?.tipo === 'USCITA') {
-                const lastMins = new Date(lastTodayRead.created_at).getHours() * 60 + new Date(lastTodayRead.created_at).getMinutes()
+                const lastMins = getLocalTimeMinutes(lastTodayRead.created_at)
                 inPausa = doubleShifts.some(s => {
                   const u1 = timeToMinutes(s.uscita_1)
                   const i2 = timeToMinutes(s.ingresso_2)
@@ -1025,8 +1058,8 @@ export default async function employeeRoutes(fastify) {
             const { data: empFull, error: empErr } = await supabase.from('dipendenti').select('id, turni_attivi').eq('id', id).single()
             console.log('[AUTO-INSERT] dipendente:', empFull, 'errore:', empErr)
             if (empFull?.turni_attivi) {
-              const dateStr   = ts.split('T')[0]
-              const newMins   = new Date(ts).getHours() * 60 + new Date(ts).getMinutes()
+              const dateStr   = getLocalDateStr(ts)
+              const newMins   = getLocalTimeMinutes(ts)
               const dayName   = getDayName(dateStr)
               console.log('[AUTO-INSERT] dateStr:', dateStr, 'dayName:', dayName, 'newMins:', newMins)
               const { data: shifts, error: shiftsErr } = await supabase.from('turni').select('*').eq('dipendente_id', id)
