@@ -116,7 +116,7 @@ export default async function hardwareRoutes(fastify) {
               stato:            'online'
             })
 
-          if (error) console.log('insert dispositivo error:', error)
+          if (error) console.error('insert dispositivo error:', error)
 
         } else {
 
@@ -131,7 +131,7 @@ export default async function hardwareRoutes(fastify) {
             .update({ ultimo_ping: new Date(), stato: 'online' })
             .eq('reader_id', reader_id)
 
-          if (error) console.log('update dispositivo error:', error)
+          if (error) console.error('update dispositivo error:', error)
 
           // Extended fields — silently ignored if columns don't exist yet (run migration)
           const extFields = {}
@@ -145,7 +145,7 @@ export default async function hardwareRoutes(fastify) {
               .from('dispositivo')
               .update(extFields)
               .eq('reader_id', reader_id)
-            if (extErr) console.log('extended fields update skipped (migration pending):', extErr.message)
+            if (extErr) console.error('extended fields update skipped (migration pending):', extErr.message)
           }
 
           // Rilevamento componente guasto — avviso SUBITO solo sulla transizione ok→errore
@@ -192,7 +192,7 @@ export default async function hardwareRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        console.error(err)
         return reply.send({ success: false })
 
       }
@@ -282,16 +282,12 @@ export default async function hardwareRoutes(fastify) {
         }
 
         if (!dipendente) {
-          console.log('TAG NON ASSOCIATO A NESSUN DIPENDENTE:', uid)
           return reply.send({
             success: true,
             tipo:    null,
             error:   'TAG_NOT_REGISTERED'
           })
         }
-
-        console.log('DIPENDENTE:', dipendente.nome, dipendente.cognome)
-        console.log('DATA LETTURA:', readDate.toISOString())
 
         /*
           CARICA FASCE ORARIE AZIENDA
@@ -344,7 +340,6 @@ export default async function hardwareRoutes(fastify) {
 
             if (eraInFascia) {
               tipo = tipo === 'ENTRATA' ? 'USCITA' : 'ENTRATA'
-              console.log('SECONDA LETTURA IN FASCIA → inverso:', tipo)
             }
 
           }
@@ -359,13 +354,7 @@ export default async function hardwareRoutes(fastify) {
             tipo = 'ENTRATA'
           }
 
-          console.log('FUORI FASCIA → tipo da ultima timbratura:', tipo)
-
         }
-
-        console.log('FASCIA ATTIVA:', fasciaAttiva?.nome || 'nessuna')
-        console.log('ULTIMA TIMBRATURA:', lastPresence?.tipo || 'nessuna')
-        console.log('TIPO FINALE:', tipo)
 
         /*
           SALVA PRESENZA CON TIMESTAMP REALE
@@ -384,11 +373,9 @@ export default async function hardwareRoutes(fastify) {
           .select()
 
         if (insertError) {
-          console.log('insert presenza error:', insertError)
+          console.error('insert presenza error:', insertError)
           return reply.send({ success: false, error: insertError.message })
         }
-
-        console.log('SALVATO:', insertedPresence)
 
         // Auto-insert missing break timbrature when a final USCITA is saved
         if (tipo === 'USCITA' && dipendente) {
@@ -405,7 +392,6 @@ export default async function hardwareRoutes(fastify) {
                   .eq('tag_uid', uid).eq('company_id', readerCompanyId)
                   .gte('created_at', `${dateStr}T00:00:00`).lte('created_at', `${dateStr}T23:59:59`)
                   .order('created_at', { ascending: true })
-                console.log('AUTO-INSERT CHECK:', dow, dayShift.uscita_1, dayShift.ingresso_2, 'reads:', todayReads?.map(r=>r.tipo))
                 await autoInsertBreakTimbrature(dip.id, readerCompanyId, uid, todayReads || [], dayShift, dateStr)
               }
             }
@@ -430,7 +416,7 @@ export default async function hardwareRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        console.error(err)
         return reply.send({ success: false })
 
       }

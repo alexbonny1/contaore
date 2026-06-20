@@ -28,17 +28,31 @@ const fastify = Fastify({
 })
 
 await fastify.register(cors, {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173'
+  origin: (origin, callback) => {
+    const allowed = process.env.FRONTEND_URL || 'http://localhost:5173'
+    // Allow requests without Origin header (hardware/ESP32/curl) and matching frontend
+    if (!origin || origin === allowed) {
+      return callback(null, true)
+    }
+    callback(null, false)
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 })
 
 await fastify.register(helmet, {
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-    }
-  },
-  frameguard: { action: 'deny' }
+  contentSecurityPolicy:        false,  // Browser-only, irrelevant for API
+  crossOriginEmbedderPolicy:    false,  // Browser-only
+  crossOriginOpenerPolicy:      false,  // Browser-only
+  crossOriginResourcePolicy:    false,  // Breaks ESP32 via CDN/proxy (same-origin blocks hardware)
+  dnsPrefetchControl:           false,  // Browser-only
+  frameguard:                   { action: 'deny' },
+  hidePoweredBy:                true,
+  hsts:                         false,  // Managed by hosting platform
+  ieNoOpen:                     false,  // IE-only
+  noSniff:                      true,
+  permittedCrossDomainPolicies: false,  // Not needed for API
+  referrerPolicy:               false,  // Browser-only
+  xssFilter:                    false   // Deprecated, browser-only
 })
 
 await fastify.register(rateLimit, {
