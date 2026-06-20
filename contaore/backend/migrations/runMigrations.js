@@ -48,6 +48,15 @@ export async function runMigrations() {
       sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_retention_months integer DEFAULT 12;`
     }).catch(() => ({ error: null }))
 
+    // Credenziali temporanee per nuovi owner (migration 004)
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS is_temporary_credentials boolean DEFAULT false;`
+    }).catch(() => ({ error: null }))
+
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS temporary_credentials_used_at timestamptz DEFAULT null;`
+    }).catch(() => ({ error: null }))
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)
