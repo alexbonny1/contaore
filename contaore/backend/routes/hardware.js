@@ -103,20 +103,31 @@ export default async function hardwareRoutes(fastify) {
             return reply.send({ success: false, error: 'MISSING_FIELDS' })
           }
 
+          // Insert only guaranteed columns — avoids failures if optional columns
+          // (firmware_version, sede, nfc_ok, display_ok) don't exist yet in the table
           const { error } = await supabase
             .from('dispositivo')
             .insert({
               company_id,
               reader_id,
-              firmware_version: firmware || null,
-              sede:             sede     || null,
-              nfc_ok:           nfc_ok   ?? null,
-              display_ok:       display_ok ?? null,
-              ultimo_ping:      new Date(),
-              stato:            'online'
+              ultimo_ping: new Date(),
+              stato:       'online'
             })
 
-          if (error) console.error('insert dispositivo error:', error)
+          if (error) {
+            console.error('insert dispositivo error:', error)
+          } else {
+            // Try extended fields in a separate update — silently skip if columns missing
+            const extFields = {}
+            if (firmware   !== undefined) extFields.firmware_version = firmware   || null
+            if (sede       !== undefined) extFields.sede              = sede       || null
+            if (nfc_ok     !== undefined) extFields.nfc_ok            = nfc_ok    ?? null
+            if (display_ok !== undefined) extFields.display_ok        = display_ok ?? null
+            if (Object.keys(extFields).length > 0) {
+              await supabase.from('dispositivo').update(extFields).eq('reader_id', reader_id)
+                .catch(() => {})
+            }
+          }
 
         } else {
 
