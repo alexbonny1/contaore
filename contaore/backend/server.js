@@ -1,6 +1,8 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
+import helmet from '@fastify/helmet'
+import pino from 'pino'
 import dotenv from 'dotenv'
 import { runMigrations } from './migrations/runMigrations.js'
 import deviceRoutes from './routes/devices.js'
@@ -22,12 +24,33 @@ import { startScheduler } from './services/notifiche.js'
 
 dotenv.config()
 
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport: process.env.NODE_ENV === 'production' ? undefined : {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'SYS:standard'
+    }
+  }
+})
+
 const fastify = Fastify({
-  logger: true
+  logger: logger
 })
 
 await fastify.register(cors, {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173'
+})
+
+await fastify.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+    }
+  },
+  frameguard: { action: 'deny' }
 })
 
 await fastify.register(rateLimit, {
