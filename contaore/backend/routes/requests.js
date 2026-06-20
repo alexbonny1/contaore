@@ -464,4 +464,224 @@ export default async function requestsRoutes(fastify) {
     }
   )
 
+  /*
+    PUT /api/requests/permessi/:id/approva
+    Il titolare approva una richiesta di permesso (uscita/entrata)
+  */
+  fastify.put(
+    '/api/requests/permessi/:id/approva',
+    { preHandler: authenticateOwner },
+    async (request, reply) => {
+      try {
+        const { id }     = request.params
+        const company_id = request.user.company_id
+
+        const { data: richiesta } = await supabase
+          .from('richieste_permessi')
+          .select('id, stato')
+          .eq('id', id)
+          .eq('company_id', company_id)
+          .single()
+
+        if (!richiesta) {
+          return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        if (richiesta.stato !== 'in_attesa') {
+          return reply.status(400).send({
+            error: 'ALREADY_PROCESSED',
+            message: `La richiesta è già stata ${richiesta.stato}`
+          })
+        }
+
+        const { data: updated, error } = await supabase
+          .from('richieste_permessi')
+          .update({
+            stato: 'approvata',
+            approved_by: request.user.id,
+            approved_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        return reply.send({ success: true, richiesta: updated })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
+    PUT /api/requests/permessi/:id/rifiuta
+    Il titolare rifiuta una richiesta di permesso
+  */
+  fastify.put(
+    '/api/requests/permessi/:id/rifiuta',
+    { preHandler: authenticateOwner },
+    async (request, reply) => {
+      try {
+        const { id }     = request.params
+        const company_id = request.user.company_id
+
+        const { data: richiesta } = await supabase
+          .from('richieste_permessi')
+          .select('id, stato')
+          .eq('id', id)
+          .eq('company_id', company_id)
+          .single()
+
+        if (!richiesta) {
+          return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        if (richiesta.stato !== 'in_attesa') {
+          return reply.status(400).send({
+            error: 'ALREADY_PROCESSED',
+            message: `La richiesta è già stata ${richiesta.stato}`
+          })
+        }
+
+        const { data: updated, error } = await supabase
+          .from('richieste_permessi')
+          .update({
+            stato: 'rifiutata',
+            approved_by: request.user.id,
+            approved_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        return reply.send({ success: true, richiesta: updated })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
+    PUT /api/requests/modifica-turni/:id/approva
+    Il titolare approva una richiesta di modifica turni
+  */
+  fastify.put(
+    '/api/requests/modifica-turni/:id/approva',
+    { preHandler: authenticateOwner },
+    async (request, reply) => {
+      try {
+        const { id }     = request.params
+        const company_id = request.user.company_id
+
+        const { data: richiesta } = await supabase
+          .from('richieste_turni')
+          .select('id, stato')
+          .eq('id', id)
+          .eq('company_id', company_id)
+          .single()
+
+        if (!richiesta) {
+          return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        if (richiesta.stato !== 'in_attesa') {
+          return reply.status(400).send({
+            error: 'ALREADY_PROCESSED',
+            message: `La richiesta è già stata ${richiesta.stato}`
+          })
+        }
+
+        const { data: updated, error } = await supabase
+          .from('richieste_turni')
+          .update({
+            stato: 'approvata',
+            approved_by: request.user.id,
+            approved_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        return reply.send({ success: true, richiesta: updated })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  /*
+    PUT /api/requests/modifica-turni/:id/rifiuta
+    Il titolare rifiuta una richiesta di modifica turni
+  */
+  fastify.put(
+    '/api/requests/modifica-turni/:id/rifiuta',
+    { preHandler: authenticateOwner },
+    async (request, reply) => {
+      try {
+        const { id }     = request.params
+        const company_id = request.user.company_id
+
+        const { data: richiesta } = await supabase
+          .from('richieste_turni')
+          .select('id, stato')
+          .eq('id', id)
+          .eq('company_id', company_id)
+          .single()
+
+        if (!richiesta) {
+          return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        if (richiesta.stato !== 'in_attesa') {
+          return reply.status(400).send({
+            error: 'ALREADY_PROCESSED',
+            message: `La richiesta è già stata ${richiesta.stato}`
+          })
+        }
+
+        const { data: updated, error } = await supabase
+          .from('richieste_turni')
+          .update({
+            stato: 'rifiutata',
+            approved_by: request.user.id,
+            approved_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (error) {
+          console.log(error)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        return reply.send({ success: true, richiesta: updated })
+
+      } catch (err) {
+        console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
 }

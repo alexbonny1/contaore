@@ -41,6 +41,8 @@ export default function Requests({ initialView = 'richieste' }) {
       const token = localStorage.getItem('token')
       const ep = type === 'ferie' ? `/api/ferie/${id}/approva`
                : type === 'giustificazioni' ? `/api/giustificazioni/${id}/approva`
+               : type === 'permessi' ? `/api/requests/permessi/${id}/approva`
+               : type === 'modifica-turni' ? `/api/requests/modifica-turni/${id}/approva`
                : `/api/requests/missing-scans/${id}/approva`
       const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
@@ -56,6 +58,8 @@ export default function Requests({ initialView = 'richieste' }) {
       const token = localStorage.getItem('token')
       const ep = type === 'ferie' ? `/api/ferie/${id}/rifiuta`
                : type === 'giustificazioni' ? `/api/giustificazioni/${id}/rifiuta`
+               : type === 'permessi' ? `/api/requests/permessi/${id}/rifiuta`
+               : type === 'modifica-turni' ? `/api/requests/modifica-turni/${id}/rifiuta`
                : `/api/requests/missing-scans/${id}/rifiuta`
       const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
