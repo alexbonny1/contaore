@@ -2,12 +2,8 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import helmet from '@fastify/helmet'
-import pino from 'pino'
-import pinoHttp from 'pino-http'
 import dotenv from 'dotenv'
 import fs from 'fs'
-import { fileURLToPath } from 'url'
-import path from 'path'
 import { runMigrations } from './migrations/runMigrations.js'
 import { createAuditLogger } from './middleware/audit.js'
 import deviceRoutes from './routes/devices.js'
@@ -29,20 +25,18 @@ import { startScheduler } from './services/notifiche.js'
 
 dotenv.config()
 
-const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'SYS:standard',
-      ignore: 'pid,hostname'
+const options = {
+  logger: {
+    level: process.env.LOG_LEVEL || 'info',
+    transport: process.env.NODE_ENV === 'production' ? undefined : {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:standard',
+        ignore: 'pid,hostname'
+      }
     }
   }
-})
-
-const options = {
-  logger: logger
 }
 
 if (process.env.NODE_ENV === 'production' && process.env.TLS_KEY_PATH && process.env.TLS_CERT_PATH) {
@@ -84,8 +78,6 @@ await fastify.register(rateLimit, {
   cache: 10000,
   allowList: ['127.0.0.1']
 })
-
-await fastify.register(pinoHttp, { logger })
 
 fastify.addHook('preHandler', createAuditLogger())
 
