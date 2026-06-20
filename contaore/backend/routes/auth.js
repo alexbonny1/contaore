@@ -50,14 +50,6 @@ export default async function authRoutes(fastify) {
         return reply.status(401).send({ error: 'INVALID_CREDENTIALS' })
       }
 
-      // Verifica credenziali temporanee
-      if (user.is_temporary_credentials && user.temporary_credentials_used_at !== null) {
-        return reply.status(401).send({
-          error: 'TEMPORARY_CREDENTIALS_EXPIRED',
-          message: 'Queste credenziali temporanee non sono più valide'
-        })
-      }
-
       // ─── LOGIN SENZA 2FA (al primo login) ──────────────────────────────────
       // 2FA verrà richiesto SOLO dopo 15 minuti di inattività, non al login
       const portale_dipendenti = user.company?.portale_dipendenti ?? false
@@ -79,19 +71,6 @@ export default async function authRoutes(fastify) {
         { expiresIn: '7d' }
       )
 
-      // Marca credenziali temporanee come usate (fire-and-forget)
-      if (user.is_temporary_credentials && user.temporary_credentials_used_at === null) {
-        supabase
-          .from('user_account')
-          .update({
-            is_temporary_credentials: false,
-            temporary_credentials_used_at: new Date().toISOString()
-          })
-          .eq('id', user.id)
-          .then(() => console.log('Temporary credentials marked as used for user', user.id))
-          .catch(err => console.error('Error marking temporary credentials as used:', err))
-      }
-
       return reply.send({
         success: true,
         token,
@@ -107,7 +86,7 @@ export default async function authRoutes(fastify) {
       })
 
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -214,7 +193,7 @@ export default async function authRoutes(fastify) {
       })
 
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -305,7 +284,7 @@ export default async function authRoutes(fastify) {
       })
 
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -362,7 +341,7 @@ export default async function authRoutes(fastify) {
       return reply.send({ success: true })
 
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -435,7 +414,7 @@ export default async function authRoutes(fastify) {
       return reply.send({ success: true })
 
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -543,7 +522,7 @@ export default async function authRoutes(fastify) {
       return reply.send({ success: true })
 
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -619,7 +598,7 @@ export default async function authRoutes(fastify) {
       return reply.send({ success: true, message: 'Password resettata con successo' })
 
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -652,7 +631,7 @@ export default async function authRoutes(fastify) {
 
       return reply.send({ success: true, enabled: user.two_factor_enabled || false })
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -701,7 +680,7 @@ export default async function authRoutes(fastify) {
 
       return reply.send({ success: true, enabled: two_factor_enabled })
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -795,7 +774,7 @@ export default async function authRoutes(fastify) {
         }
       })
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -889,7 +868,7 @@ export default async function authRoutes(fastify) {
 
       return reply.send({ success: true, needsTwoFactor: false, token: newToken })
     } catch (err) {
-      console.log(err)
+      console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })

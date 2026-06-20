@@ -4,7 +4,7 @@ import {
   Building2, Plus, Trash2,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
   Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio, Download,
-  FileText, ExternalLink, Shield, Upload, RotateCcw, Sun, Moon, LogOut
+  FileText, ExternalLink, Shield, Upload, RotateCcw, Sun, Moon, LogOut, Key
 } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -45,6 +45,13 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
 
 // Input class helper — 16px font su mobile previene auto-zoom iOS Safari
 const inputCls = "w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[16px] sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500";
+
+function formatCountdown(seconds) {
+  if (!seconds || seconds <= 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 export default function Admin() {
 
@@ -102,6 +109,10 @@ export default function Admin() {
   const [uploadingDoc, setUploadingDoc]     = useState(null);
   const [activeTab, setActiveTab]           = useState("aziende");
 
+  const [newCredentials, setNewCredentials] = useState(null);
+  const [credsCountdown, setCredsCountdown] = useState(null);
+  const [credCopied, setCredCopied]         = useState(null);
+
   function showToast(message, type = "success") {
     setToast({ message, type });
   }
@@ -117,6 +128,18 @@ export default function Admin() {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!newCredentials) { setCredsCountdown(null); return; }
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((newCredentials.expiresAt - Date.now()) / 1000));
+      setCredsCountdown(remaining);
+      if (remaining <= 0) setNewCredentials(null);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [newCredentials]);
 
   async function loadCustomDocs() {
     try {
@@ -204,7 +227,7 @@ export default function Admin() {
       const data = await response.json();
       if (data.success) setCompanies(data.companies || []);
     } catch (err) {
-      console.log(err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -228,16 +251,24 @@ export default function Admin() {
         else setError("Errore nella creazione");
         return;
       }
+      const savedEmail = ownerEmail;
+      const savedUsername = username;
       setCompanyName(""); setUsername(""); setOwnerEmail("");
       setShowCreate(false);
+      setNewCredentials({
+        username: savedUsername,
+        email: savedEmail,
+        password: data.password_generata,
+        expiresAt: Date.now() + 10 * 60 * 1000
+      });
       if (data.email_inviata) {
-        showToast(`Azienda creata — credenziali inviate a ${ownerEmail}`);
+        showToast(`Azienda creata — credenziali inviate a ${savedEmail}`);
       } else {
         showToast("Azienda creata. Email non inviata (verifica Resend)", "error");
       }
       loadCompanies();
     } catch (err) {
-      console.log(err);
+      console.error(err);
       setError("Errore di connessione");
     } finally {
       setSaving(false);
@@ -263,7 +294,7 @@ export default function Admin() {
       showToast("Azienda eliminata");
       loadCompanies();
     } catch (err) {
-      console.log(err);
+      console.error(err);
       showToast("Errore di connessione", "error");
     }
   }
@@ -288,7 +319,7 @@ export default function Admin() {
         showToast("Password aggiornata — email non inviata", "error");
       }
     } catch (err) {
-      console.log(err);
+      console.error(err);
       showToast("Errore di connessione", "error");
     } finally {
       setResetLoading(false);
@@ -313,7 +344,7 @@ export default function Admin() {
         prev.map(c => c.id === companyId ? { ...c, portale_dipendenti: !attivoAttuale } : c)
       );
     } catch (err) {
-      console.log(err);
+      console.error(err);
       showToast("Errore di connessione", "error");
     } finally {
       setTogglingPortale(null);
@@ -456,7 +487,7 @@ export default function Admin() {
       showToast("Fascia oraria aggiunta");
       loadCompanies();
     } catch (err) {
-      console.log(err);
+      console.error(err);
       showToast("Errore di connessione", "error");
     } finally {
       setSavingFascia(false);
@@ -482,7 +513,7 @@ export default function Admin() {
       showToast("Fascia eliminata");
       loadCompanies();
     } catch (err) {
-      console.log(err);
+      console.error(err);
       showToast("Errore di connessione", "error");
     }
   }
@@ -939,6 +970,52 @@ export default function Admin() {
                 {saving ? "Creazione in corso..." : "Crea e invia credenziali"}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* PANNELLO CREDENZIALI APPENA CREATE */}
+        {newCredentials && (
+          <div className="rounded-3xl border border-amber-200 dark:border-amber-700/40 bg-amber-50 dark:bg-amber-900/20 p-4 sm:p-6 mb-4">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Key size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">Credenziali create</h3>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                    <Clock size={11} /> Visibili ancora {formatCountdown(credsCountdown)}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setNewCredentials(null)} className="p-1 text-amber-700 dark:text-amber-400">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {[
+                { label: "Username", value: newCredentials.username, key: "username" },
+                { label: "Password", value: newCredentials.password, key: "password" }
+              ].map(({ label, value, key }) => (
+                <div key={key} className="flex items-center justify-between gap-3 bg-white dark:bg-zinc-900/40 rounded-xl px-4 py-2.5 border border-amber-100 dark:border-amber-800/30">
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium uppercase tracking-wide">{label}</p>
+                    <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{value}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(value);
+                      setCredCopied(key);
+                      setTimeout(() => setCredCopied(null), 2000);
+                    }}
+                    className="shrink-0 p-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-800/30 transition"
+                  >
+                    {credCopied === key ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-amber-700/60 dark:text-amber-500/60 mt-3">
+              Credenziali inviate via email a {newCredentials.email}
+            </p>
           </div>
         )}
 
