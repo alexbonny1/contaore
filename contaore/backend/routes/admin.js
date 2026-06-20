@@ -129,7 +129,9 @@ export default async function adminRoutes(fastify) {
             password:   hashedPassword,
             email,
             role:       'owner',
-            company_id: company.id
+            company_id: company.id,
+            is_temporary_credentials: true,
+            temporary_credentials_used_at: null
           })
           .select()
           .single()
@@ -170,7 +172,8 @@ export default async function adminRoutes(fastify) {
             username:   user.username,
             email:      user.email,
             role:       user.role,
-            company_id: user.company_id
+            company_id: user.company_id,
+            is_temporary_credentials: true
           }
         })
 

@@ -47,6 +47,14 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
               ${loginSection}
             </div>
 
+            <div style="background:#fef3c7;border-radius:6px;padding:16px;margin-bottom:24px;border-left:4px solid #f59e0b;">
+              <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;">⚠️ CREDENZIALI TEMPORANEE</p>
+              <p style="margin:8px 0 0;font-size:13px;color:#92400e;line-height:1.5;">
+                Queste credenziali funzionano solo al <strong>primo accesso</strong>.
+                Dopo il primo login, dovrai impostare una nuova password permanente.
+              </p>
+            </div>
+
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
               Dal pannello puoi gestire i dipendenti, visualizzare le presenze,
               approvare richieste di ferie e giustificazioni, e configurare i turni.
