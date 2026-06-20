@@ -445,7 +445,7 @@ export async function sendTwoFactorEmail(email, code) {
             </ul>
 
             <p style="font-size:12px;color:#aaa;margin:24px 0 0;border-top:1px solid #eee;padding-top:16px;">
-              Contaore — Sistema di gestione presenze
+              Timbry — Gestione presenze
             </p>
           </div>
         </div>
