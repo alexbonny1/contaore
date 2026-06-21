@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import {
   Clock, Calendar, AlertCircle, CheckCircle2,
   XCircle, ChevronDown, ChevronUp, Send, LogOut, Lock,
-  Sun, Moon, TrendingUp, UserCheck, Umbrella, Pencil, Download
+  Sun, Moon, TrendingUp, UserCheck, Umbrella, Pencil, Download,
+  User, Shield, ChevronLeft, Trash2
 } from "lucide-react";
 import { API_URL } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import DipendenteBottomNav from "../components/DipendenteBottomNav";
+import { SettingRow, SettingsGroup } from "../components/SettingsUI";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -124,6 +126,9 @@ export default function DipendenteDashboard() {
   const [showTurniForm, setShowTurniForm]             = useState(false);
   const [richiesteTurni, setRichiesteTurni]           = useState([]);
 
+  // profilo sub-view: null (hub) | 'profilo' | 'sicurezza'
+  const [profiloSub, setProfiloSub]                   = useState(null);
+
   // profilo edit
   const [editingProfile, setEditingProfile]           = useState(false);
   const [editNome, setEditNome]                       = useState('');
@@ -222,10 +227,11 @@ export default function DipendenteDashboard() {
       const json = await res.json();
       if (!json.success) { showToast(json.error || "Errore salvataggio", "error"); return; }
       if (json.credenziali_reinviate) {
-        showToast("Profilo aggiornato — nuove credenziali inviate via email");
-      } else {
-        showToast("Profilo aggiornato");
+        showToast("Profilo aggiornato — verrai disconnesso...");
+        setTimeout(() => { localStorage.clear(); navigate("/"); }, 2500);
+        return;
       }
+      showToast("Profilo aggiornato");
       setEditingProfile(false);
       loadMe();
     } catch (err) { console.log(err); showToast("Errore server", "error"); }
@@ -1215,21 +1221,21 @@ export default function DipendenteDashboard() {
                 Puoi richiedere al titolare di modificare il tuo orario di lavoro per un periodo specifico.
               </p>
 
-              {!data?.turni_attivi && (
+              {!shifts?.length && (
                 <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 text-center">
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">I turni non sono ancora configurati dal titolare.</p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Nessun turno assegnato — contatta il titolare.</p>
                   <p className="text-xs text-zinc-400 mt-1">Una volta assegnato un turno, potrai inviare richieste di modifica.</p>
                 </div>
               )}
 
-              {data?.turni_attivi && !showTurniForm && (
+              {shifts?.length > 0 && !showTurniForm && (
                 <button onClick={() => setShowTurniForm(true)}
                   className="flex items-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium mb-5 sm:mb-6">
                   <Clock size={14} className="sm:w-[15px] sm:h-[15px]" /> Nuova richiesta cambio turno
                 </button>
               )}
 
-              {data?.turni_attivi && showTurniForm && (
+              {shifts?.length > 0 && showTurniForm && (
                 <form onSubmit={inviRichiestaTurni} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
                   <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta cambio turno</h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
@@ -1332,168 +1338,257 @@ export default function DipendenteDashboard() {
 
         {/* ══════════ TAB: PROFILO ══════════ */}
         {tab === "profilo" && (
-          <div className="space-y-5">
+          <div className="space-y-4">
 
-            {/* ACCOUNT */}
-            <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6">
-              {!editingProfile ? (
-                <div className="flex items-center justify-between gap-3 mb-5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-black text-base font-semibold shrink-0">
-                      {(employee.nome?.[0] || "").toUpperCase()}{(employee.cognome?.[0] || "").toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">{employee.nome} {employee.cognome}</p>
-                      {employee.email && <p className="text-xs text-zinc-500 truncate">{employee.email}</p>}
-                    </div>
+            {/* ── HUB ── */}
+            {!profiloSub && (
+              <>
+                {/* Avatar + nome */}
+                <div className="flex items-center gap-3 px-1 mb-1">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-black text-base font-semibold shrink-0">
+                    {(employee.nome?.[0] || "").toUpperCase()}{(employee.cognome?.[0] || "").toUpperCase()}
                   </div>
-                  <button
-                    onClick={() => { setEditNome(employee.nome || ''); setEditCognome(employee.cognome || ''); setEditEmail(employee.email || ''); setEditingProfile(true); }}
-                    className="shrink-0 flex items-center gap-1.5 px-3 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
-                    <Pencil size={13} /> Modifica
-                  </button>
-                </div>
-              ) : (
-                <div className="mb-5 space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-xs text-zinc-400 mb-1">Nome</p>
-                      <input value={editNome} onChange={e => setEditNome(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-400 mb-1">Cognome</p>
-                      <input value={editCognome} onChange={e => setEditCognome(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-zinc-400 mb-1">Email</p>
-                    <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={saveProfile} disabled={savingProfile}
-                      className="flex-1 h-10 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
-                      {savingProfile ? "Salvataggio..." : "Salva"}
-                    </button>
-                    <button onClick={() => setEditingProfile(false)}
-                      className="flex-1 h-10 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-medium">
-                      Annulla
-                    </button>
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">{employee.nome} {employee.cognome}</p>
+                    {employee.email && <p className="text-xs text-zinc-500 truncate">{employee.email}</p>}
                   </div>
                 </div>
-              )}
-              <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
-                <button onClick={() => setShowChangePassword(true)}
-                  className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-sm font-medium">
-                  <Lock size={15} /> Password
-                </button>
-                <button onClick={() => setDark(d => !d)}
-                  className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-sm font-medium">
-                  {dark ? <Sun size={15} /> : <Moon size={15} />} {dark ? "Chiaro" : "Scuro"}
-                </button>
-                <button onClick={logout}
-                  className="flex items-center justify-center gap-2 h-11 rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
+
+                {/* Impostazioni hub */}
+                <SettingsGroup>
+                  <SettingRow
+                    onClick={() => { setEditNome(employee.nome || ''); setEditCognome(employee.cognome || ''); setEditEmail(employee.email || ''); setEditingProfile(false); setProfiloSub('profilo'); }}
+                    icon={User}
+                    iconBg="bg-blue-50 dark:bg-blue-900/20"
+                    iconColor="text-blue-500"
+                    title="Profilo"
+                    subtitle="Nome, cognome e indirizzo email"
+                  />
+                  <SettingRow
+                    onClick={() => setProfiloSub('sicurezza')}
+                    icon={Shield}
+                    iconBg="bg-green-50 dark:bg-green-900/20"
+                    iconColor="text-green-500"
+                    title="Sicurezza"
+                    subtitle="Password e autenticazione a due fattori"
+                  />
+                </SettingsGroup>
+
+                {/* Tema */}
+                <SettingsGroup>
+                  <SettingRow
+                    onClick={() => setDark(d => !d)}
+                    icon={dark ? Sun : Moon}
+                    iconBg="bg-zinc-100 dark:bg-zinc-800"
+                    iconColor="text-zinc-600 dark:text-zinc-300"
+                    title={dark ? "Modalità chiara" : "Modalità scura"}
+                    subtitle={dark ? "Passa al tema chiaro" : "Passa al tema scuro"}
+                  />
+                </SettingsGroup>
+
+                {/* Logout */}
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 text-sm font-medium">
                   <LogOut size={15} /> Esci
                 </button>
-              </div>
-            </div>
 
-            {/* 2FA */}
-            <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Verifica in 2 passaggi</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">Richiede un codice email ad ogni login</p>
-                </div>
-                <button
-                  onClick={toggleTwoFa}
-                  disabled={loadingTwoFa}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-50 ${twoFaEnabled ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${twoFaEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-              {twoFaEnabled && (
-                <p className="text-xs text-zinc-400 mt-3">Ad ogni accesso riceverai un codice di verifica via email.</p>
-              )}
-            </div>
-
-            {/* ELIMINA ACCOUNT */}
-            <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-red-200 dark:border-red-900/40 p-5 sm:p-6">
-              {!showDeleteAccount ? (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-red-600 dark:text-red-400">Elimina account</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Rimuove l'accesso al portale</p>
+                {/* I MIEI TURNI */}
+                <h3 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 pt-1">I miei turni</h3>
+                {shifts.length === 0 ? (
+                  <div className="text-center py-10 text-zinc-400">
+                    <Clock size={28} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Nessun turno assegnato</p>
                   </div>
-                  <button onClick={() => setShowDeleteAccount(true)}
-                    className="px-4 h-9 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium border border-red-200 dark:border-red-800">
-                    Elimina
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">Conferma eliminazione account</p>
-                  <p className="text-xs text-zinc-500 leading-relaxed">Questa azione rimuove il tuo accesso al portale. I dati lavorativi restano archiviati dall'azienda.</p>
-                  <div>
-                    <p className="text-xs text-zinc-400 mb-1">Inserisci la tua password per confermare</p>
-                    <input
-                      type="password"
-                      value={deletePassword}
-                      onChange={e => setDeletePassword(e.target.value)}
-                      placeholder="Password"
-                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={deleteAccount} disabled={deletingAccount}
-                      className="flex-1 h-10 rounded-xl bg-red-600 text-white text-sm font-medium disabled:opacity-50">
-                      {deletingAccount ? "Eliminazione..." : "Conferma eliminazione"}
-                    </button>
-                    <button onClick={() => { setShowDeleteAccount(false); setDeletePassword(''); }}
-                      className="flex-1 h-10 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-medium">
-                      Annulla
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* I MIEI TURNI */}
-            <h3 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100">I miei turni</h3>
-            {!employee.turni_attivi ? (
-              <div className="text-center py-16 text-zinc-400">
-                <Clock size={32} className="mx-auto mb-3 opacity-30" />
-                <p>Nessun turno configurato per il tuo profilo</p>
-              </div>
-            ) : shifts.length === 0 ? (
-              <div className="text-center py-16 text-zinc-400">Nessun turno assegnato</div>
-            ) : (
-              <div className="space-y-3">
-                {["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"].map(giorno => {
-                  const dayShifts = shifts.filter(s => s.giorno_settimana === giorno);
-                  if (!dayShifts.length) return null;
-                  return (
-                    <div key={giorno} className="rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-5 py-4">
-                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">{giorno}</p>
-                      {dayShifts.map(s => (
-                        <div key={s.id} className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300 flex-wrap">
-                          <Sun size={14} className="text-zinc-400 flex-shrink-0" />
-                          <span>
-                            {s.ingresso_1?.slice(0,5)} – {s.uscita_1?.slice(0,5)}
-                            {s.ingresso_2 && ` / ${s.ingresso_2.slice(0,5)} – ${s.uscita_2?.slice(0,5)}`}
-                          </span>
-                          {s.uscita_1 && s.ingresso_1 && s.uscita_1 < s.ingresso_1 && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">Notturno</span>
-                          )}
-                          {s.turno_nome && <span className="text-xs text-zinc-400">({s.turno_nome})</span>}
+                ) : (
+                  <div className="space-y-3">
+                    {["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"].map(giorno => {
+                      const dayShifts = shifts.filter(s => s.giorno_settimana === giorno);
+                      if (!dayShifts.length) return null;
+                      return (
+                        <div key={giorno} className="rounded-2xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 px-5 py-4">
+                          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">{giorno}</p>
+                          {dayShifts.map(s => (
+                            <div key={s.id} className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300 flex-wrap">
+                              <Sun size={14} className="text-zinc-400 flex-shrink-0" />
+                              <span>
+                                {s.ingresso_1?.slice(0,5)} – {s.uscita_1?.slice(0,5)}
+                                {s.ingresso_2 && ` / ${s.ingresso_2.slice(0,5)} – ${s.uscita_2?.slice(0,5)}`}
+                              </span>
+                              {s.uscita_1 && s.ingresso_1 && s.uscita_1 < s.ingresso_1 && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">Notturno</span>
+                              )}
+                              {s.turno_nome && <span className="text-xs text-zinc-400">({s.turno_nome})</span>}
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
+
+            {/* ── SUB-VIEW: PROFILO ── */}
+            {profiloSub === 'profilo' && (
+              <>
+                <button
+                  onClick={() => { setProfiloSub(null); setEditingProfile(false); }}
+                  className="inline-flex items-center gap-0.5 -ml-1 mb-1 text-sm font-medium text-blue-500">
+                  <ChevronLeft size={18} /> Impostazioni
+                </button>
+
+                <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6">
+                  {!editingProfile ? (
+                    <>
+                      <div className="flex items-center justify-between gap-3 mb-5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-black text-base font-semibold shrink-0">
+                            {(employee.nome?.[0] || "").toUpperCase()}{(employee.cognome?.[0] || "").toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">{employee.nome} {employee.cognome}</p>
+                            {employee.email && <p className="text-xs text-zinc-500 truncate">{employee.email}</p>}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setEditingProfile(true)}
+                          className="shrink-0 flex items-center gap-1.5 px-3 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+                          <Pencil size={13} /> Modifica
+                        </button>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
+                          <span className="text-zinc-500">Nome</span>
+                          <span className="text-zinc-900 dark:text-zinc-100 font-medium">{employee.nome || "—"}</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
+                          <span className="text-zinc-500">Cognome</span>
+                          <span className="text-zinc-900 dark:text-zinc-100 font-medium">{employee.cognome || "—"}</span>
+                        </div>
+                        <div className="flex justify-between py-2">
+                          <span className="text-zinc-500">Email</span>
+                          <span className="text-zinc-900 dark:text-zinc-100 font-medium truncate max-w-[60%] text-right">{employee.email || "—"}</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Modifica profilo</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-zinc-400 mb-1">Nome *</p>
+                          <input value={editNome} onChange={e => setEditNome(e.target.value)}
+                            className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-zinc-400 mb-1">Cognome</p>
+                          <input value={editCognome} onChange={e => setEditCognome(e.target.value)}
+                            className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-zinc-400 mb-1">Email</p>
+                        <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
+                          className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                      </div>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Se modifichi nome o email, ti verranno inviate nuove credenziali e verrai disconnesso.
+                      </p>
+                      <div className="flex gap-2 pt-1">
+                        <button onClick={saveProfile} disabled={savingProfile}
+                          className="flex-1 h-10 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
+                          {savingProfile ? "Salvataggio..." : "Salva"}
+                        </button>
+                        <button onClick={() => setEditingProfile(false)}
+                          className="flex-1 h-10 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-medium">
+                          Annulla
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ── SUB-VIEW: SICUREZZA ── */}
+            {profiloSub === 'sicurezza' && (
+              <>
+                <button
+                  onClick={() => { setProfiloSub(null); setShowDeleteAccount(false); setDeletePassword(''); }}
+                  className="inline-flex items-center gap-0.5 -ml-1 mb-1 text-sm font-medium text-blue-500">
+                  <ChevronLeft size={18} /> Impostazioni
+                </button>
+
+                {/* 2FA */}
+                <SettingsGroup>
+                  <div className="flex items-center gap-3 px-4 py-3.5">
+                    <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 bg-indigo-50 dark:bg-indigo-900/20">
+                      <Shield size={18} className="text-indigo-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Verifica in 2 passaggi</p>
+                      <p className="text-xs text-zinc-500">Richiede un codice email ad ogni login</p>
+                    </div>
+                    <button
+                      onClick={toggleTwoFa}
+                      disabled={loadingTwoFa}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-50 shrink-0 ${twoFaEnabled ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${twoFaEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  <SettingRow
+                    onClick={() => setShowChangePassword(true)}
+                    icon={Lock}
+                    iconBg="bg-zinc-100 dark:bg-zinc-800"
+                    iconColor="text-zinc-600 dark:text-zinc-300"
+                    title="Cambia password"
+                    subtitle="Aggiorna la tua password di accesso"
+                  />
+                </SettingsGroup>
+
+                {/* ELIMINA ACCOUNT */}
+                <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-red-200 dark:border-red-900/40 p-5 sm:p-6">
+                  {!showDeleteAccount ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-red-600 dark:text-red-400">Elimina account</p>
+                        <p className="text-xs text-zinc-500 mt-0.5">Rimuove l'accesso al portale</p>
+                      </div>
+                      <button onClick={() => setShowDeleteAccount(true)}
+                        className="px-4 h-9 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium border border-red-200 dark:border-red-800">
+                        Elimina
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-red-600 dark:text-red-400">Conferma eliminazione account</p>
+                      <p className="text-xs text-zinc-500 leading-relaxed">Questa azione rimuove il tuo accesso al portale. I dati lavorativi restano archiviati dall'azienda.</p>
+                      <div>
+                        <p className="text-xs text-zinc-400 mb-1">Inserisci la tua password per confermare</p>
+                        <input
+                          type="password"
+                          value={deletePassword}
+                          onChange={e => setDeletePassword(e.target.value)}
+                          placeholder="Password"
+                          className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={deleteAccount} disabled={deletingAccount}
+                          className="flex-1 h-10 rounded-xl bg-red-600 text-white text-sm font-medium disabled:opacity-50">
+                          {deletingAccount ? "Eliminazione..." : "Conferma eliminazione"}
+                        </button>
+                        <button onClick={() => { setShowDeleteAccount(false); setDeletePassword(''); }}
+                          className="flex-1 h-10 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-medium">
+                          Annulla
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
           </div>
         )}
 
