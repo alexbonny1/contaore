@@ -41,6 +41,7 @@ body,
   background: var(--bg);
   color: var(--text);
   font-family: Inter, sans-serif;
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -61,7 +62,3 @@ header {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Disable iOS rubber-band scroll so pull-to-refresh feels intentional */
-html, body {
-  overscroll-behavior-y: none;
-}
