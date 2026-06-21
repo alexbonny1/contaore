@@ -105,12 +105,6 @@ export async function checkInactivity(request, reply) {
     const token = authHeader.replace('Bearer ', '')
     const decoded = jwt.verify(token, JWT_SECRET)
 
-    // I dipendenti non hanno 2FA
-    if (decoded.role === 'dipendente') {
-      request.user = decoded
-      return // Continua senza controllo
-    }
-
     // Se 2FA non è abilitato, passa
     if (!decoded.two_factor_enabled) {
       request.user = decoded
