@@ -65,6 +65,8 @@ export default function Admin() {
   const [companyName, setCompanyName]       = useState("");
   const [username, setUsername]             = useState("");
   const [ownerEmail, setOwnerEmail]         = useState("");
+  const [ownerNome, setOwnerNome]           = useState("");
+  const [ownerCognome, setOwnerCognome]     = useState("");
   const [saving, setSaving]                 = useState(false);
   const [error, setError]                   = useState("");
 
@@ -242,7 +244,7 @@ export default function Admin() {
       const response = await fetch(API_URL + "/api/admin/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ company_name: companyName, username, email: ownerEmail })
+        body: JSON.stringify({ company_name: companyName, username, email: ownerEmail, nome: ownerNome, cognome: ownerCognome })
       });
       const data = await response.json();
       if (!data.success) {
@@ -253,7 +255,7 @@ export default function Admin() {
       }
       const savedEmail = ownerEmail;
       const savedUsername = username;
-      setCompanyName(""); setUsername(""); setOwnerEmail("");
+      setCompanyName(""); setUsername(""); setOwnerEmail(""); setOwnerNome(""); setOwnerCognome("");
       setShowCreate(false);
       setNewCredentials({
         username: savedUsername,
@@ -956,6 +958,12 @@ export default function Admin() {
                 onChange={(e) => setCompanyName(e.target.value)} className={inputCls} required />
               <input type="text" placeholder="Username titolare *" value={username}
                 onChange={(e) => setUsername(e.target.value)} className={inputCls} required />
+              <div className="grid grid-cols-2 gap-3">
+                <input type="text" placeholder="Nome titolare" value={ownerNome}
+                  onChange={(e) => setOwnerNome(e.target.value)} className={inputCls} />
+                <input type="text" placeholder="Cognome titolare" value={ownerCognome}
+                  onChange={(e) => setOwnerCognome(e.target.value)} className={inputCls} />
+              </div>
               <div className="relative">
                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                 <input type="email" placeholder="Email titolare * (riceverà le credenziali)" value={ownerEmail}

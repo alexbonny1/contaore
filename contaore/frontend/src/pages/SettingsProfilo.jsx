@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Pencil } from "lucide-react";
 import { API_URL } from "../api";
 import { SettingsHeader } from "../components/SettingsUI";
 
 export default function SettingsProfilo() {
-  const token = localStorage.getItem("token");
+  const token    = localStorage.getItem("token");
+  const navigate = useNavigate();
 
   const [profile, setProfile]             = useState({ nome: "", cognome: "", email: "", username: "" });
   const [loading, setLoading]             = useState(true);
@@ -73,7 +75,9 @@ export default function SettingsProfilo() {
       setEditing(false);
 
       if (json.credenziali_reinviate) {
-        showToast("Profilo aggiornato — nuove credenziali inviate via email");
+        showToast("Profilo aggiornato — verrai disconnesso...");
+        setTimeout(() => { localStorage.clear(); navigate("/"); }, 2500);
+        return;
       } else {
         showToast("Profilo aggiornato");
       }

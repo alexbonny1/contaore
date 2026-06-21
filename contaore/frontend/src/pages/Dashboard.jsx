@@ -41,7 +41,7 @@ export default function Dashboard() {
 
         {/* SALUTO TITOLARE */}
         <p className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-100 mb-5">
-          Ciao, {ownerUser?.nome || ownerUser?.username} 👋
+          Ciao, {ownerUser?.nome || ownerUser?.username}
         </p>
 
         {/* RIQUADRO RIASSUNTIVO PRESENZE → Dipendenti */}

@@ -40,17 +40,31 @@ export function SettingsHeader({ title, subtitle }) {
 }
 
 /* Riga categoria in stile Apple (icona colorata + titolo + chevron) */
-export function SettingRow({ to, icon: Icon, iconBg, iconColor, title, subtitle }) {
-  return (
-    <Link to={to} className="flex items-center gap-3 px-4 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+export function SettingRow({ to, onClick, icon: Icon, iconBg, iconColor, title, subtitle, rightContent }) {
+  const inner = (
+    <>
       <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 ${iconBg}`}>
         <Icon size={18} className={iconColor} />
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 text-left">
         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{title}</p>
         {subtitle && <p className="text-xs text-zinc-500 truncate">{subtitle}</p>}
       </div>
-      <ChevronRight size={18} className="text-zinc-300 dark:text-zinc-600 shrink-0" />
+      {rightContent !== undefined ? rightContent : <ChevronRight size={18} className="text-zinc-300 dark:text-zinc-600 shrink-0" />}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick}
+        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+        {inner}
+      </button>
+    );
+  }
+  return (
+    <Link to={to} className="flex items-center gap-3 px-4 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+      {inner}
     </Link>
   );
 }

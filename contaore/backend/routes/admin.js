@@ -86,7 +86,7 @@ export default async function adminRoutes(fastify) {
     { preHandler: authenticateSuperadmin },
     async (request, reply) => {
       try {
-        const { company_name, username, email } = request.body
+        const { company_name, username, email, nome, cognome } = request.body
         // password opzionale: se non fornita viene auto-generata
         const passwordInChiaro = request.body.password || generaPassword()
 
@@ -128,6 +128,8 @@ export default async function adminRoutes(fastify) {
             username,
             password:   hashedPassword,
             email,
+            nome:       nome || null,
+            cognome:    cognome || null,
             role:       'owner',
             company_id: company.id
           })
