@@ -84,24 +84,19 @@ export default async function hardwareRoutes(fastify) {
 
         const { reader_id, company_id, firmware, sede, nfc_ok, display_ok } = request.body
 
-        if (!reader_id) {
+        if (!reader_id || !company_id) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
         }
 
-        // SECURITY FIX: Check if reader exists
+        // reader_id is unique per company, not globally
         const { data: existingReader, error: readerError } = await supabase
           .from('dispositivo')
           .select('*')
           .eq('reader_id', reader_id)
+          .eq('company_id', company_id)
           .maybeSingle()
 
-        // If reader doesn't exist, use company_id from request to create it
-        // (only for first registration from hardware)
         if (!existingReader) {
-
-          if (!company_id) {
-            return reply.send({ success: false, error: 'MISSING_FIELDS' })
-          }
 
           // Insert only guaranteed columns — avoids failures if optional columns
           // (firmware_version, sede, nfc_ok, display_ok) don't exist yet in the table
@@ -116,6 +111,7 @@ export default async function hardwareRoutes(fastify) {
 
           if (error) {
             console.error('insert dispositivo error:', error)
+            return reply.send({ success: false, error: 'DB_ERROR' })
           } else {
             // Try extended fields in a separate update — silently skip if columns missing
             const extFields = {}
@@ -124,23 +120,19 @@ export default async function hardwareRoutes(fastify) {
             if (nfc_ok     !== undefined) extFields.nfc_ok            = nfc_ok    ?? null
             if (display_ok !== undefined) extFields.display_ok        = display_ok ?? null
             if (Object.keys(extFields).length > 0) {
-              await supabase.from('dispositivo').update(extFields).eq('reader_id', reader_id)
+              await supabase.from('dispositivo').update(extFields)
+                .eq('reader_id', reader_id).eq('company_id', company_id)
                 .catch(() => {})
             }
           }
 
         } else {
 
-          // Validate company_id from request matches reader's registered company_id
-          if (company_id && company_id !== existingReader.company_id) {
-            return reply.send({ success: false, error: 'COMPANY_MISMATCH' })
-          }
-
           // Minimal guaranteed update — ultimo_ping always refreshed
           const { error } = await supabase
             .from('dispositivo')
             .update({ ultimo_ping: new Date(), stato: 'online' })
-            .eq('reader_id', reader_id)
+            .eq('reader_id', reader_id).eq('company_id', company_id)
 
           if (error) console.error('update dispositivo error:', error)
 
@@ -155,7 +147,7 @@ export default async function hardwareRoutes(fastify) {
             const { error: extErr } = await supabase
               .from('dispositivo')
               .update(extFields)
-              .eq('reader_id', reader_id)
+              .eq('reader_id', reader_id).eq('company_id', company_id)
             if (extErr) console.error('extended fields update skipped (migration pending):', extErr.message)
           }
 
@@ -193,7 +185,7 @@ export default async function hardwareRoutes(fastify) {
             await supabase
               .from('dispositivo')
               .update({ ota_pending: false })
-              .eq('reader_id', reader_id)
+              .eq('reader_id', reader_id).eq('company_id', company_id)
 
             otaPayload = { ota_version: otaRelease.version, ota_url: otaRelease.url }
           }
@@ -232,30 +224,20 @@ export default async function hardwareRoutes(fastify) {
           return reply.send({ success: false, error: 'MISSING_FIELDS' })
         }
 
-        // Validate that reader exists and get its company_id
+        // reader_id is unique per company — validate reader exists for this specific company
         const { data: reader, error: readerError } = await supabase
           .from('dispositivo')
-          .select('company_id')
+          .select('id')
           .eq('reader_id', reader_id)
+          .eq('company_id', company_id)
           .maybeSingle()
 
-        // Reader must exist and have a company_id association
         if (readerError || !reader) {
           return reply.send({
             success: false,
             error: 'READER_NOT_FOUND'
           })
         }
-
-        // Validate company_id from request matches reader's registered company_id
-        if (company_id !== reader.company_id) {
-          return reply.send({
-            success: false,
-            error: 'COMPANY_MISMATCH'
-          })
-        }
-
-        const readerCompanyId = reader.company_id
 
         /*
           DATA EFFETTIVA DELLA LETTURA
@@ -273,7 +255,7 @@ export default async function hardwareRoutes(fastify) {
           .from('dipendenti')
           .select('id, nome, cognome')
           .eq('badge_uid', uid)
-          .eq('company_id', readerCompanyId)
+          .eq('company_id', company_id)
           .maybeSingle()
 
         /*
@@ -281,7 +263,7 @@ export default async function hardwareRoutes(fastify) {
           serve per la registrazione badge
         */
 
-        latestReads[readerCompanyId] = {
+        latestReads[company_id] = {
           uid,
           reader_id,
           timestamp: Date.now()
@@ -307,7 +289,7 @@ export default async function hardwareRoutes(fastify) {
         const { data: fasce } = await supabase
           .from('fasce_orarie')
           .select('*')
-          .eq('company_id', readerCompanyId)
+          .eq('company_id', company_id)
           .order('ora_inizio', { ascending: true })
 
         /*
@@ -319,7 +301,7 @@ export default async function hardwareRoutes(fastify) {
           .from('presenza')
           .select('tipo, created_at')
           .eq('tag_uid', uid)
-          .eq('company_id', readerCompanyId)
+          .eq('company_id', company_id)
           .lt('created_at', readDate.toISOString())
           .order('created_at', { ascending: false })
           .limit(1)
@@ -374,7 +356,7 @@ export default async function hardwareRoutes(fastify) {
         const { data: insertedPresence, error: insertError } = await supabase
           .from('presenza')
           .insert({
-            company_id: readerCompanyId,
+            company_id: company_id,
             tag_uid:    uid,
             reader_id,
             tipo,
@@ -393,17 +375,17 @@ export default async function hardwareRoutes(fastify) {
           try {
             const dateStr = `${readDate.getFullYear()}-${String(readDate.getMonth()+1).padStart(2,'0')}-${String(readDate.getDate()).padStart(2,'0')}`
             const readMins = readDate.getHours() * 60 + readDate.getMinutes()
-            const { data: dip } = await supabase.from('dipendenti').select('id, turni_attivi').eq('badge_uid', uid).eq('company_id', readerCompanyId).maybeSingle()
+            const { data: dip } = await supabase.from('dipendenti').select('id, turni_attivi').eq('badge_uid', uid).eq('company_id', company_id).maybeSingle()
             if (dip?.turni_attivi) {
               const { data: shifts } = await supabase.from('turni').select('*').eq('dipendente_id', dip.id)
               const dow = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'][readDate.getDay()]
               const dayShift = (shifts || []).find(s => s.giorno_settimana === dow && s.uscita_1 && s.ingresso_2)
               if (dayShift && readMins >= timeToMinutes(dayShift.ingresso_2)) {
                 const { data: todayReads } = await supabase.from('presenza').select('tipo, created_at')
-                  .eq('tag_uid', uid).eq('company_id', readerCompanyId)
+                  .eq('tag_uid', uid).eq('company_id', company_id)
                   .gte('created_at', `${dateStr}T00:00:00`).lte('created_at', `${dateStr}T23:59:59`)
                   .order('created_at', { ascending: true })
-                await autoInsertBreakTimbrature(dip.id, readerCompanyId, uid, todayReads || [], dayShift, dateStr)
+                await autoInsertBreakTimbrature(dip.id, company_id, uid, todayReads || [], dayShift, dateStr)
               }
             }
           } catch (_) {}
@@ -416,7 +398,7 @@ export default async function hardwareRoutes(fastify) {
         await supabase
           .from('dispositivo')
           .update({ ultimo_ping: new Date(), stato: 'online' })
-          .eq('reader_id', reader_id)
+          .eq('reader_id', reader_id).eq('company_id', company_id)
 
         return reply.send({
           success:    true,
