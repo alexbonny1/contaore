@@ -304,7 +304,7 @@ export default async function tagRoutes(fastify) {
 
           if (company?.portale_dipendenti) {
             const { data: existingAccount } = await supabase
-              .from('user_account').select('id').eq('dipendente_id', empId).maybeSingle()
+              .from('user_account').select('id').eq('dipendente_id', empId).eq('company_id', companyId).maybeSingle()
 
             if (!existingAccount) {
               const empNome    = nome    ?? tag.dipendenti?.nome    ?? ''
@@ -325,11 +325,17 @@ export default async function tagRoutes(fastify) {
 
               if (!accErr) {
                 accountCreato = true
-                const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
-                await sendCredenziali({ email, nome: empNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
+                try {
+                  const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
+                  await sendCredenziali({ email, nome: empNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
+                } catch (e) { console.log('sendCredenziali error:', e?.message) }
               }
             } else {
-              await supabase.from('user_account').update({ email }).eq('dipendente_id', empId)
+              const { error: updateErr } = await supabase.from('user_account')
+                .update({ email })
+                .eq('dipendente_id', empId)
+                .eq('company_id', companyId)
+              if (updateErr) console.log('user_account update error:', updateErr)
             }
           }
         }
