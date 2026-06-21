@@ -496,8 +496,8 @@ export default async function employeeRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (employeesError) {
-          console.log(employeesError)
-          return reply.send({ success: false })
+          console.log('Error querying dipendenti:', employeesError)
+          return reply.send({ success: false, error: 'DB_DIPENDENTI', detail: employeesError.message })
         }
 
         const { data: readsRaw, error: readsError } = await supabase
@@ -523,77 +523,80 @@ export default async function employeeRoutes(fastify) {
           .eq('company_id', companyId)
 
         const result = employees.map(emp => {
+          try {
+            const empReads   = reads.filter(r => r.tag_uid === emp.badge_uid)
+            const todayReads = empReads.filter(r => getLocalDateStr(r.created_at) === today)
+            const monthReads = empReads.filter(r => getLocalDateStr(r.created_at).slice(0, 7) === thisMonth)
 
-          const empReads   = reads.filter(r => r.tag_uid === emp.badge_uid)
-          const todayReads = empReads.filter(r => getLocalDateStr(r.created_at) === today)
-          const monthReads = empReads.filter(r => getLocalDateStr(r.created_at).slice(0, 7) === thisMonth)
+            const presente = isEmployeeInside(empReads)
 
-          const presente = isEmployeeInside(empReads)
+            const empShifts = (allShifts || []).filter(s => s.dipendente_id === emp.id)
+            const todayShifts = empShifts.filter(s => s.giorno_settimana === todayName)
 
-          const empShifts = (allShifts || []).filter(s => s.dipendente_id === emp.id)
-          const todayShifts = empShifts.filter(s => s.giorno_settimana === todayName)
-
-          // Employee is in pausa: either inside during break window, OR clocked out near uscita_1 and still before ingresso_2
-          let inPausa = false
-          if (emp.turni_attivi) {
-            const doubleShifts = todayShifts.filter(s => s.uscita_1 && s.ingresso_2)
-            if (presente) {
-              inPausa = doubleShifts.some(s => {
-                const pausaStart = timeToMinutes(s.uscita_1)
-                const pausaEnd   = timeToMinutes(s.ingresso_2)
-                return nowMins >= pausaStart && nowMins < pausaEnd
-              })
-            } else if (doubleShifts.length > 0) {
-              const todaySorted = todayReads.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-              const lastTodayRead = todaySorted[todaySorted.length - 1]
-              if (lastTodayRead?.tipo === 'USCITA') {
-                const lastMins = getLocalTimeMinutes(lastTodayRead.created_at)
+            // Employee is in pausa: either inside during break window, OR clocked out near uscita_1 and still before ingresso_2
+            let inPausa = false
+            if (emp.turni_attivi) {
+              const doubleShifts = todayShifts.filter(s => s.uscita_1 && s.ingresso_2)
+              if (presente) {
                 inPausa = doubleShifts.some(s => {
-                  const u1 = timeToMinutes(s.uscita_1)
-                  const i2 = timeToMinutes(s.ingresso_2)
-                  return Math.abs(lastMins - u1) <= 30 && nowMins < i2
+                  const pausaStart = timeToMinutes(s.uscita_1)
+                  const pausaEnd   = timeToMinutes(s.ingresso_2)
+                  return nowMins >= pausaStart && nowMins < pausaEnd
                 })
+              } else if (doubleShifts.length > 0) {
+                const todaySorted = todayReads.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                const lastTodayRead = todaySorted[todaySorted.length - 1]
+                if (lastTodayRead?.tipo === 'USCITA') {
+                  const lastMins = getLocalTimeMinutes(lastTodayRead.created_at)
+                  inPausa = doubleShifts.some(s => {
+                    const u1 = timeToMinutes(s.uscita_1)
+                    const i2 = timeToMinutes(s.ingresso_2)
+                    return Math.abs(lastMins - u1) <= 30 && nowMins < i2
+                  })
+                }
               }
             }
-          }
 
-          // assente solo se non ha timbrato affatto oggi e siamo dentro la finestra del turno
-          let assente = false
-          if (emp.turni_attivi && !inPausa && todayReads.length === 0 && todayShifts.length > 0) {
-            assente = todayShifts.some(s => {
-              if (!s.ingresso_1) return false
-              const inizio = timeToMinutes(s.ingresso_1)
-              const fine   = timeToMinutes(s.uscita_2 || s.uscita_1)
-              return nowMins >= inizio && (!fine || nowMins <= fine)
-            })
-          }
-
-          return {
-            ...emp,
-            attivo:   presente && !inPausa,
-            in_pausa: inPausa,
-            assente,
-            stats: {
-              total_reads: empReads.length,
-              today_reads: todayReads.length,
-              month_reads: monthReads.length,
-              total_hours: emp.turni_attivi
-                ? calculateHoursWithBreaks(monthReads, empShifts)
-                : calculateHours(monthReads),
-              last_read: empReads.length
-                ? empReads[empReads.length - 1].created_at
-                : null
+            // assente solo se non ha timbrato affatto oggi e siamo dentro la finestra del turno
+            let assente = false
+            if (emp.turni_attivi && !inPausa && todayReads.length === 0 && todayShifts.length > 0) {
+              assente = todayShifts.some(s => {
+                if (!s.ingresso_1) return false
+                const inizio = timeToMinutes(s.ingresso_1)
+                const fine   = timeToMinutes(s.uscita_2 || s.uscita_1)
+                return nowMins >= inizio && (!fine || nowMins <= fine)
+              })
             }
-          }
 
+            return {
+              ...emp,
+              attivo:   presente && !inPausa,
+              in_pausa: inPausa,
+              assente,
+              stats: {
+                total_reads: empReads.length,
+                today_reads: todayReads.length,
+                month_reads: monthReads.length,
+                total_hours: emp.turni_attivi
+                  ? calculateHoursWithBreaks(monthReads, empShifts)
+                  : calculateHours(monthReads),
+                last_read: empReads.length
+                  ? empReads[empReads.length - 1].created_at
+                  : null
+              }
+            }
+          } catch (mapErr) {
+            console.log('Error mapping employee', emp.id, mapErr)
+            return { ...emp, attivo: false, in_pausa: false, assente: false, stats: { total_reads: 0, today_reads: 0, month_reads: 0, total_hours: 0, last_read: null } }
+          }
         })
 
         return reply.send({ success: true, employees: result })
 
       } catch (err) {
 
-        console.log(err)
-        return reply.send({ success: false })
+        console.log('GET /api/employees unhandled error:', err)
+        return reply.send({ success: false, error: 'UNHANDLED', detail: err?.message })
 
       }
 

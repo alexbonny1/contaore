@@ -561,6 +561,7 @@ export default function Employees() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(false);
+  const [apiErrorDetail, setApiErrorDetail] = useState('');
   const [showExport, setShowExport]                 = useState(false);
   const [selectionMode, setSelectionMode]           = useState(false);
   const [selectedEmployeeIds, setSelectedEmpIds]    = useState([]);
@@ -607,12 +608,17 @@ export default function Employees() {
       if (data.success) {
         setEmployees(data.employees || []);
         setApiError(false);
+        setApiErrorDetail('');
       } else {
         setApiError(true);
+        const detail = data.detail || data.error || `HTTP ${response.status}`;
+        setApiErrorDetail(detail);
+        console.log('GET /api/employees error:', data);
       }
     } catch (err) {
       console.log(err);
       setApiError(true);
+      setApiErrorDetail(err?.message || 'Network error');
     } finally {
       setLoading(false);
     }
@@ -705,7 +711,8 @@ export default function Employees() {
         {!loading && apiError && (
           <div className="rounded-2xl sm:rounded-3xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-8 sm:p-10 text-center">
             <h3 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Errore nel caricamento</h3>
-            <p className="text-sm sm:text-base text-zinc-500 mb-4">Impossibile caricare i dipendenti. Riprova.</p>
+            <p className="text-sm sm:text-base text-zinc-500 mb-1">Impossibile caricare i dipendenti.</p>
+            {apiErrorDetail && <p className="text-xs text-zinc-400 mb-4 font-mono">{apiErrorDetail}</p>}
             <button
               onClick={loadEmployees}
               className="px-4 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium"
