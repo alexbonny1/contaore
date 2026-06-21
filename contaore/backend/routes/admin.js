@@ -194,8 +194,37 @@ export default async function adminRoutes(fastify) {
       try {
         const { id } = request.params
 
-        await supabase.from('user_account').delete().eq('company_id', id)
+        // Raccoglie ID dipendenti e user per join su tabelle figlie
+        const { data: dipendenti } = await supabase.from('dipendenti').select('id').eq('company_id', id)
+        const dipIds = (dipendenti || []).map(d => d.id)
+
+        const { data: users } = await supabase.from('user_account').select('id').eq('company_id', id)
+        const userIds = (users || []).map(u => u.id)
+
+        // Tabelle con dipendente_id
+        if (dipIds.length) {
+          await supabase.from('turni').delete().in('dipendente_id', dipIds)
+          await supabase.from('giustificazioni').delete().in('dipendente_id', dipIds)
+          await supabase.from('richieste_turni').delete().in('dipendente_id', dipIds)
+        }
+
+        // Tabelle con user_id
+        if (userIds.length) {
+          await supabase.from('two_factor_attempts').delete().in('user_id', userIds)
+        }
+
+        // Tabelle con company_id diretta
+        await supabase.from('presenza').delete().eq('company_id', id)
+        await supabase.from('richieste_ferie').delete().eq('company_id', id)
+        await supabase.from('richieste_permessi').delete().eq('company_id', id)
+        await supabase.from('richieste_timbratura').delete().eq('company_id', id)
+        await supabase.from('pausa_aziendale').delete().eq('company_id', id)
+        await supabase.from('notifiche_settings').delete().eq('company_id', id)
+        await supabase.from('tag').delete().eq('company_id', id)
+        await supabase.from('dispositivo').delete().eq('company_id', id)
+        await supabase.from('dipendenti').delete().eq('company_id', id)
         await supabase.from('fasce_orarie').delete().eq('company_id', id)
+        await supabase.from('user_account').delete().eq('company_id', id)
 
         const { error } = await supabase
           .from('company')
