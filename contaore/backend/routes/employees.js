@@ -2,102 +2,11 @@ import bcrypt from 'bcrypt'
 import { supabase } from '../services/supabase.js'
 import { authenticate, authenticateWithInactivity } from '../middleware/auth.js'
 import { sendCredenziali } from '../services/email.js'
-
-function generatePassword(length = 10) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  let pwd = ''
-  for (let i = 0; i < length; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length))
-  return pwd
-}
-
-function buildUsername(nome, cognome) {
-  const normalize = s =>
-    (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
-  return `${normalize(nome)}.${normalize(cognome)}`
-}
-
-async function findAvailableUsername(base) {
-  let username = base
-  let attempt  = 1
-  while (true) {
-    const { data } = await supabase.from('user_account').select('id').eq('username', username).maybeSingle()
-    if (!data) return username
-    attempt++
-    username = `${base}${attempt}`
-  }
-}
-
-function getLocalDateStr(dateStr, timezone = 'Europe/Rome') {
-  const date = new Date(dateStr)
-  const formatter = new Intl.DateTimeFormat('it-IT', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    timeZone: timezone
-  })
-  const parts = formatter.formatToParts(date)
-  const year = parts.find(p => p.type === 'year').value
-  const month = parts.find(p => p.type === 'month').value
-  const day = parts.find(p => p.type === 'day').value
-  return `${year}-${month}-${day}`
-}
-
-function getLocalTimeMinutes(dateStr, timezone = 'Europe/Rome') {
-  const date = new Date(dateStr)
-  const formatter = new Intl.DateTimeFormat('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: timezone
-  })
-  const parts = formatter.formatToParts(date)
-  const hours = parseInt(parts.find(p => p.type === 'hour').value)
-  const minutes = parseInt(parts.find(p => p.type === 'minute').value)
-  return hours * 60 + minutes
-}
-
-function getLocalDayOfWeek(dateStr, timezone = 'Europe/Rome') {
-  const date = new Date(dateStr)
-  const formatter = new Intl.DateTimeFormat('it-IT', {
-    weekday: 'long',
-    timeZone: timezone
-  })
-  const dayName = formatter.format(date)
-  const dayMap = {
-    'domenica': 0, 'lunedì': 1, 'martedì': 2, 'mercoledì': 3,
-    'giovedì': 4, 'venerdì': 5, 'sabato': 6
-  }
-  return dayMap[dayName.toLowerCase()] ?? new Date(dateStr).getDay()
-}
-
-const GIORNI_SETTIMANA = [
-  'Domenica','Lunedì','Martedì','Mercoledì',
-  'Giovedì','Venerdì','Sabato'
-]
-
-function getDayName(dateStr) {
-  return GIORNI_SETTIMANA[getLocalDayOfWeek(dateStr)]
-}
-
-function timeToMinutes(t) {
-  if (!t) return null
-  const parts = t.split(':')
-  return parseInt(parts[0]) * 60 + parseInt(parts[1])
-}
-
-// Handles cross-midnight shifts (e.g. 22:00→02:00 = 240 min, not -1200)
-function shiftDurationMins(ingresso, uscita) {
-  const start = timeToMinutes(ingresso)
-  const end   = timeToMinutes(uscita)
-  return end > start ? end - start : (1440 - start) + end
-}
-
-function shiftExpectedHours(shift) {
-  let mins = 0
-  if (shift.ingresso_1 && shift.uscita_1) mins += shiftDurationMins(shift.ingresso_1, shift.uscita_1)
-  if (shift.ingresso_2 && shift.uscita_2) mins += shiftDurationMins(shift.ingresso_2, shift.uscita_2)
-  return Number((mins / 60).toFixed(2))
-}
+import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
+import {
+  GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours,
+  getLocalDateStr, getLocalTimeMinutes, getLocalDayOfWeek, getDayName
+} from '../utils/timeHelpers.js'
 
 function isEmployeeInside(reads = []) {
   if (!reads.length) return false
@@ -515,7 +424,7 @@ export default async function employeeRoutes(fastify) {
         const today     = getLocalDateStr(now.toISOString())
         const thisMonth = today.slice(0, 7)
         const nowMins   = getLocalTimeMinutes(now.toISOString())
-        const todayName = GIORNI_SETTIMANA[getLocalDayOfWeek(now.toISOString())]
+        const todayName = GIORNI[getLocalDayOfWeek(now.toISOString())]
 
         const { data: allShifts } = await supabase
           .from('turni')
