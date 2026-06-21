@@ -500,16 +500,16 @@ export default async function employeeRoutes(fastify) {
           return reply.send({ success: false })
         }
 
-        const { data: reads, error: readsError } = await supabase
+        const { data: readsRaw, error: readsError } = await supabase
           .from('presenza')
           .select('*')
           .eq('company_id', companyId)
           .order('created_at', { ascending: true })
 
         if (readsError) {
-          console.log(readsError)
-          return reply.send({ success: false })
+          console.log('Warning: presenza query failed, degrading gracefully', readsError)
         }
+        const reads = readsRaw || []
 
         const now       = new Date()
         const today     = getLocalDateStr(now.toISOString())

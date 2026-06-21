@@ -560,6 +560,7 @@ export default function Employees() {
   const [dark, setDark] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState(false);
   const [showExport, setShowExport]                 = useState(false);
   const [selectionMode, setSelectionMode]           = useState(false);
   const [selectedEmployeeIds, setSelectedEmpIds]    = useState([]);
@@ -603,9 +604,18 @@ export default function Employees() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
-      if (data.success) setEmployees(data.employees || []);
-    } catch (err) { console.log(err); }
-    finally { setLoading(false); }
+      if (data.success) {
+        setEmployees(data.employees || []);
+        setApiError(false);
+      } else {
+        setApiError(true);
+      }
+    } catch (err) {
+      console.log(err);
+      setApiError(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -692,14 +702,27 @@ export default function Employees() {
           </div>
         )}
 
-        {!loading && employees.length === 0 && (
+        {!loading && apiError && (
+          <div className="rounded-2xl sm:rounded-3xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-8 sm:p-10 text-center">
+            <h3 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Errore nel caricamento</h3>
+            <p className="text-sm sm:text-base text-zinc-500 mb-4">Impossibile caricare i dipendenti. Riprova.</p>
+            <button
+              onClick={loadEmployees}
+              className="px-4 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium"
+            >
+              Riprova
+            </button>
+          </div>
+        )}
+
+        {!loading && !apiError && employees.length === 0 && (
           <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-8 sm:p-10 text-center">
             <h3 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Nessun dipendente</h3>
             <p className="text-sm sm:text-base text-zinc-500">Nessun badge registrato</p>
           </div>
         )}
 
-        {!loading && employees.length > 0 && (
+        {!loading && !apiError && employees.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
             {employees.map((emp) => {
               const isSelected = selectedEmployeeIds.includes(emp.id);
