@@ -50,8 +50,33 @@ export default async function authRoutes(fastify) {
         return reply.status(401).send({ error: 'INVALID_CREDENTIALS' })
       }
 
-      // ─── LOGIN SENZA 2FA (al primo login) ──────────────────────────────────
-      // 2FA verrà richiesto SOLO dopo 15 minuti di inattività, non al login
+      // ─── 2FA AL LOGIN ─────────────────────────────────────────────────────────
+      if (user.two_factor_enabled === true) {
+        const code   = generateTwoFactorCode()
+        const method = user.two_factor_method || 'email'
+
+        const { error: insertErr } = await supabase
+          .from('two_factor_attempts')
+          .insert({ user_id: user.id, code, method, verified: false })
+
+        if (insertErr) {
+          console.error('2FA login insert:', insertErr.message)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        await sendTwoFactorCode(user.phone_number, user.email, code, method, sendTwoFactorEmail)
+          .catch(e => console.error('2FA login send:', e.message))
+
+        const tempToken = jwt.sign(
+          { userId: user.id, type: '2fa_login', method },
+          JWT_SECRET,
+          { expiresIn: '5m' }
+        )
+
+        return reply.send({ status: 'TWO_FACTOR_REQUIRED', tempToken, method })
+      }
+
+      // ─── LOGIN SENZA 2FA ───────────────────────────────────────────────────────
       const portale_dipendenti = user.company?.portale_dipendenti ?? false
       const lastActivityTimestamp = new Date().toISOString()
 
@@ -125,7 +150,7 @@ export default async function authRoutes(fastify) {
       // Cerca il tentativo 2FA
       const { data: attempt, error: findError } = await supabase
         .from('two_factor_attempts')
-        .select('*, user:user_account(*)')
+        .select('*, user:user_account(*, company:company(portale_dipendenti))')
         .eq('user_id', decoded.userId)
         .eq('code', code)
         .eq('verified', false)
@@ -162,17 +187,20 @@ export default async function authRoutes(fastify) {
 
       // Genera JWT completo
       const user = attempt.user
-      const portale_dipendenti = user.company?.portale_dipendenti ?? false
+      const portale_dipendenti    = user.company?.portale_dipendenti ?? false
+      const lastActivityTimestamp = new Date().toISOString()
 
       const token = jwt.sign(
         {
-          id:                  user.id,
-          username:            user.username,
-          email:               user.email,
-          company_id:          user.company_id,
-          role:                user.role,
-          dipendente_id:       user.dipendente_id || null,
-          portale_dipendenti
+          id:                      user.id,
+          username:                user.username,
+          email:                   user.email,
+          company_id:              user.company_id,
+          role:                    user.role,
+          dipendente_id:           user.dipendente_id || null,
+          portale_dipendenti,
+          two_factor_enabled:      user.two_factor_enabled || false,
+          last_activity_timestamp: lastActivityTimestamp
         },
         JWT_SECRET,
         { expiresIn: '7d' }

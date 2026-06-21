@@ -124,6 +124,22 @@ export default function DipendenteDashboard() {
   const [showTurniForm, setShowTurniForm]             = useState(false);
   const [richiesteTurni, setRichiesteTurni]           = useState([]);
 
+  // profilo edit
+  const [editingProfile, setEditingProfile]           = useState(false);
+  const [editNome, setEditNome]                       = useState('');
+  const [editCognome, setEditCognome]                 = useState('');
+  const [editEmail, setEditEmail]                     = useState('');
+  const [savingProfile, setSavingProfile]             = useState(false);
+
+  // elimina account
+  const [showDeleteAccount, setShowDeleteAccount]     = useState(false);
+  const [deletePassword, setDeletePassword]           = useState('');
+  const [deletingAccount, setDeletingAccount]         = useState(false);
+
+  // 2FA
+  const [twoFaEnabled, setTwoFaEnabled]               = useState(false);
+  const [loadingTwoFa, setLoadingTwoFa]               = useState(false);
+
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
@@ -183,6 +199,67 @@ export default function DipendenteDashboard() {
     } catch (err) { console.log(err); }
   }
 
+  async function loadUserSettings() {
+    try {
+      const res  = await fetch(API_URL + "/api/user/settings", { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (json.success) setTwoFaEnabled(json.settings?.two_factor_enabled || false);
+    } catch (err) { console.log(err); }
+  }
+
+  async function saveProfile() {
+    if (!editNome.trim()) { showToast("Il nome è obbligatorio", "error"); return; }
+    if (editEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail)) {
+      showToast("Email non valida", "error"); return;
+    }
+    setSavingProfile(true);
+    try {
+      const res  = await fetch(API_URL + "/api/dipendente/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ nome: editNome.trim(), cognome: editCognome.trim(), email: editEmail.trim() || null })
+      });
+      const json = await res.json();
+      if (!json.success) { showToast(json.error || "Errore salvataggio", "error"); return; }
+      showToast("Profilo aggiornato");
+      setEditingProfile(false);
+      loadMe();
+    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    finally { setSavingProfile(false); }
+  }
+
+  async function deleteAccount() {
+    if (!deletePassword) { showToast("Inserisci la password", "error"); return; }
+    setDeletingAccount(true);
+    try {
+      const res  = await fetch(API_URL + "/api/dipendente/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: deletePassword })
+      });
+      const json = await res.json();
+      if (!json.success) { showToast(json.error === 'WRONG_PASSWORD' ? "Password errata" : (json.error || "Errore"), "error"); return; }
+      localStorage.clear();
+      navigate("/");
+    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    finally { setDeletingAccount(false); }
+  }
+
+  async function toggleTwoFa() {
+    setLoadingTwoFa(true);
+    try {
+      const res  = await fetch(API_URL + "/api/user/toggle-2fa", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ enabled: !twoFaEnabled })
+      });
+      const json = await res.json();
+      if (json.success) setTwoFaEnabled(json.two_factor_enabled);
+      else showToast(json.error || "Errore", "error");
+    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    finally { setLoadingTwoFa(false); }
+  }
+
   const { pulling, refreshing, distance } = usePullToRefresh(() => Promise.all([loadMe(), loadFerie(), loadMissingScans(), loadPermesi(), loadRichiesteTurni()]))
 
   useEffect(() => {
@@ -192,6 +269,7 @@ export default function DipendenteDashboard() {
     loadMissingScans();
     loadPermesi();
     loadRichiesteTurni();
+    loadUserSettings();
   }, []);
 
   // ── giustifica assenza ───────────────────────────────────────────────────
@@ -1246,15 +1324,54 @@ export default function DipendenteDashboard() {
 
             {/* ACCOUNT */}
             <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-11 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-black text-base font-semibold shrink-0">
-                  {(employee.nome?.[0] || "").toUpperCase()}{(employee.cognome?.[0] || "").toUpperCase()}
+              {!editingProfile ? (
+                <div className="flex items-center justify-between gap-3 mb-5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-black text-base font-semibold shrink-0">
+                      {(employee.nome?.[0] || "").toUpperCase()}{(employee.cognome?.[0] || "").toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">{employee.nome} {employee.cognome}</p>
+                      {employee.email && <p className="text-xs text-zinc-500 truncate">{employee.email}</p>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setEditNome(employee.nome || ''); setEditCognome(employee.cognome || ''); setEditEmail(employee.email || ''); setEditingProfile(true); }}
+                    className="shrink-0 flex items-center gap-1.5 px-3 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+                    <Pencil size={13} /> Modifica
+                  </button>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">{employee.nome} {employee.cognome}</p>
-                  {employee.email && <p className="text-xs text-zinc-500 truncate">{employee.email}</p>}
+              ) : (
+                <div className="mb-5 space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-1">Nome</p>
+                      <input value={editNome} onChange={e => setEditNome(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-1">Cognome</p>
+                      <input value={editCognome} onChange={e => setEditCognome(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-400 mb-1">Email</p>
+                    <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={saveProfile} disabled={savingProfile}
+                      className="flex-1 h-10 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
+                      {savingProfile ? "Salvataggio..." : "Salva"}
+                    </button>
+                    <button onClick={() => setEditingProfile(false)}
+                      className="flex-1 h-10 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-medium">
+                      Annulla
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
                 <button onClick={() => setShowChangePassword(true)}
                   className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-sm font-medium">
@@ -1269,6 +1386,65 @@ export default function DipendenteDashboard() {
                   <LogOut size={15} /> Esci
                 </button>
               </div>
+            </div>
+
+            {/* 2FA */}
+            <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Verifica in 2 passaggi</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">Richiede un codice email ad ogni login</p>
+                </div>
+                <button
+                  onClick={toggleTwoFa}
+                  disabled={loadingTwoFa}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-50 ${twoFaEnabled ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${twoFaEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              {twoFaEnabled && (
+                <p className="text-xs text-zinc-400 mt-3">Ad ogni accesso riceverai un codice di verifica via email.</p>
+              )}
+            </div>
+
+            {/* ELIMINA ACCOUNT */}
+            <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-red-200 dark:border-red-900/40 p-5 sm:p-6">
+              {!showDeleteAccount ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-red-600 dark:text-red-400">Elimina account</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Rimuove l'accesso al portale</p>
+                  </div>
+                  <button onClick={() => setShowDeleteAccount(true)}
+                    className="px-4 h-9 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium border border-red-200 dark:border-red-800">
+                    Elimina
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">Conferma eliminazione account</p>
+                  <p className="text-xs text-zinc-500 leading-relaxed">Questa azione rimuove il tuo accesso al portale. I dati lavorativi restano archiviati dall'azienda.</p>
+                  <div>
+                    <p className="text-xs text-zinc-400 mb-1">Inserisci la tua password per confermare</p>
+                    <input
+                      type="password"
+                      value={deletePassword}
+                      onChange={e => setDeletePassword(e.target.value)}
+                      placeholder="Password"
+                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={deleteAccount} disabled={deletingAccount}
+                      className="flex-1 h-10 rounded-xl bg-red-600 text-white text-sm font-medium disabled:opacity-50">
+                      {deletingAccount ? "Eliminazione..." : "Conferma eliminazione"}
+                    </button>
+                    <button onClick={() => { setShowDeleteAccount(false); setDeletePassword(''); }}
+                      className="flex-1 h-10 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-medium">
+                      Annulla
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* I MIEI TURNI */}

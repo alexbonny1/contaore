@@ -527,6 +527,38 @@ export default async function exportRoutes(fastify) {
 
           y += 14
         }
+
+        // ─── SEZIONE FIRMA ────────────────────────────────────────────────
+        const signH = 140
+        if (y + signH > doc.page.height - 40) {
+          doc.addPage()
+          y = 40
+        }
+
+        y += 20
+        doc.moveTo(40, y).lineTo(555, y).strokeColor('#e5e7eb').lineWidth(1).stroke()
+        y += 16
+
+        doc.fillColor('#111').font('Helvetica-Bold').fontSize(9)
+          .text('PRESA VISIONE', 40, y)
+        doc.font('Helvetica').fillColor('#6b7280').fontSize(8)
+          .text(`Data: ______ / ______ / __________`, 40, y + 14)
+
+        y += 40
+
+        // box firma titolare (sinistra)
+        doc.rect(40, y, 240, 60).strokeColor('#d1d5db').lineWidth(0.8).stroke()
+        doc.fillColor('#6b7280').font('Helvetica').fontSize(8)
+          .text('FIRMA TITOLARE', 40, y + 6, { width: 240, align: 'center' })
+        doc.moveTo(60, y + 46).lineTo(260, y + 46).strokeColor('#9ca3af').lineWidth(0.5).stroke()
+
+        // box firma dipendente (destra)
+        doc.rect(315, y, 240, 60).strokeColor('#d1d5db').lineWidth(0.8).stroke()
+        doc.fillColor('#6b7280').font('Helvetica').fontSize(8)
+          .text('FIRMA DIPENDENTE', 315, y + 6, { width: 240, align: 'center' })
+        doc.moveTo(335, y + 46).lineTo(535, y + 46).strokeColor('#9ca3af').lineWidth(0.5).stroke()
+
+        y += 70
       }
 
       doc.end()

@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt'
 import { supabase }              from '../services/supabase.js'
 import { authenticateDipendente } from '../middleware/auth.js'
 import { sendNotificaRichiestaFerie } from '../services/email.js'
@@ -988,6 +989,114 @@ export default async function dipendenteRoutes(fastify) {
 
       } catch (err) {
         console.log(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  // ─── MODIFICA PROFILO DIPENDENTE ─────────────────────────────────────────────
+  fastify.put(
+    '/api/dipendente/profile',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const userId       = request.user.id
+        const dipendenteId = request.user.dipendente_id
+        const { nome, cognome, email } = request.body
+
+        if (!nome || !nome.trim()) {
+          return reply.status(400).send({ error: 'NOME_REQUIRED' })
+        }
+
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          return reply.status(400).send({ error: 'EMAIL_INVALID' })
+        }
+
+        // Aggiorna dipendenti
+        const dipUpdate = {}
+        if (nome)    dipUpdate.nome    = nome.trim()
+        if (cognome !== undefined) dipUpdate.cognome = cognome?.trim() || ''
+        if (email !== undefined)   dipUpdate.email   = email?.trim() || null
+
+        if (dipendenteId && Object.keys(dipUpdate).length > 0) {
+          const { error: dipErr } = await supabase
+            .from('dipendenti')
+            .update(dipUpdate)
+            .eq('id', dipendenteId)
+          if (dipErr) {
+            console.error('profile update dipendenti:', dipErr.message)
+            return reply.status(500).send({ error: 'SERVER_ERROR' })
+          }
+        }
+
+        // Aggiorna email in user_account se fornita
+        if (email !== undefined) {
+          const { error: userErr } = await supabase
+            .from('user_account')
+            .update({ email: email?.trim() || null })
+            .eq('id', userId)
+          if (userErr) {
+            console.error('profile update user_account:', userErr.message)
+            return reply.status(500).send({ error: 'SERVER_ERROR' })
+          }
+        }
+
+        return reply.send({ success: true })
+
+      } catch (err) {
+        console.error(err)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  // ─── ELIMINA ACCOUNT DIPENDENTE ──────────────────────────────────────────────
+  fastify.delete(
+    '/api/dipendente/account',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const userId = request.user.id
+        const { password } = request.body
+
+        if (!password) {
+          return reply.status(400).send({ error: 'PASSWORD_REQUIRED' })
+        }
+
+        // Recupera hash password
+        const { data: user, error: userErr } = await supabase
+          .from('user_account')
+          .select('password, role')
+          .eq('id', userId)
+          .single()
+
+        if (userErr || !user) {
+          return reply.status(404).send({ error: 'USER_NOT_FOUND' })
+        }
+
+        if (user.role !== 'dipendente') {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
+        }
+
+        const valid = await bcrypt.compare(password, user.password)
+        if (!valid) {
+          return reply.status(401).send({ error: 'WRONG_PASSWORD' })
+        }
+
+        const { error: delErr } = await supabase
+          .from('user_account')
+          .delete()
+          .eq('id', userId)
+
+        if (delErr) {
+          console.error('delete account:', delErr.message)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        return reply.send({ success: true })
+
+      } catch (err) {
+        console.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }

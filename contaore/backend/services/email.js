@@ -47,12 +47,15 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
               ${loginSection}
             </div>
 
-            <div style="background:#fef3c7;border-radius:6px;padding:16px;margin-bottom:24px;border-left:4px solid #f59e0b;">
-              <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;">⚠️ CREDENZIALI TEMPORANEE</p>
-              <p style="margin:8px 0 0;font-size:13px;color:#92400e;line-height:1.5;">
-                Queste credenziali funzionano solo al <strong>primo accesso</strong>.
-                Dopo il primo login, dovrai impostare una nuova password permanente.
-              </p>
+            <div style="background:#f5f4f0;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#1a1a1a;">📱 Installa Timbry sul tuo dispositivo</p>
+              <p style="margin:0 0 8px;font-size:12px;color:#6b6b6b;line-height:1.6;">Puoi aggiungere Timbry alla schermata Home per accedere più velocemente:</p>
+              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">iPhone / iPad (Safari):</p>
+              <p style="margin:0 0 10px;font-size:12px;color:#6b6b6b;line-height:1.6;">Apri il link in Safari → tocca l'icona di condivisione (□↑) → seleziona <strong>"Aggiungi a schermata Home"</strong></p>
+              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">Android (Chrome):</p>
+              <p style="margin:0 0 10px;font-size:12px;color:#6b6b6b;line-height:1.6;">Apri il link in Chrome → tocca il menu (⋮) → seleziona <strong>"Aggiungi a schermata Home"</strong> o <strong>"Installa app"</strong></p>
+              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">Desktop (Chrome / Edge):</p>
+              <p style="margin:0;font-size:12px;color:#6b6b6b;line-height:1.6;">Cerca l'icona di installazione (⊕) nella barra degli indirizzi e clicca <strong>"Installa"</strong></p>
             </div>
 
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
@@ -62,7 +65,6 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
 
             <p style="font-size:12px;color:#aaa;margin:0;line-height:1.5;">
               Conserva questa email in un posto sicuro.
-              Per motivi di sicurezza non possiamo recuperare la password.
             </p>
           </div>
         </div>
@@ -112,6 +114,17 @@ export async function sendCredenziali({ email, nome, username, password, company
               ${loginSection}
             </div>
 
+            <div style="background:#f5f4f0;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#1a1a1a;">📱 Installa Timbry sul tuo dispositivo</p>
+              <p style="margin:0 0 8px;font-size:12px;color:#6b6b6b;line-height:1.6;">Puoi aggiungere Timbry alla schermata Home per accedere più velocemente:</p>
+              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">iPhone / iPad (Safari):</p>
+              <p style="margin:0 0 10px;font-size:12px;color:#6b6b6b;line-height:1.6;">Apri il link in Safari → tocca l'icona di condivisione (□↑) → seleziona <strong>"Aggiungi a schermata Home"</strong></p>
+              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">Android (Chrome):</p>
+              <p style="margin:0 0 10px;font-size:12px;color:#6b6b6b;line-height:1.6;">Apri il link in Chrome → tocca il menu (⋮) → seleziona <strong>"Aggiungi a schermata Home"</strong> o <strong>"Installa app"</strong></p>
+              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">Desktop (Chrome / Edge):</p>
+              <p style="margin:0;font-size:12px;color:#6b6b6b;line-height:1.6;">Cerca l'icona di installazione (⊕) nella barra degli indirizzi e clicca <strong>"Installa"</strong></p>
+            </div>
+
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
               Dal portale puoi vedere i tuoi turni, le ore lavorate, le assenze
               e fare richieste di ferie o giustificazioni.
@@ -119,8 +132,7 @@ export async function sendCredenziali({ email, nome, username, password, company
 
             <p style="font-size:12px;color:#aaa;margin:0;line-height:1.5;">
               Conserva questa email in un posto sicuro.
-              Per motivi di sicurezza non possiamo recuperare la password —
-              se la perdi contatta il tuo responsabile.
+              Se hai problemi di accesso contatta il tuo responsabile.
             </p>
           </div>
         </div>
