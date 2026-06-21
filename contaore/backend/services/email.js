@@ -18,6 +18,36 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM = process.env.EMAIL_FROM || 'Timbry <onboarding@resend.dev>'
 
+// ─── Tutorial PWA condiviso ───────────────────────────────────────────────────
+const PWA_TUTORIAL_HTML = `
+  <div style="background:#f5f4f0;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+    <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#1a1a1a;">📲 Installa Timbry sul tuo dispositivo</p>
+    <p style="margin:0 0 12px;font-size:12px;color:#6b6b6b;line-height:1.6;">Puoi usare Timbry come app installata sul tuo dispositivo, senza passare dal browser ogni volta:</p>
+
+    <p style="margin:0 0 4px;font-size:12px;color:#1a1a1a;font-weight:600;">📱 iPhone / iPad (Safari)</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">1. Apri il link in <strong>Safari</strong> (non Chrome)</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">2. Tocca l'icona di condivisione <strong>□↑</strong> in basso al centro</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">3. Scorri verso il basso e seleziona <strong>"Aggiungi a schermata Home"</strong></p>
+    <p style="margin:0 0 12px;font-size:12px;color:#555;line-height:1.6;">4. Premi <strong>"Aggiungi"</strong> in alto a destra → Timbry appare come app 🎉</p>
+
+    <p style="margin:0 0 4px;font-size:12px;color:#1a1a1a;font-weight:600;">🤖 Android (Chrome)</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">1. Apri il link in <strong>Google Chrome</strong></p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">2. Tocca i tre puntini <strong>⋮</strong> in alto a destra</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">3. Seleziona <strong>"Aggiungi a schermata Home"</strong> o <strong>"Installa app"</strong></p>
+    <p style="margin:0 0 12px;font-size:12px;color:#555;line-height:1.6;">4. Conferma con <strong>"Aggiungi"</strong> / <strong>"Installa"</strong> → trovi Timbry nelle tue app 🎉</p>
+
+    <p style="margin:0 0 4px;font-size:12px;color:#1a1a1a;font-weight:600;">🍎 Mac (Safari)</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">1. Apri il link in <strong>Safari</strong></p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">2. Dal menu in alto: <strong>File → Aggiungi al Dock</strong></p>
+    <p style="margin:0 0 12px;font-size:12px;color:#555;line-height:1.6;">3. Oppure: icona condivisione → <strong>"Aggiungi al Dock"</strong> → Timbry nel Dock 🎉</p>
+
+    <p style="margin:0 0 4px;font-size:12px;color:#1a1a1a;font-weight:600;">🖥️ Windows / Mac (Chrome o Edge)</p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">1. Apri il link in <strong>Chrome</strong> o <strong>Microsoft Edge</strong></p>
+    <p style="margin:0 0 3px;font-size:12px;color:#555;line-height:1.6;">2. Cerca l'icona <strong>⊕</strong> o <strong>⬇</strong> nella barra degli indirizzi (in alto a destra)</p>
+    <p style="margin:0 0 0;font-size:12px;color:#555;line-height:1.6;">3. Clicca <strong>"Installa"</strong> → Timbry si apre come finestra separata 🎉</p>
+  </div>
+`
+
 // ─── Invia credenziali al TITOLARE quando il superadmin crea l'azienda ───────
 export async function sendCredenzialiOwner({ email, username, password, companyNome, loginUrl }) {
   try {
@@ -47,16 +77,7 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
               ${loginSection}
             </div>
 
-            <div style="background:#f5f4f0;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
-              <p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#1a1a1a;">📱 Installa Timbry sul tuo dispositivo</p>
-              <p style="margin:0 0 8px;font-size:12px;color:#6b6b6b;line-height:1.6;">Puoi aggiungere Timbry alla schermata Home per accedere più velocemente:</p>
-              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">iPhone / iPad (Safari):</p>
-              <p style="margin:0 0 10px;font-size:12px;color:#6b6b6b;line-height:1.6;">Apri il link in Safari → tocca l'icona di condivisione (□↑) → seleziona <strong>"Aggiungi a schermata Home"</strong></p>
-              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">Android (Chrome):</p>
-              <p style="margin:0 0 10px;font-size:12px;color:#6b6b6b;line-height:1.6;">Apri il link in Chrome → tocca il menu (⋮) → seleziona <strong>"Aggiungi a schermata Home"</strong> o <strong>"Installa app"</strong></p>
-              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">Desktop (Chrome / Edge):</p>
-              <p style="margin:0;font-size:12px;color:#6b6b6b;line-height:1.6;">Cerca l'icona di installazione (⊕) nella barra degli indirizzi e clicca <strong>"Installa"</strong></p>
-            </div>
+            ${PWA_TUTORIAL_HTML}
 
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
               Dal pannello puoi gestire i dipendenti, visualizzare le presenze,
@@ -114,16 +135,7 @@ export async function sendCredenziali({ email, nome, username, password, company
               ${loginSection}
             </div>
 
-            <div style="background:#f5f4f0;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
-              <p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#1a1a1a;">📱 Installa Timbry sul tuo dispositivo</p>
-              <p style="margin:0 0 8px;font-size:12px;color:#6b6b6b;line-height:1.6;">Puoi aggiungere Timbry alla schermata Home per accedere più velocemente:</p>
-              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">iPhone / iPad (Safari):</p>
-              <p style="margin:0 0 10px;font-size:12px;color:#6b6b6b;line-height:1.6;">Apri il link in Safari → tocca l'icona di condivisione (□↑) → seleziona <strong>"Aggiungi a schermata Home"</strong></p>
-              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">Android (Chrome):</p>
-              <p style="margin:0 0 10px;font-size:12px;color:#6b6b6b;line-height:1.6;">Apri il link in Chrome → tocca il menu (⋮) → seleziona <strong>"Aggiungi a schermata Home"</strong> o <strong>"Installa app"</strong></p>
-              <p style="margin:0 0 3px;font-size:12px;color:#444;font-weight:600;">Desktop (Chrome / Edge):</p>
-              <p style="margin:0;font-size:12px;color:#6b6b6b;line-height:1.6;">Cerca l'icona di installazione (⊕) nella barra degli indirizzi e clicca <strong>"Installa"</strong></p>
-            </div>
+            ${PWA_TUTORIAL_HTML}
 
             <p style="font-size:13px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
               Dal portale puoi vedere i tuoi turni, le ore lavorate, le assenze

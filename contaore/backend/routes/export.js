@@ -2,6 +2,7 @@ import { supabase } from '../services/supabase.js'
 import { authenticate } from '../middleware/auth.js'
 import PDFDocument from 'pdfkit'
 import XLSX from 'xlsx'
+import { getLocalDateStr } from '../utils/timeHelpers.js'
 
 /*
 ────────────────────────────────────
@@ -101,8 +102,8 @@ function buildCoppie(sorted) {
       lastE = r
     } else if (r.tipo === 'USCITA') {
       coppie.push({
-        entrata:            lastE ? new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—',
-        uscita:             new Date(r.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+        entrata:            lastE ? new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }) : '—',
+        uscita:             new Date(r.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }),
         entrata_manuale:    lastE ? !!lastE.manuale : false,
         uscita_manuale:     !!r.manuale,
         entrata_automatica: lastE ? !!lastE.automatica : false,
@@ -112,7 +113,7 @@ function buildCoppie(sorted) {
     }
   })
   if (lastE) coppie.push({
-    entrata:            new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+    entrata:            new Date(lastE.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }),
     uscita:             '—',
     entrata_manuale:    !!lastE.manuale,
     uscita_manuale:     false,
@@ -198,7 +199,7 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
   // raggruppa letture per giorno
   const byDay = {}
   reads.forEach(r => {
-    const day = new Date(r.created_at).toISOString().split('T')[0]
+    const day = getLocalDateStr(r.created_at)
     if (!byDay[day]) byDay[day] = []
     byDay[day].push(r)
   })

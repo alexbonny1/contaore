@@ -7,6 +7,9 @@ import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [ownerUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
+  });
 
   const { pulling, refreshing, distance } = usePullToRefresh(loadDashboard);
 
@@ -35,6 +38,11 @@ export default function Dashboard() {
   return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
+
+        {/* SALUTO TITOLARE */}
+        <p className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-100 mb-5">
+          Ciao, {ownerUser?.nome || ownerUser?.username} 👋
+        </p>
 
         {/* RIQUADRO RIASSUNTIVO PRESENZE → Dipendenti */}
         <Link

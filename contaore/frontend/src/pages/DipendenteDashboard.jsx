@@ -221,7 +221,11 @@ export default function DipendenteDashboard() {
       });
       const json = await res.json();
       if (!json.success) { showToast(json.error || "Errore salvataggio", "error"); return; }
-      showToast("Profilo aggiornato");
+      if (json.credenziali_reinviate) {
+        showToast("Profilo aggiornato — nuove credenziali inviate via email");
+      } else {
+        showToast("Profilo aggiornato");
+      }
       setEditingProfile(false);
       loadMe();
     } catch (err) { console.log(err); showToast("Errore server", "error"); }
@@ -890,7 +894,7 @@ export default function DipendenteDashboard() {
             )}
 
             {showFerieForm && (
-              <form onSubmit={inviaRichiestaFerie} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
+              <form onSubmit={inviaRichiestaFerie} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
                 <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta ferie</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -984,18 +988,16 @@ export default function DipendenteDashboard() {
               >
                 Permessi
               </button>
-              {data?.turni_attivi && (
-                <button
-                  onClick={() => setRequestsSubTab("turni")}
-                  className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
-                    requestsSubTab === "turni"
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
-                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                  }`}
-                >
-                  Modifica turni
-                </button>
-              )}
+              <button
+                onClick={() => setRequestsSubTab("turni")}
+                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
+                  requestsSubTab === "turni"
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                Cambio turno
+              </button>
             </div>
 
             {/* SEZIONE TIMBRATURA MANCATA */}
@@ -1011,7 +1013,7 @@ export default function DipendenteDashboard() {
               )}
 
               {showMissingScanForm && (
-                <form onSubmit={inviaMissingScan} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
+                <form onSubmit={inviaMissingScan} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
                   <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta timbratura mancata</h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
                     Richiedi al titolare di aggiungere una timbratura di entrata o uscita che hai dimenticato.
@@ -1110,7 +1112,7 @@ export default function DipendenteDashboard() {
               )}
 
               {showPermesoForm && (
-                <form onSubmit={inviPermesso} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
+                <form onSubmit={inviPermesso} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
                   <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta permesso</h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
                     Richiedi un permesso di uscita o entrata anticipata/ritardata.
@@ -1205,23 +1207,33 @@ export default function DipendenteDashboard() {
             </div>
             )}
 
-            {/* SEZIONE MODIFICA TURNI */}
-            {data?.turni_attivi && requestsSubTab === "turni" && (
+            {/* SEZIONE CAMBIO TURNO */}
+            {requestsSubTab === "turni" && (
             <div>
-              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiedi modifica turni</h3>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Richiesta cambio turno</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                Puoi richiedere al titolare di modificare il tuo orario di lavoro per un periodo specifico.
+              </p>
 
-              {!showTurniForm && (
+              {!data?.turni_attivi && (
+                <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 text-center">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">I turni non sono ancora configurati dal titolare.</p>
+                  <p className="text-xs text-zinc-400 mt-1">Una volta assegnato un turno, potrai inviare richieste di modifica.</p>
+                </div>
+              )}
+
+              {data?.turni_attivi && !showTurniForm && (
                 <button onClick={() => setShowTurniForm(true)}
                   className="flex items-center gap-1.5 sm:gap-2 h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-medium mb-5 sm:mb-6">
-                  <Clock size={14} className="sm:w-[15px] sm:h-[15px]" /> Nuova richiesta
+                  <Clock size={14} className="sm:w-[15px] sm:h-[15px]" /> Nuova richiesta cambio turno
                 </button>
               )}
 
-              {showTurniForm && (
-                <form onSubmit={inviRichiestaTurni} className="rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
-                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta modifica turni</h3>
+              {data?.turni_attivi && showTurniForm && (
+                <form onSubmit={inviRichiestaTurni} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
+                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Richiesta cambio turno</h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-                    Seleziona il periodo e i giorni della settimana che vuoi modificare.
+                    Seleziona il periodo e indica i nuovi orari che desideri. Il titolare riceverà la richiesta e potrà approvarla o rifiutarla.
                   </p>
 
                   <div className="mb-4">

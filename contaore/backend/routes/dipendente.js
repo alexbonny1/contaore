@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt'
 import { supabase }              from '../services/supabase.js'
 import { authenticateDipendente } from '../middleware/auth.js'
-import { sendNotificaRichiestaFerie } from '../services/email.js'
+import { sendNotificaRichiestaFerie, sendCredenziali } from '../services/email.js'
+import { generatePassword } from '../utils/userHelpers.js'
 import {
   GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours,
   getLocalDateStr, getLocalTimeMinutes, getLocalDayOfWeek
@@ -871,6 +872,7 @@ export default async function dipendenteRoutes(fastify) {
       try {
         const userId       = request.user.id
         const dipendenteId = request.user.dipendente_id
+        const companyId    = request.user.company_id
         const { nome, cognome, email } = request.body
 
         if (!nome || !nome.trim()) {
@@ -880,6 +882,19 @@ export default async function dipendenteRoutes(fastify) {
         if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           return reply.status(400).send({ error: 'EMAIL_INVALID' })
         }
+
+        // Carica dati attuali per confronto
+        const { data: currentUser } = await supabase
+          .from('user_account')
+          .select('username, email')
+          .eq('id', userId)
+          .single()
+
+        const { data: currentDip } = dipendenteId ? await supabase
+          .from('dipendenti')
+          .select('nome')
+          .eq('id', dipendenteId)
+          .single() : { data: null }
 
         // Aggiorna dipendenti
         const dipUpdate = {}
@@ -910,7 +925,41 @@ export default async function dipendenteRoutes(fastify) {
           }
         }
 
-        return reply.send({ success: true })
+        // Se nome o email cambiati → genera nuova password e reinvia credenziali
+        const nomeChanged  = nome.trim() !== (currentDip?.nome || '')
+        const emailChanged = email !== undefined && (email?.trim() || null) !== (currentUser?.email || null)
+
+        if (nomeChanged || emailChanged) {
+          const newPwd    = generatePassword()
+          const hashedPwd = await bcrypt.hash(newPwd, 10)
+
+          await supabase
+            .from('user_account')
+            .update({ password: hashedPwd })
+            .eq('id', userId)
+
+          const { data: company } = await supabase
+            .from('company')
+            .select('nome')
+            .eq('id', companyId)
+            .single()
+
+          const emailDest = (email?.trim()) || currentUser?.email
+          if (emailDest) {
+            await sendCredenziali({
+              email:       emailDest,
+              nome:        nome.trim(),
+              username:    currentUser.username,
+              password:    newPwd,
+              companyNome: company?.nome || '',
+              loginUrl:    process.env.FRONTEND_URL || 'https://timbry.it'
+            }).catch(e => console.error('sendCredenziali profile update:', e?.message))
+          }
+
+          return reply.send({ success: true, credenziali_reinviate: true })
+        }
+
+        return reply.send({ success: true, credenziali_reinviate: false })
 
       } catch (err) {
         console.error(err)

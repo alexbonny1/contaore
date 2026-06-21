@@ -77,6 +77,14 @@ export async function runMigrations() {
       sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS ota_pending boolean DEFAULT false;`
     }).catch(() => ({ error: null }))
 
+    // Colonne profilo personale per titolare (migration 006)
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS nome varchar(100);`
+    }).catch(() => ({}))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS cognome varchar(100);`
+    }).catch(() => ({}))
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)
