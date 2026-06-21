@@ -602,10 +602,6 @@ export default function Employees() {
   async function loadEmployees() {
     try {
       const data = await apiFetch('/api/employees');
-      if (data.isInactivity2FA) {
-        // il modal 2FA è già stato mostrato da apiFetch
-        return;
-      }
       if (data.success) {
         setEmployees(data.employees || []);
         setApiError(false);

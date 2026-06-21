@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -17,7 +17,6 @@ import DipendenteDashboard from "./pages/DipendenteDashboard";
 import ResetPassword       from "./pages/ResetPassword";
 import TwoFactorVerify     from "./pages/TwoFactorVerify";
 import TwoFactorVerifyReset from "./pages/TwoFactorVerifyReset";
-import TwoFactorVerifyInactivity from "./pages/TwoFactorVerifyInactivity";
 import Notifications       from "./pages/Notifications";
 import Settings            from "./pages/Settings";
 import SettingsPresenze    from "./pages/SettingsPresenze";
@@ -30,21 +29,7 @@ import CookiePolicy        from "./pages/CookiePolicy";
 import ProtectedRoute from "./ProtectedRoute";
 import OwnerLayout from "./components/OwnerLayout";
 
-// Wrapper per il router che ascolta eventi 2FA
 function AppWithInactivity2FA() {
-  const [show2FAInactivity, setShow2FAInactivity] = useState(false);
-
-  useEffect(() => {
-    const handleInactivity2FA = () => {
-      setShow2FAInactivity(true);
-    };
-
-    window.addEventListener('inactivity2FARequired', handleInactivity2FA);
-
-    return () => {
-      window.removeEventListener('inactivity2FARequired', handleInactivity2FA);
-    };
-  }, []);
 
   return (
     <>
@@ -54,7 +39,6 @@ function AppWithInactivity2FA() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-2fa" element={<TwoFactorVerify />} />
         <Route path="/verify-2fa-reset" element={<TwoFactorVerifyReset />} />
-        <Route path="/verify-2fa-inactivity" element={<TwoFactorVerifyInactivity />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
 
@@ -97,12 +81,6 @@ function AppWithInactivity2FA() {
 
       </Routes>
 
-      {/* Modal 2FA Inattività */}
-      {show2FAInactivity && (
-        <>
-          <TwoFactorVerifyInactivity />
-        </>
-      )}
     </>
   );
 }
