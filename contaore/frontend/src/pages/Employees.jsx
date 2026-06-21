@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Download, X, CheckSquare, Square, FileText, Table2, UserPlus
 } from "lucide-react";
-import { API_URL } from "../api";
+import { API_URL, apiFetch } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 /*
@@ -601,17 +601,18 @@ export default function Employees() {
 
   async function loadEmployees() {
     try {
-      const response = await fetch(`${API_URL}/api/employees`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiFetch('/api/employees');
+      if (data.isInactivity2FA) {
+        // il modal 2FA è già stato mostrato da apiFetch
+        return;
+      }
       if (data.success) {
         setEmployees(data.employees || []);
         setApiError(false);
         setApiErrorDetail('');
       } else {
         setApiError(true);
-        const detail = data.detail || data.error || `HTTP ${response.status}`;
+        const detail = data.detail || data.error || 'Errore sconosciuto';
         setApiErrorDetail(detail);
         console.log('GET /api/employees error:', data);
       }
