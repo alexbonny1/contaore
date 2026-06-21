@@ -1,7 +1,10 @@
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcrypt'
 import { supabase } from '../services/supabase.js'
-import { sendTwoFactorEmail } from '../services/email.js'
+import { sendTwoFactorEmail, sendCredenzialiOwner } from '../services/email.js'
 import { generateTwoFactorCode, sendTwoFactorCode } from '../services/twilio.js'
+import { generatePassword } from '../utils/userHelpers.js'
+import { authenticateOwner } from '../middleware/auth.js'
 
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) throw new Error('JWT_SECRET env var missing')
@@ -341,6 +344,105 @@ export default async function userSettingsRoutes(fastify) {
         message: `Nuovo codice inviato via ${decoded.method}`
       })
 
+    } catch (err) {
+      console.error(err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── OWNER PROFILE UPDATE ──────────────────────────────────────────────────
+  fastify.put('/api/owner/profile', { preHandler: authenticateOwner }, async (request, reply) => {
+    try {
+      const userId     = request.user.id
+      const companyId  = request.user.company_id
+      const { nome, cognome, email } = request.body
+
+      if (!nome || !nome.trim()) {
+        return reply.status(400).send({ error: 'NOME_REQUIRED' })
+      }
+
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return reply.status(400).send({ error: 'EMAIL_INVALID' })
+      }
+
+      // Carica dati attuali per confronto
+      const { data: currentUser } = await supabase
+        .from('user_account')
+        .select('username, email, nome, cognome')
+        .eq('id', userId)
+        .single()
+
+      const updateData = {
+        nome:    nome.trim(),
+        cognome: cognome?.trim() || null,
+      }
+      if (email !== undefined) updateData.email = email?.trim() || null
+
+      const { error: updateErr } = await supabase
+        .from('user_account')
+        .update(updateData)
+        .eq('id', userId)
+
+      if (updateErr) {
+        console.error('owner profile update:', updateErr.message)
+        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+
+      // Se nome o email sono cambiati → genera nuova password e reinvia credenziali
+      const nomeChanged  = nome.trim() !== (currentUser?.nome || '')
+      const emailChanged = email && email.trim() !== (currentUser?.email || '')
+
+      if (nomeChanged || emailChanged) {
+        const newPwd    = generatePassword()
+        const hashedPwd = await bcrypt.hash(newPwd, 10)
+
+        await supabase
+          .from('user_account')
+          .update({ password: hashedPwd })
+          .eq('id', userId)
+
+        const { data: company } = await supabase
+          .from('company')
+          .select('nome')
+          .eq('id', companyId)
+          .single()
+
+        const loginUrl  = process.env.FRONTEND_URL || 'https://timbry.it'
+        const emailDest = (email?.trim()) || currentUser?.email
+
+        if (emailDest) {
+          await sendCredenzialiOwner({
+            email:       emailDest,
+            username:    currentUser.username,
+            password:    newPwd,
+            companyNome: company?.nome || '',
+            loginUrl
+          }).catch(e => console.error('sendCredenzialiOwner owner profile:', e?.message))
+        }
+
+        return reply.send({ success: true, credenziali_reinviate: true })
+      }
+
+      return reply.send({ success: true, credenziali_reinviate: false })
+
+    } catch (err) {
+      console.error('owner profile error:', err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── GET OWNER PROFILE ────────────────────────────────────────────────────
+  fastify.get('/api/owner/profile', { preHandler: authenticateOwner }, async (request, reply) => {
+    try {
+      const { data: user, error } = await supabase
+        .from('user_account')
+        .select('username, email, nome, cognome')
+        .eq('id', request.user.id)
+        .single()
+
+      if (error || !user) return reply.status(404).send({ error: 'NOT_FOUND' })
+
+      return reply.send({ success: true, profile: user })
     } catch (err) {
       console.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { SlidersHorizontal, BarChart2, Bell, Shield, Trash2 } from "lucide-react";
+import { SlidersHorizontal, BarChart2, Bell, Shield, Trash2, User } from "lucide-react";
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
 
 // ─── Schermata principale impostazioni (stile Apple, categorie) ────────────────
@@ -19,6 +19,14 @@ export default function Settings() {
       <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Impostazioni</h1>
 
       <SettingsGroup>
+        <SettingRow
+          to="/impostazioni/profilo"
+          icon={User}
+          iconBg="bg-blue-50 dark:bg-blue-900/20"
+          iconColor="text-blue-500"
+          title="Profilo"
+          subtitle="Nome, cognome e indirizzo email"
+        />
         <SettingRow
           to="/impostazioni/presenze"
           icon={SlidersHorizontal}

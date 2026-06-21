@@ -340,7 +340,8 @@ export default async function requestsRoutes(fastify) {
               company_id,
               tag_uid: richiesta.dipendenti.badge_uid,
               tipo: tipoTimbratura,
-              created_at: dataCompleta.toISOString()
+              created_at: dataCompleta.toISOString(),
+              manuale: true
             })
             .select()
             .single()

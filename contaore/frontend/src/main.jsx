@@ -19,6 +19,7 @@ import TwoFactorVerify     from "./pages/TwoFactorVerify";
 import TwoFactorVerifyReset from "./pages/TwoFactorVerifyReset";
 import Notifications       from "./pages/Notifications";
 import Settings            from "./pages/Settings";
+import SettingsProfilo     from "./pages/SettingsProfilo";
 import SettingsPresenze    from "./pages/SettingsPresenze";
 import SettingsGrafici     from "./pages/SettingsGrafici";
 import SettingsSicurezza   from "./pages/SettingsSicurezza";
@@ -65,6 +66,7 @@ function AppWithInactivity2FA() {
           <Route path="/readers"       element={<Readers />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/impostazioni"            element={<Settings />} />
+          <Route path="/impostazioni/profilo"    element={<SettingsProfilo />} />
           <Route path="/impostazioni/presenze"   element={<SettingsPresenze />} />
           <Route path="/impostazioni/grafici"    element={<SettingsGrafici />} />
           <Route path="/impostazioni/notifiche"  element={<Notifications />} />
