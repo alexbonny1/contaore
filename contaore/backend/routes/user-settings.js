@@ -434,13 +434,24 @@ export default async function userSettingsRoutes(fastify) {
   // ─── GET OWNER PROFILE ────────────────────────────────────────────────────
   fastify.get('/api/owner/profile', { preHandler: authenticateOwner }, async (request, reply) => {
     try {
-      const { data: user, error } = await supabase
+      // Prova prima con nome/cognome, poi fallback se le colonne non esistono ancora
+      let { data: user, error } = await supabase
         .from('user_account')
         .select('username, email, nome, cognome')
         .eq('id', request.user.id)
         .single()
 
-      if (error || !user) return reply.status(404).send({ error: 'NOT_FOUND' })
+      if (error) {
+        const fallback = await supabase
+          .from('user_account')
+          .select('username, email')
+          .eq('id', request.user.id)
+          .single()
+        if (fallback.error || !fallback.data) return reply.status(404).send({ error: 'NOT_FOUND' })
+        user = { ...fallback.data, nome: null, cognome: null }
+      }
+
+      if (!user) return reply.status(404).send({ error: 'NOT_FOUND' })
 
       return reply.send({ success: true, profile: user })
     } catch (err) {
