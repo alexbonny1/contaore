@@ -361,23 +361,32 @@ export default async function userSettingsRoutes(fastify) {
         return reply.status(400).send({ error: 'EMAIL_INVALID' })
       }
 
-      // Carica dati attuali per confronto
-      const { data: currentUser } = await supabase
+      // Carica dati attuali — fallback se nome/cognome non esistono ancora
+      let { data: currentUser } = await supabase
         .from('user_account')
         .select('username, email, nome, cognome')
         .eq('id', userId)
         .single()
 
-      // Update email — colonna garantita
-      const baseUpdate = {}
-      if (email !== undefined) baseUpdate.email = email?.trim() || null
-      if (Object.keys(baseUpdate).length > 0) {
+      if (!currentUser) {
+        const { data: fallback } = await supabase
+          .from('user_account')
+          .select('username, email')
+          .eq('id', userId)
+          .single()
+        if (!fallback) return reply.status(404).send({ error: 'USER_NOT_FOUND' })
+        currentUser = { ...fallback, nome: null, cognome: null }
+      }
+
+      // Aggiorna email solo se è cambiata (evita update inutili su colonna email)
+      const emailChanged = email !== undefined && (email?.trim() || null) !== (currentUser.email || null)
+      if (emailChanged) {
         const { error: updateErr } = await supabase
           .from('user_account')
-          .update(baseUpdate)
+          .update({ email: email?.trim() || null })
           .eq('id', userId)
         if (updateErr) {
-          console.error('owner profile update:', updateErr.message)
+          console.error('owner profile update email:', updateErr.message)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
       }
@@ -390,11 +399,9 @@ export default async function userSettingsRoutes(fastify) {
         await supabase.from('user_account').update(extUpdate).eq('id', userId).catch(() => {})
       }
 
-      // Rigenera password e reinvia credenziali solo se cambia l'email
-      const emailChanged = email !== undefined && (email?.trim() || null) !== (currentUser?.email || null)
-
+      // Rigenera password e reinvia credenziali solo se l'email è cambiata
       if (emailChanged) {
-        const emailDest = email?.trim() || currentUser?.email
+        const emailDest = email?.trim() || currentUser.email
         if (emailDest) {
           const newPwd    = generatePassword()
           const hashedPwd = await bcrypt.hash(newPwd, 10)
