@@ -390,9 +390,14 @@ export default async function userSettingsRoutes(fastify) {
 
       // Se nome o email sono cambiati → genera nuova password e reinvia credenziali
       const nomeChanged  = nome.trim() !== (currentUser?.nome || '')
-      const emailChanged = email && email.trim() !== (currentUser?.email || '')
+      const emailChanged = email !== undefined && (email?.trim() || null) !== (currentUser?.email || null)
 
       if (nomeChanged || emailChanged) {
+        const emailDest = email?.trim() || currentUser?.email
+        if (!emailDest) {
+          return reply.status(400).send({ error: 'EMAIL_REQUIRED' })
+        }
+
         const newPwd    = generatePassword()
         const hashedPwd = await bcrypt.hash(newPwd, 10)
 
@@ -407,18 +412,15 @@ export default async function userSettingsRoutes(fastify) {
           .eq('id', companyId)
           .single()
 
-        const loginUrl  = process.env.FRONTEND_URL || 'https://timbry.it'
-        const emailDest = (email?.trim()) || currentUser?.email
+        const loginUrl = process.env.FRONTEND_URL || 'https://timbry.it'
 
-        if (emailDest) {
-          await sendCredenzialiOwner({
-            email:       emailDest,
-            username:    currentUser.username,
-            password:    newPwd,
-            companyNome: company?.nome || '',
-            loginUrl
-          }).catch(e => console.error('sendCredenzialiOwner owner profile:', e?.message))
-        }
+        await sendCredenzialiOwner({
+          email:       emailDest,
+          username:    currentUser.username,
+          password:    newPwd,
+          companyNome: company?.nome || '',
+          loginUrl
+        }).catch(e => console.error('sendCredenzialiOwner owner profile:', e?.message))
 
         return reply.send({ success: true, credenziali_reinviate: true })
       }
