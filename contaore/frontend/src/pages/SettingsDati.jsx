@@ -129,8 +129,9 @@ export default function SettingsDati() {
 
         {/* ambito */}
         <div className="space-y-3">
+          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Periodo da eliminare</p>
           <div className="flex p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-800">
-            {[{ id: "mese", label: "Un mese" }, { id: "prima", label: "Prima di una data" }].map(o => (
+            {[{ id: "mese", label: "Mese specifico" }, { id: "prima", label: "Prima di una data" }].map(o => (
               <button key={o.id} onClick={() => setModo(o.id)}
                 className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${
                   modo === o.id ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm" : "text-zinc-500"
@@ -140,17 +141,23 @@ export default function SettingsDati() {
             ))}
           </div>
           {modo === "mese" ? (
-            <input type="month" value={mese} onChange={e => setMese(e.target.value)}
-              className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+            <div className="space-y-2">
+              <p className="text-xs text-zinc-500">Verranno eliminate tutte le timbrature del mese scelto</p>
+              <input type="month" value={mese} onChange={e => setMese(e.target.value)}
+                className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+            </div>
           ) : (
-            <input type="date" value={prima} onChange={e => setPrima(e.target.value)}
-              className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+            <div className="space-y-2">
+              <p className="text-xs text-zinc-500">Verranno eliminate tutte le timbrature precedenti alla data scelta</p>
+              <input type="date" value={prima} onChange={e => setPrima(e.target.value)}
+                className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+            </div>
           )}
         </div>
 
         <button onClick={elimina} disabled={deleting}
           className="w-full h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium disabled:opacity-50 transition-colors">
-          {deleting ? "Eliminazione..." : "Elimina storico"}
+          {deleting ? "Eliminazione in corso..." : "Elimina timbrature"}
         </button>
       </div>
 
@@ -165,8 +172,11 @@ export default function SettingsDati() {
         </div>
 
         {autoEnabled && (
-          <div>
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Conserva i dati più recenti di</p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Per quanto tempo conservare lo storico?</p>
+              <p className="text-xs text-zinc-400">Le timbrature più vecchie del periodo scelto vengono eliminate in automatico ogni giorno.</p>
+            </div>
             <div className="flex flex-wrap gap-2">
               {RETENTION_OPTS.map(o => (
                 <button key={o.v} type="button" disabled={savingAuto}
@@ -178,7 +188,9 @@ export default function SettingsDati() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-zinc-400 mt-2">Le timbrature più vecchie del periodo scelto verranno eliminate automaticamente.</p>
+            <p className="text-xs text-zinc-500 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+              Ad esempio con <strong>6 mesi</strong>, oggi verrebbero conservate solo le timbrature da dicembre 2025 in poi.
+            </p>
           </div>
         )}
       </div>
