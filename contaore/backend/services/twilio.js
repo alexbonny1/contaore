@@ -28,7 +28,6 @@ export async function sendTwoFactorSMS(phoneNumber, code) {
       to: phoneNumber // Deve essere in formato +39...
     });
 
-    console.log(`[2FA SMS] Inviato a ${phoneNumber} - SID: ${result.sid}`);
     return {
       success: true,
       sid: result.sid,
@@ -58,7 +57,6 @@ export async function sendTwoFactorWhatsApp(phoneNumber, code) {
       to: whatsappTo
     });
 
-    console.log(`[2FA WhatsApp] Inviato a ${phoneNumber} - SID: ${result.sid}`);
     return {
       success: true,
       sid: result.sid,

@@ -5,9 +5,7 @@ import { supabase } from '../services/supabase.js'
 import { sendResetPassword, sendTwoFactorEmail } from '../services/email.js'
 import {
   generateTwoFactorCode,
-  sendTwoFactorCode,
-  sendTwoFactorSMS,
-  sendTwoFactorWhatsApp
+  sendTwoFactorCode
 } from '../services/twilio.js'
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -111,7 +109,7 @@ export default async function authRoutes(fastify) {
       })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -221,7 +219,7 @@ export default async function authRoutes(fastify) {
       })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -312,7 +310,7 @@ export default async function authRoutes(fastify) {
       })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -369,7 +367,7 @@ export default async function authRoutes(fastify) {
       return reply.send({ success: true })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -438,11 +436,10 @@ export default async function authRoutes(fastify) {
         // Non bloccare — l'utente vede messaggio generico
       }
 
-      console.log('forgot-password: reset richiesto - email inviata:', emailInviata)
       return reply.send({ success: true })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -550,7 +547,7 @@ export default async function authRoutes(fastify) {
       return reply.send({ success: true })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -626,7 +623,7 @@ export default async function authRoutes(fastify) {
       return reply.send({ success: true, message: 'Password resettata con successo' })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -659,7 +656,7 @@ export default async function authRoutes(fastify) {
 
       return reply.send({ success: true, enabled: user.two_factor_enabled || false })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -702,13 +699,13 @@ export default async function authRoutes(fastify) {
         .eq('id', decoded.id)
 
       if (error) {
-        console.log(error)
+        request.log.error(error)
         return reply.status(500).send({ error: 'UPDATE_ERROR' })
       }
 
       return reply.send({ success: true, enabled: two_factor_enabled })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -802,7 +799,7 @@ export default async function authRoutes(fastify) {
         }
       })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -896,7 +893,7 @@ export default async function authRoutes(fastify) {
 
       return reply.send({ success: true, needsTwoFactor: false, token: newToken })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })

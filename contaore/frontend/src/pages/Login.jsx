@@ -61,7 +61,6 @@ export default function Login() {
       }
 
     } catch (err) {
-      console.log(err);
       setError("Errore di connessione");
     } finally {
       setLoading(false);

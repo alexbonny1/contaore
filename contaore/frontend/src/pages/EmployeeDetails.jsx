@@ -395,7 +395,6 @@ export default function EmployeeDetails() {
       setShowEditProfile(false);
       loadData();
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     } finally {
       setProfileSaving(false);
@@ -426,7 +425,6 @@ export default function EmployeeDetails() {
       setShowAddPresence(false);
       loadData();
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     } finally {
       setAddPresenceSaving(false);
@@ -458,7 +456,6 @@ export default function EmployeeDetails() {
       setShowEditPresence(false);
       loadData();
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     } finally {
       setEditPresenceSaving(false);
@@ -478,7 +475,6 @@ export default function EmployeeDetails() {
       showToast("Timbratura eliminata");
       loadData();
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     }
   }
@@ -525,7 +521,7 @@ export default function EmployeeDetails() {
           setWaitingBadgeScan(false);
           await changeBadge(data.uid);
         }
-      } catch (err) { console.log(err); }
+      } catch (err) { }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -559,7 +555,6 @@ export default function EmployeeDetails() {
       }
 
     } catch (err) {
-      console.log(err);
     } finally {
       setLoading(false);
     }
@@ -596,7 +591,6 @@ export default function EmployeeDetails() {
       loadData();
 
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     } finally {
       setChangingBadge(false);
@@ -656,7 +650,6 @@ export default function EmployeeDetails() {
       loadData();
 
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     } finally {
       setSaving(false);
@@ -678,7 +671,6 @@ export default function EmployeeDetails() {
       if (!data.success) { showToast("Errore eliminazione", "error"); return; }
       loadData();
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     }
 
@@ -702,7 +694,7 @@ export default function EmployeeDetails() {
         }
       );
       loadData();
-    } catch (err) { console.log(err); }
+    } catch (err) { }
 
   }
 

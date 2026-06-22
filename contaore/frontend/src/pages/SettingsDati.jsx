@@ -103,7 +103,7 @@ export default function SettingsDati() {
       const data = await res.json();
       if (!data.success) { showToast(data.error || "Errore eliminazione", "error"); return; }
       showToast(`Eliminate ${data.deleted ?? 0} timbrature`);
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setDeleting(false); }
   }
 
@@ -118,7 +118,7 @@ export default function SettingsDati() {
       const data = await res.json();
       if (!data.success) { showToast("Errore salvataggio", "error"); return; }
       showToast("Impostazioni salvate");
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSavingAuto(false); }
   }
 

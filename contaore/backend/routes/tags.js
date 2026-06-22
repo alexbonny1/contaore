@@ -19,7 +19,7 @@ export default async function tagRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false })
         }
 
@@ -34,7 +34,7 @@ export default async function tagRoutes(fastify) {
 
         return reply.send({ success: true, tags })
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
       }
     }
@@ -113,7 +113,7 @@ export default async function tagRoutes(fastify) {
           .single()
 
         if (employeeError) {
-          console.log(employeeError)
+          request.log.error(employeeError)
           return reply.send({ success: false, error: employeeError.message })
         }
 
@@ -128,7 +128,7 @@ export default async function tagRoutes(fastify) {
           .single()
 
         if (tagError) {
-          console.log(tagError)
+          request.log.error(tagError)
           await supabase.from('dipendenti').delete().eq('id', employee.id)
           return reply.send({ success: false, error: tagError.message })
         }
@@ -179,7 +179,7 @@ export default async function tagRoutes(fastify) {
         })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
       }
     }
@@ -231,7 +231,7 @@ export default async function tagRoutes(fastify) {
 
         return reply.send({ success: true })
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
       }
     }
@@ -296,21 +296,20 @@ export default async function tagRoutes(fastify) {
                 try {
                   const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
                   await sendCredenziali({ email, nome: empNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
-                } catch (e) { console.log('sendCredenziali error:', e?.message) }
+                } catch (_) {}
               }
             } else {
               const { error: updateErr } = await supabase.from('user_account')
                 .update({ email })
                 .eq('dipendente_id', empId)
                 .eq('company_id', companyId)
-              if (updateErr) console.log('user_account update error:', updateErr)
             }
           }
         }
 
         return reply.send({ success: true, account_creato: accountCreato })
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
       }
     }
@@ -351,7 +350,7 @@ export default async function tagRoutes(fastify) {
 
         return reply.send({ success: true })
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
       }
     }

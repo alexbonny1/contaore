@@ -168,7 +168,7 @@ export default function DipendenteDashboard() {
       const json = await res.json();
       if (!json.success) { navigate("/"); return; }
       setData(json);
-    } catch (err) { console.log(err); }
+    } catch (err) { }
     finally { setLoading(false); }
   }
 
@@ -177,7 +177,7 @@ export default function DipendenteDashboard() {
       const res  = await fetch(API_URL + "/api/dipendente/ferie", { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (json.success) { setFerie(json.ferie || []); setPause(json.pause || []); }
-    } catch (err) { console.log(err); }
+    } catch (err) { }
   }
 
   async function loadMissingScans() {
@@ -185,7 +185,7 @@ export default function DipendenteDashboard() {
       const res  = await fetch(API_URL + "/api/requests/missing-scans", { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (json.success) setMissingScans(json.richieste || []);
-    } catch (err) { console.log(err); }
+    } catch (err) { }
   }
 
   async function loadPermesi() {
@@ -193,7 +193,7 @@ export default function DipendenteDashboard() {
       const res  = await fetch(API_URL + "/api/dipendente/richieste/permessi", { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (json.success) setPermesi(json.richieste || []);
-    } catch (err) { console.log(err); }
+    } catch (err) { }
   }
 
   async function loadRichiesteTurni() {
@@ -201,7 +201,7 @@ export default function DipendenteDashboard() {
       const res  = await fetch(API_URL + "/api/dipendente/richieste/turni", { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (json.success) setRichiesteTurni(json.richieste || []);
-    } catch (err) { console.log(err); }
+    } catch (err) { }
   }
 
   async function loadUserSettings() {
@@ -209,7 +209,7 @@ export default function DipendenteDashboard() {
       const res  = await fetch(API_URL + "/api/user/settings", { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (json.success) setTwoFaEnabled(json.settings?.two_factor_enabled || false);
-    } catch (err) { console.log(err); }
+    } catch (err) { }
   }
 
   async function saveProfile() {
@@ -234,7 +234,7 @@ export default function DipendenteDashboard() {
       showToast("Profilo aggiornato");
       setEditingProfile(false);
       loadMe();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSavingProfile(false); }
   }
 
@@ -251,7 +251,7 @@ export default function DipendenteDashboard() {
       if (!json.success) { showToast(json.error === 'WRONG_PASSWORD' ? "Password errata" : (json.error || "Errore"), "error"); return; }
       localStorage.clear();
       navigate("/");
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setDeletingAccount(false); }
   }
 
@@ -266,7 +266,7 @@ export default function DipendenteDashboard() {
       const json = await res.json();
       if (json.success) setTwoFaEnabled(json.two_factor_enabled);
       else showToast(json.error || "Errore", "error");
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setLoadingTwoFa(false); }
   }
 
@@ -300,7 +300,7 @@ export default function DipendenteDashboard() {
       showToast("Giustificazione inviata");
       setShowJustForm(null); setJustMotivo("");
       loadMe();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSavingJust(false); }
   }
 
@@ -319,7 +319,7 @@ export default function DipendenteDashboard() {
       showToast("Richiesta ferie inviata — in attesa di approvazione");
       setFerieInizio(""); setFerieFine(""); setFerieNote(""); setShowFerieForm(false);
       loadFerie();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSavingFerie(false); }
   }
 
@@ -334,7 +334,7 @@ export default function DipendenteDashboard() {
       if (!json.success) { showToast(json.message || "Errore", "error"); return; }
       showToast("Richiesta cancellata");
       loadFerie();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
   }
 
   // ── invia richiesta timbratura mancata ───────────────────────────────────
@@ -358,7 +358,7 @@ export default function DipendenteDashboard() {
       showToast("Richiesta inviata — in attesa di approvazione");
       setMissingScanData(""); setMissingScanOra(""); setMissingScanMotivo(""); setShowMissingScanForm(false);
       loadMissingScans();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSavingMissingScan(false); }
   }
 
@@ -392,7 +392,6 @@ export default function DipendenteDashboard() {
       setShowModifyModal(false);
       loadMissingScans();
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     } finally {
       setSavingModify(false);
@@ -410,7 +409,7 @@ export default function DipendenteDashboard() {
       if (!json.success) { showToast(json.message || "Errore", "error"); return; }
       showToast("Richiesta cancellata");
       loadMissingScans();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
   }
 
   // ── invia richiesta permesso ─────────────────────────────────────────────
@@ -441,7 +440,7 @@ export default function DipendenteDashboard() {
       setPermesoDataUscita(""); setPermesoOraUscita(""); setPermesoDataEntrata(""); setPermesoOraEntrata(""); setPermesoMotivo(""); setShowPermesoForm(false);
       // Reload permessi se la funzione esiste
       if (typeof loadPermesi === 'function') loadPermesi();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSavingPermeso(false); }
   }
 
@@ -457,7 +456,7 @@ export default function DipendenteDashboard() {
       showToast("Richiesta cancellata");
       // Reload permessi se la funzione esiste
       if (typeof loadPermesi === 'function') loadPermesi();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
   }
 
   // ── invia richiesta modifica turni ───────────────────────────────────────
@@ -500,7 +499,7 @@ export default function DipendenteDashboard() {
       setTurniDataDal(""); setTurniDataAl(""); setTurniGiorniSelezionati({lunedi: false, martedi: false, mercoledi: false, giovedi: false, venerdi: false, sabato: false, domenica: false}); setTurniOrari({}); setTurniMotivo(""); setShowTurniForm(false);
       // Reload richieste turni se la funzione esiste
       if (typeof loadRichiesteTurni === 'function') loadRichiesteTurni();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSavingTurni(false); }
   }
 
@@ -516,7 +515,7 @@ export default function DipendenteDashboard() {
       showToast("Richiesta cancellata");
       // Reload richieste turni se la funzione esiste
       if (typeof loadRichiesteTurni === 'function') loadRichiesteTurni();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
   }
 
   function logout() { localStorage.clear(); navigate("/"); }
@@ -539,7 +538,6 @@ export default function DipendenteDashboard() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.log(err);
       showToast("Errore download PDF", "error");
     }
   }

@@ -27,7 +27,7 @@ export default function Dashboard() {
       const res   = await fetch(API_URL + "/api/employees", { headers: { Authorization: "Bearer " + token } });
       const data  = await res.json();
       if (data.success) setEmployees(data.employees || []);
-    } catch (err) { console.log(err); }
+    } catch (err) { }
     finally { setLoading(false); }
   }
 

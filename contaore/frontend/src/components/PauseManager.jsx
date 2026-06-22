@@ -60,7 +60,6 @@ export default function PauseManager({ portaleAttivo: portaleAttivoProp }) {
       const data = await res.json()
       if (data.success) setPause(data.pause || [])
     } catch (err) {
-      console.log(err)
     } finally {
       if (isFirstLoad.current) { setLoading(false); isFirstLoad.current = false }
     }
@@ -78,7 +77,7 @@ export default function PauseManager({ portaleAttivo: portaleAttivoProp }) {
             .map(t => ({ id: t.dipendente_id, nome: t.nome }))
         )
       }
-    } catch (err) { console.log(err) }
+    } catch (err) { }
     finally { setLoadingEmps(false) }
   }
 
@@ -134,7 +133,7 @@ export default function PauseManager({ portaleAttivo: portaleAttivoProp }) {
         showToast(data.detail || data.message || data.error || 'Errore', 'error')
       }
     } catch (err) {
-      console.log(err); showToast('Errore server', 'error')
+      showToast('Errore server', 'error')
     } finally { setSaving(false) }
   }
 
@@ -148,7 +147,7 @@ export default function PauseManager({ portaleAttivo: portaleAttivoProp }) {
       const data = await res.json()
       if (data.success) { showToast('Pausa annullata', 'success'); loadPause() }
       else showToast('Errore', 'error')
-    } catch (err) { console.log(err); showToast('Errore server', 'error') }
+    } catch (err) { showToast('Errore server', 'error') }
     finally { setCancellingId(null) }
   }
 

@@ -31,7 +31,7 @@ export default async function adminRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         }
 
@@ -70,7 +70,7 @@ export default async function adminRoutes(fastify) {
         return reply.send({ success: true, companies: result })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -116,7 +116,7 @@ export default async function adminRoutes(fastify) {
           .single()
 
         if (companyError) {
-          console.error(companyError)
+          request.log.error(companyError)
           return reply.status(500).send({ success: false, error: 'COMPANY_CREATE_ERROR' })
         }
 
@@ -137,7 +137,7 @@ export default async function adminRoutes(fastify) {
           .single()
 
         if (userError) {
-          console.error(userError)
+          request.log.error(userError)
           // rollback company
           await supabase.from('company').delete().eq('id', company.id)
           return reply.status(500).send({ success: false, error: 'USER_CREATE_ERROR' })
@@ -155,7 +155,6 @@ export default async function adminRoutes(fastify) {
             loginUrl
           })
           if (emailInviata) {
-            console.log('Email credenziali owner inviata a', email)
           } else {
             console.warn('Invio email credenziali owner fallito per', email)
           }
@@ -178,7 +177,7 @@ export default async function adminRoutes(fastify) {
         })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -232,14 +231,14 @@ export default async function adminRoutes(fastify) {
           .eq('id', id)
 
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'DELETE_ERROR' })
         }
 
         return reply.send({ success: true })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -275,7 +274,7 @@ export default async function adminRoutes(fastify) {
           .neq('role', 'superadmin')
 
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'UPDATE_ERROR' })
         }
 
@@ -306,7 +305,7 @@ export default async function adminRoutes(fastify) {
         return reply.send({ success: true, email_inviata: emailInviata, nuova_password: passwordInChiaro })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -335,14 +334,14 @@ export default async function adminRoutes(fastify) {
           .single()
 
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'UPDATE_ERROR' })
         }
 
         return reply.send({ success: true, company: data })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -366,14 +365,14 @@ export default async function adminRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         }
 
         return reply.send({ success: true, accounts: data || [] })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -394,12 +393,12 @@ export default async function adminRoutes(fastify) {
           .eq('company_id', id)
           .order('reader_id', { ascending: true })
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         }
         return reply.send({ success: true, devices: data || [] })
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -422,14 +421,14 @@ export default async function adminRoutes(fastify) {
           .order('ora_inizio', { ascending: true })
 
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         }
 
         return reply.send({ success: true, fasce: data || [] })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -475,7 +474,7 @@ export default async function adminRoutes(fastify) {
         return reply.send({ success: true, fasce: [fascia], message: '1 fascia oraria creata' })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -497,14 +496,14 @@ export default async function adminRoutes(fastify) {
           .eq('id', id)
 
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'DELETE_ERROR' })
         }
 
         return reply.send({ success: true })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -523,7 +522,7 @@ export default async function adminRoutes(fastify) {
         if (error) return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         return reply.send({ success: true, settings: data || {} })
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -545,12 +544,12 @@ export default async function adminRoutes(fastify) {
           .upsert(row)
           .select().single()
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         }
         return reply.send({ success: true, settings: data })
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -573,14 +572,14 @@ export default async function adminRoutes(fastify) {
           .eq('reader_id', readerId)
 
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'UPDATE_ERROR' })
         }
 
         return reply.send({ success: true })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -602,7 +601,7 @@ export default async function adminRoutes(fastify) {
         if (error) return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         return reply.send({ success: true, release: data || null })
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -632,12 +631,12 @@ export default async function adminRoutes(fastify) {
           .select()
           .single()
         if (error) {
-          console.error(error)
+          request.log.error(error)
           return reply.status(500).send({ success: false, error: 'DB_ERROR' })
         }
         return reply.send({ success: true, release: data })
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -665,7 +664,7 @@ export default async function adminRoutes(fastify) {
       }))
       return reply.send({ success: true, files })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.send({ success: false })
     }
   })
@@ -694,7 +693,7 @@ export default async function adminRoutes(fastify) {
       const url = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${key}`
       return reply.send({ success: true, url })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ success: false })
     }
   })
@@ -707,7 +706,7 @@ export default async function adminRoutes(fastify) {
       if (error) return reply.send({ success: false })
       return reply.send({ success: true })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.send({ success: false })
     }
   })

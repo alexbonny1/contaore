@@ -36,7 +36,7 @@ async function routes(fastify, options) {
 
     } catch (err) {
 
-      console.log(err)
+      request.log.error(err)
 
       return reply.code(500).send({
         error: 'Server error'

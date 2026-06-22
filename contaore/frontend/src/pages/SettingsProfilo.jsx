@@ -42,7 +42,7 @@ export default function SettingsProfilo() {
         setEditCognome(json.profile.cognome || "");
         setEditEmail(json.profile.email || "");
       }
-    } catch (err) { console.log(err); }
+    } catch (err) { }
     finally { setLoading(false); }
   }
 
@@ -89,7 +89,7 @@ export default function SettingsProfilo() {
       } else {
         showToast("Profilo aggiornato");
       }
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSaving(false); }
   }
 

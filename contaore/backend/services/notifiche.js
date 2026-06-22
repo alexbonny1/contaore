@@ -10,16 +10,9 @@ import {
   sendNotificaBadgeNonRiconosciuto,
   sendNotificaTimbraturaMancante
 } from './email.js'
+import { GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours } from '../utils/timeHelpers.js'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
-
-const GIORNI = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
-
-function timeToMins(t) {
-  if (!t) return null
-  const [h, m] = t.split(':')
-  return parseInt(h) * 60 + parseInt(m)
-}
 
 function todayStr() {
   return new Date().toISOString().split('T')[0]
@@ -37,19 +30,6 @@ function calcHours(reads = []) {
     }
   }
   return mins / 60
-}
-
-function shiftDurMins(ingresso, uscita) {
-  const start = timeToMins(ingresso)
-  const end   = timeToMins(uscita)
-  return end > start ? end - start : (1440 - start) + end
-}
-
-function shiftExpHours(s) {
-  let m = 0
-  if (s.ingresso_1 && s.uscita_1) m += shiftDurMins(s.ingresso_1, s.uscita_1)
-  if (s.ingresso_2 && s.uscita_2) m += shiftDurMins(s.ingresso_2, s.uscita_2)
-  return m / 60
 }
 
 // ─── dedup — prevent duplicate emails in the same day ────────────────────────
@@ -135,7 +115,7 @@ export async function onRitardo({ uid, companyId }) {
       .select('ingresso_1').eq('dipendente_id', emp.id).eq('giorno_settimana', todayName)
     if (!shifts?.length) return
 
-    const isLate = shifts.some(s => s.ingresso_1 && nowMins > timeToMins(s.ingresso_1) + minutiTolleranza)
+    const isLate = shifts.some(s => s.ingresso_1 && nowMins > timeToMinutes(s.ingresso_1) + minutiTolleranza)
     if (!isLate) return
 
     const key = `${companyId}:ritardo:${emp.id}:${todayStr()}`
@@ -185,7 +165,7 @@ export async function checkAssenti() {
       if (entered.has(emp.badge_uid)) continue
       const empShifts = (shifts || []).filter(s => s.dipendente_id === emp.id)
       if (!empShifts.length) continue
-      const late = empShifts.some(s => s.ingresso_1 && nowMins >= timeToMins(s.ingresso_1) + tol)
+      const late = empShifts.some(s => s.ingresso_1 && nowMins >= timeToMinutes(s.ingresso_1) + tol)
       if (!late) continue
       const key = `${cid}:assente:${emp.id}:${today}`
       if (!canSend(key)) continue
@@ -296,7 +276,7 @@ export async function checkRiepilogoGiornaliero() {
   for (const setting of settings) {
     const cid = setting.company_id
     const ora = setting.parametri?.ora_invio ?? '18:00'
-    if (nowMins < timeToMins(ora)) continue
+    if (nowMins < timeToMinutes(ora)) continue
     if (setting.last_triggered_at?.startsWith(today)) continue
 
     const targetIds = setting.target_ids?.length ? setting.target_ids : null
@@ -343,7 +323,7 @@ export async function checkRiepilogoSettimanale() {
   for (const setting of settings) {
     const cid = setting.company_id
     const ora = setting.parametri?.ora_invio ?? '08:00'
-    if (nowMins < timeToMins(ora)) continue
+    if (nowMins < timeToMinutes(ora)) continue
     if (setting.last_triggered_at?.startsWith(today)) continue
 
     const lastMon = new Date(now)
@@ -409,7 +389,7 @@ export async function checkStraordinarioMensile() {
       let oreAtt = 0
       workedDays.forEach(day => {
         const dn = GIORNI[new Date(day).getDay()]
-        empShifts.filter(s => s.giorno_settimana === dn).forEach(s => { oreAtt += shiftExpHours(s) })
+        empShifts.filter(s => s.giorno_settimana === dn).forEach(s => { oreAtt += shiftExpectedHours(s) })
       })
 
       const straord = oreLav - oreAtt
@@ -537,7 +517,6 @@ async function autoCleanupPresenze() {
       for (let i = 0; i < ids.length; i += 500) {
         await supabase.from('presenza').delete().in('id', ids.slice(i, i + 500))
       }
-      if (ids.length) console.log(`[autoCleanup] company ${c.id}: eliminate ${ids.length} presenze (> ${months} mesi)`)
     } catch (e) { console.error('autoCleanupPresenze company:', e) }
   }
 }
@@ -569,5 +548,4 @@ export function startScheduler() {
     autoCleanupPresenze().catch(e => console.error('autoCleanupPresenze:', e))
   }, 24 * 60 * 60 * 1000)
 
-  console.log('Notification scheduler started')
 }

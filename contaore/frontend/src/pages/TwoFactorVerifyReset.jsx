@@ -88,7 +88,6 @@ export default function TwoFactorVerifyReset() {
       }, 2000)
     } catch (err) {
       setError('Errore di verifica. Riprova.')
-      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -113,7 +112,6 @@ export default function TwoFactorVerifyReset() {
       }
     } catch (err) {
       setError('Errore. Riprova.')
-      console.error(err)
     } finally {
       setLoading(false)
     }

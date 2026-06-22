@@ -25,7 +25,6 @@ export default function TwoFactorSettings() {
           setMethod('email') // Default method
         }
       } catch (err) {
-        console.error('Error loading settings:', err)
       } finally {
         setLoading(false)
       }

@@ -2,7 +2,10 @@ import { supabase } from '../services/supabase.js'
 import { authenticate } from '../middleware/auth.js'
 import PDFDocument from 'pdfkit'
 import XLSX from 'xlsx'
-import { getLocalDateStr } from '../utils/timeHelpers.js'
+import {
+  getLocalDateStr, timeToMinutes, shiftDurationMins, shiftExpectedHours,
+  GIORNI, getDayName, computeBreakDeductionMins
+} from '../utils/timeHelpers.js'
 
 /*
 ────────────────────────────────────
@@ -17,57 +20,6 @@ function formatOre(h) {
   if (ore === 0) return `${min}m`
   if (min === 0) return `${ore}h`
   return `${ore}h ${min}m`
-}
-
-function timeToMinutes(t) {
-  if (!t) return null
-  const parts = t.split(':')
-  return parseInt(parts[0]) * 60 + parseInt(parts[1])
-}
-
-function shiftDurationMins(ingresso, uscita) {
-  const start = timeToMinutes(ingresso)
-  const end   = timeToMinutes(uscita)
-  return end > start ? end - start : (1440 - start) + end
-}
-
-function shiftExpectedHours(shift) {
-  let mins = 0
-  if (shift.ingresso_1 && shift.uscita_1) mins += shiftDurationMins(shift.ingresso_1, shift.uscita_1)
-  if (shift.ingresso_2 && shift.uscita_2) mins += shiftDurationMins(shift.ingresso_2, shift.uscita_2)
-  return Number((mins / 60).toFixed(2))
-}
-
-function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
-  let deduction = 0
-  let lastEntrataMins = null
-  const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
-  for (const r of sortedReads) {
-    const d    = new Date(r.created_at)
-    const mins = d.getHours() * 60 + d.getMinutes()
-    if (r.tipo === 'ENTRATA') {
-      lastEntrataMins = mins
-    } else if (r.tipo === 'USCITA' && lastEntrataMins !== null) {
-      const sessionStart = lastEntrataMins
-      const sessionEnd   = mins
-      const overlapStart = Math.max(sessionStart, breakStartMins)
-      const overlapEnd   = Math.min(sessionEnd,   breakEndMins)
-      if (overlapEnd > overlapStart) deduction += overlapEnd - overlapStart
-      lastEntrataMins = null
-    }
-  }
-  if (lastEntrataMins !== null) {
-    const overlapStart = Math.max(lastEntrataMins, breakStartMins)
-    const overlapEnd   = Math.min(nowMins,          breakEndMins)
-    if (overlapEnd > overlapStart) deduction += overlapEnd - overlapStart
-  }
-  return deduction
-}
-
-const GIORNI = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
-
-function getDayName(dateStr) {
-  return GIORNI[new Date(dateStr).getDay()]
 }
 
 function calcOreGiorno(sorted, dayShifts = []) {

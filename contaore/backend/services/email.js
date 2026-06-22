@@ -97,7 +97,6 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
       return false
     }
 
-    console.log('Email credenziali owner inviata a', email, '- ID:', data?.id)
     return true
 
   } catch (err) {
@@ -156,7 +155,6 @@ export async function sendCredenziali({ email, nome, username, password, company
       return false
     }
 
-    console.log('Email credenziali inviata a', email, '- ID:', data?.id)
     return true
 
   } catch (err) {
@@ -264,7 +262,6 @@ export async function sendResetPassword({ email, username, resetUrl }) {
       return false
     }
 
-    console.log('Email reset password inviata a', email, '- ID:', data?.id)
     return true
 
   } catch (err) {
@@ -481,7 +478,6 @@ export async function sendTwoFactorEmail(email, code) {
       return false
     }
 
-    console.log(`[2FA EMAIL] Inviato a ${email}`)
     return true
   } catch (err) {
     console.error('2FA email send error:', err.message)

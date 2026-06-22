@@ -48,7 +48,7 @@ export default async function userSettingsRoutes(fastify) {
       })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       if (err.message === 'TOKEN_MISSING') return reply.status(401).send({ error: 'TOKEN_MISSING' })
       if (err.message === 'INVALID_TOKEN') return reply.status(401).send({ error: 'INVALID_TOKEN' })
       return reply.status(500).send({ error: 'SERVER_ERROR' })
@@ -143,7 +143,7 @@ export default async function userSettingsRoutes(fastify) {
       })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       if (err.message === 'TOKEN_MISSING') return reply.status(401).send({ error: 'TOKEN_MISSING' })
       if (err.message === 'INVALID_TOKEN') return reply.status(401).send({ error: 'INVALID_TOKEN' })
       return reply.status(500).send({ error: 'SERVER_ERROR' })
@@ -223,7 +223,7 @@ export default async function userSettingsRoutes(fastify) {
       })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -255,7 +255,7 @@ export default async function userSettingsRoutes(fastify) {
       })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       if (err.message === 'TOKEN_MISSING') return reply.status(401).send({ error: 'TOKEN_MISSING' })
       if (err.message === 'INVALID_TOKEN') return reply.status(401).send({ error: 'INVALID_TOKEN' })
       return reply.status(500).send({ error: 'SERVER_ERROR' })
@@ -345,7 +345,7 @@ export default async function userSettingsRoutes(fastify) {
       })
 
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
@@ -452,7 +452,7 @@ export default async function userSettingsRoutes(fastify) {
 
       return reply.send({ success: true, profile: user })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
