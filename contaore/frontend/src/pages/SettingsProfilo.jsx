@@ -54,14 +54,8 @@ export default function SettingsProfilo() {
   }
 
   async function saveProfile() {
-    if (!editNome.trim()) { showToast("Il nome è obbligatorio", "error"); return; }
     if (editEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail)) {
       showToast("Email non valida", "error"); return;
-    }
-    const nomeWillChange = editNome.trim() !== (profile.nome || "");
-    const emailWillChange = (editEmail.trim() || null) !== (profile.email || null);
-    if ((nomeWillChange || emailWillChange) && !editEmail.trim() && !profile.email) {
-      showToast("Imposta un'email prima di modificare il nome", "error"); return;
     }
     setSaving(true);
     try {
@@ -72,11 +66,7 @@ export default function SettingsProfilo() {
       });
       const json = await res.json();
       if (!json.success) {
-        if (json.error === "EMAIL_REQUIRED") {
-          showToast("Imposta un'email prima di modificare il nome", "error");
-        } else {
-          showToast(json.error || "Errore salvataggio", "error");
-        }
+        showToast(json.error || "Errore salvataggio", "error");
         return;
       }
 
@@ -181,7 +171,7 @@ export default function SettingsProfilo() {
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Modifica profilo</p>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <p className="text-xs text-zinc-400 mb-1">Nome *</p>
+                <p className="text-xs text-zinc-400 mb-1">Nome</p>
                 <input
                   value={editNome}
                   onChange={e => setEditNome(e.target.value)}
@@ -208,7 +198,7 @@ export default function SettingsProfilo() {
             </div>
 
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              ⚠️ Se modifichi nome o email, ti verrà inviata una email con le nuove credenziali di accesso (inclusa una nuova password).
+              ⚠️ Se modifichi nome, cognome o email (e hai un'email impostata), ti verranno inviate le nuove credenziali di accesso (inclusa una nuova password).
             </p>
 
             <div className="flex gap-2 pt-1">
