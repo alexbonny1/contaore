@@ -38,17 +38,30 @@ export default function SettingsProfilo() {
       const json = await res.json();
       if (json.success) {
         setProfile(json.profile);
-        setEditNome(json.profile.nome || json.profile.username || "");
-        setEditCognome(json.profile.cognome || "");
-        setEditEmail(json.profile.email || "");
+        const p = json.profile;
+        if (p.nome) {
+          setEditNome(p.nome);
+          setEditCognome(p.cognome || "");
+        } else {
+          const parts = (p.username || "").split(".");
+          setEditNome(parts[0] || "");
+          setEditCognome(parts.slice(1).join(".") || "");
+        }
+        setEditEmail(p.email || "");
       }
     } catch (err) { }
     finally { setLoading(false); }
   }
 
   function startEdit() {
-    setEditNome(profile.nome || profile.username || "");
-    setEditCognome(profile.cognome || "");
+    if (profile.nome) {
+      setEditNome(profile.nome);
+      setEditCognome(profile.cognome || "");
+    } else {
+      const parts = (profile.username || "").split(".");
+      setEditNome(parts[0] || "");
+      setEditCognome(parts.slice(1).join(".") || "");
+    }
     setEditEmail(profile.email || "");
     setEditing(true);
   }
