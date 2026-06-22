@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt'
 import { supabase } from '../services/supabase.js'
 import { sendTwoFactorEmail, sendCredenzialiOwner } from '../services/email.js'
 import { generateTwoFactorCode, sendTwoFactorCode } from '../services/twilio.js'
-import { generatePassword } from '../utils/userHelpers.js'
+import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
 import { authenticateOwner } from '../middleware/auth.js'
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -378,8 +378,13 @@ export default async function userSettingsRoutes(fastify) {
         currentUser = { ...fallback, nome: null, cognome: null }
       }
 
-      // Aggiorna email solo se è cambiata (evita update inutili su colonna email)
-      const emailChanged = email !== undefined && (email?.trim() || null) !== (currentUser.email || null)
+      const newNome    = nome    !== undefined ? (nome?.trim()    || null) : (currentUser.nome    || null)
+      const newCognome = cognome !== undefined ? (cognome?.trim() || null) : (currentUser.cognome || null)
+      const emailChanged   = email   !== undefined && (email?.trim()    || null) !== (currentUser.email    || null)
+      const nomeChanged    = nome    !== undefined && (nome?.trim()     || null) !== (currentUser.nome     || null)
+      const cognomeChanged = cognome !== undefined && (cognome?.trim()  || null) !== (currentUser.cognome  || null)
+
+      // Aggiorna email solo se cambiata
       if (emailChanged) {
         const { error: updateErr } = await supabase
           .from('user_account')
@@ -391,45 +396,45 @@ export default async function userSettingsRoutes(fastify) {
         }
       }
 
-      // Update nome/cognome — silente se colonne non esistono ancora
+      // Aggiorna nome/cognome — silente se colonne non esistono ancora
       const extUpdate = {}
-      if (nome !== undefined)    extUpdate.nome    = nome?.trim()    || null
+      if (nome    !== undefined) extUpdate.nome    = nome?.trim()    || null
       if (cognome !== undefined) extUpdate.cognome = cognome?.trim() || null
       if (Object.keys(extUpdate).length > 0) {
         await supabase.from('user_account').update(extUpdate).eq('id', userId).catch(() => {})
       }
 
-      // Rigenera password e reinvia credenziali solo se l'email è cambiata
-      if (emailChanged) {
-        const emailDest = email?.trim() || currentUser.email
+      // Se nome, cognome o email cambiano → rigenera username + password e reinvia credenziali
+      if (nomeChanged || cognomeChanged || emailChanged) {
+        const emailDest = (emailChanged ? email?.trim() : null) || currentUser.email
+
+        // Rigenera username se nome/cognome cambiati
+        let newUsername = currentUser.username
+        if ((nomeChanged || cognomeChanged) && newNome) {
+          const base = buildUsername(newNome, newCognome || '')
+          newUsername = await findAvailableUsername(base)
+          await supabase.from('user_account').update({ username: newUsername }).eq('id', userId)
+        }
+
+        // Rigenera password
+        const newPwd    = generatePassword()
+        const hashedPwd = await bcrypt.hash(newPwd, 10)
+        await supabase.from('user_account').update({ password: hashedPwd }).eq('id', userId)
+
         if (emailDest) {
-          const newPwd    = generatePassword()
-          const hashedPwd = await bcrypt.hash(newPwd, 10)
-
-          await supabase
-            .from('user_account')
-            .update({ password: hashedPwd })
-            .eq('id', userId)
-
           const { data: company } = await supabase
-            .from('company')
-            .select('nome')
-            .eq('id', companyId)
-            .single()
-
-          const loginUrl = process.env.FRONTEND_URL || 'https://timbry.it'
+            .from('company').select('nome').eq('id', companyId).single()
 
           await sendCredenzialiOwner({
             email:       emailDest,
-            username:    currentUser.username,
+            username:    newUsername,
             password:    newPwd,
             companyNome: company?.nome || '',
-            loginUrl
+            loginUrl:    process.env.FRONTEND_URL || 'https://timbry.it'
           }).catch(e => console.error('sendCredenzialiOwner owner profile:', e?.message))
-
-          return reply.send({ success: true, credenziali_reinviate: true })
         }
-        // Nessuna email disponibile → salva senza reinviare credenziali
+
+        return reply.send({ success: true, credenziali_reinviate: !!emailDest })
       }
 
       return reply.send({ success: true, credenziali_reinviate: false })
