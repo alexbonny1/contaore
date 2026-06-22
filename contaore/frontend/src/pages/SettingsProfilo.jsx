@@ -58,6 +58,11 @@ export default function SettingsProfilo() {
     if (editEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail)) {
       showToast("Email non valida", "error"); return;
     }
+    const nomeWillChange = editNome.trim() !== (profile.nome || "");
+    const emailWillChange = (editEmail.trim() || null) !== (profile.email || null);
+    if ((nomeWillChange || emailWillChange) && !editEmail.trim() && !profile.email) {
+      showToast("Imposta un'email prima di modificare il nome", "error"); return;
+    }
     setSaving(true);
     try {
       const res  = await fetch(API_URL + "/api/owner/profile", {
@@ -66,7 +71,14 @@ export default function SettingsProfilo() {
         body:    JSON.stringify({ nome: editNome.trim(), cognome: editCognome.trim(), email: editEmail.trim() || null })
       });
       const json = await res.json();
-      if (!json.success) { showToast(json.error || "Errore salvataggio", "error"); return; }
+      if (!json.success) {
+        if (json.error === "EMAIL_REQUIRED") {
+          showToast("Imposta un'email prima di modificare il nome", "error");
+        } else {
+          showToast(json.error || "Errore salvataggio", "error");
+        }
+        return;
+      }
 
       // Aggiorna localStorage con il nuovo nome
       try {
