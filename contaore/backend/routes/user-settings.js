@@ -406,7 +406,7 @@ export default async function userSettingsRoutes(fastify) {
       if (nome    !== undefined) extUpdate.nome    = nome?.trim()    || null
       if (cognome !== undefined) extUpdate.cognome = cognome?.trim() || null
       if (Object.keys(extUpdate).length > 0) {
-        await supabase.from('user_account').update(extUpdate).eq('id', userId).catch(() => {})
+        await supabase.from('user_account').update(extUpdate).eq('id', userId)
       }
 
       // Se nome, cognome o email cambiano → rigenera username + credenziali
