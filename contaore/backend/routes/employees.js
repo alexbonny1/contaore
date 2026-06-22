@@ -5,7 +5,8 @@ import { sendCredenziali } from '../services/email.js'
 import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
 import {
   GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours,
-  getLocalDateStr, getLocalTimeMinutes, getLocalDayOfWeek, getDayName
+  getLocalDateStr, getLocalTimeMinutes, getLocalDayOfWeek, getDayName,
+  buildSessions, buildCoppie, computeBreakDeductionMins, isInFerie
 } from '../utils/timeHelpers.js'
 
 function isEmployeeInside(reads = []) {
@@ -33,33 +34,6 @@ function calculateHours(reads = []) {
     }
   }
   return Number((totalMinutes / 60).toFixed(2))
-}
-
-// Minutes of shift-break time that the employee "covered" without explicit badge
-function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
-  let deductionMins  = 0
-  let lastEntrataMins = null
-  const now     = new Date()
-  const nowMins = getLocalTimeMinutes(now.toISOString())
-
-  for (const read of sortedReads) {
-    const readMins = getLocalTimeMinutes(read.created_at)
-    if (read.tipo === 'ENTRATA') {
-      lastEntrataMins = readMins
-    } else if (read.tipo === 'USCITA' && lastEntrataMins !== null) {
-      const winStart = Math.max(lastEntrataMins, breakStartMins)
-      const winEnd   = Math.min(readMins, breakEndMins)
-      if (winEnd > winStart) deductionMins += winEnd - winStart
-      lastEntrataMins = null
-    }
-  }
-  // Employee still inside — deduct break time that has already elapsed
-  if (lastEntrataMins !== null) {
-    const winStart = Math.max(lastEntrataMins, breakStartMins)
-    const winEnd   = Math.min(nowMins, breakEndMins)
-    if (winEnd > winStart) deductionMins += winEnd - winStart
-  }
-  return deductionMins
 }
 
 // calculateHours with per-day break deduction based on shift schedule
@@ -90,70 +64,6 @@ function calculateHoursWithBreaks(reads, empShifts) {
     totalMins += Math.max(0, dayMins)
   }
   return Number((totalMins / 60).toFixed(2))
-}
-
-function buildSessions(scans) {
-  const sorted = [...scans].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-  const sessions = []
-  let openEntrata = null
-  for (const scan of sorted) {
-    if (scan.tipo === 'ENTRATA') {
-      if (openEntrata) {
-        sessions.push({
-          entrata: openEntrata, uscita: null,
-          date: getLocalDateStr(openEntrata.created_at),
-          uscita_giorno_dopo: false, hours: 0, incomplete: true
-        })
-      }
-      openEntrata = scan
-    } else if (scan.tipo === 'USCITA') {
-      if (openEntrata) {
-        const ms = new Date(scan.created_at) - new Date(openEntrata.created_at)
-        sessions.push({
-          entrata: openEntrata, uscita: scan,
-          date: getLocalDateStr(openEntrata.created_at),
-          uscita_giorno_dopo: getLocalDateStr(scan.created_at) !== getLocalDateStr(openEntrata.created_at),
-          hours: ms > 0 ? ms / 3600000 : 0,
-          incomplete: false
-        })
-        openEntrata = null
-      } else {
-        // Lone USCITA: entrata dimenticata — resa visibile invece di essere ignorata
-        sessions.push({
-          entrata: null, uscita: scan,
-          date: getLocalDateStr(scan.created_at),
-          uscita_giorno_dopo: false, hours: 0, incomplete: true
-        })
-      }
-    }
-  }
-  if (openEntrata) {
-    sessions.push({
-      entrata: openEntrata, uscita: null,
-      date: getLocalDateStr(openEntrata.created_at),
-      uscita_giorno_dopo: false, hours: 0, incomplete: false
-    })
-  }
-  return sessions
-}
-
-function buildCoppie(sessions) {
-  return sessions.map(s => ({
-    entrata:             s.entrata ? new Date(s.entrata.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null,
-    uscita:              s.uscita  ? new Date(s.uscita.created_at).toLocaleTimeString('it-IT',  { hour: '2-digit', minute: '2-digit' }) : null,
-    entrata_id:          s.entrata?.id || null,
-    uscita_id:           s.uscita?.id  || null,
-    entrata_manuale:     s.entrata ? !!s.entrata.manuale    : false,
-    uscita_manuale:      s.uscita  ? !!s.uscita.manuale     : false,
-    entrata_automatica:  s.entrata ? !!s.entrata.automatica : false,
-    uscita_automatica:   s.uscita  ? !!s.uscita.automatica  : false,
-    uscita_giorno_dopo:  !!s.uscita_giorno_dopo,
-    incomplete:          !!s.incomplete
-  }))
-}
-
-function isInFerie(dateStr, ferie = []) {
-  return ferie.some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
 }
 
 async function autoInsertBreakTimbrature(supabase, dipendenteId, companyId, tagUid, todayReads, shift, dateStr) {
@@ -405,7 +315,6 @@ export default async function employeeRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (employeesError) {
-          console.log('Error querying dipendenti:', employeesError)
           return reply.send({ success: false, error: 'DB_DIPENDENTI', detail: employeesError.message })
         }
 
@@ -416,7 +325,6 @@ export default async function employeeRoutes(fastify) {
           .order('created_at', { ascending: true })
 
         if (readsError) {
-          console.log('Warning: presenza query failed, degrading gracefully', readsError)
         }
         const reads = readsRaw || []
 
@@ -495,7 +403,6 @@ export default async function employeeRoutes(fastify) {
               }
             }
           } catch (mapErr) {
-            console.log('Error mapping employee', emp.id, mapErr)
             return { ...emp, attivo: false, in_pausa: false, assente: false, stats: { total_reads: 0, today_reads: 0, month_reads: 0, total_hours: 0, last_read: null } }
           }
         })
@@ -504,7 +411,6 @@ export default async function employeeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log('GET /api/employees unhandled error:', err)
         return reply.send({ success: false, error: 'UNHANDLED', detail: err?.message })
 
       }
@@ -530,7 +436,7 @@ export default async function employeeRoutes(fastify) {
           .single()
 
         if (employeeError || !employee) {
-          console.log(employeeError)
+          request.log.error(employeeError)
           return reply.send({ success: false })
         }
 
@@ -542,7 +448,7 @@ export default async function employeeRoutes(fastify) {
           .order('created_at', { ascending: true })
 
         if (readsError) {
-          console.log(readsError)
+          request.log.error(readsError)
           return reply.send({ success: false })
         }
 
@@ -553,7 +459,7 @@ export default async function employeeRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (shiftsError) {
-          console.log(shiftsError)
+          request.log.error(shiftsError)
           return reply.send({ success: false })
         }
 
@@ -630,7 +536,7 @@ export default async function employeeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -669,7 +575,7 @@ export default async function employeeRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false, error })
         }
 
@@ -677,7 +583,7 @@ export default async function employeeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -710,7 +616,7 @@ export default async function employeeRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false })
         }
 
@@ -718,7 +624,7 @@ export default async function employeeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -741,7 +647,7 @@ export default async function employeeRoutes(fastify) {
           .eq('id', id)
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false })
         }
 
@@ -749,7 +655,7 @@ export default async function employeeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -783,7 +689,7 @@ export default async function employeeRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false })
         }
 
@@ -791,7 +697,7 @@ export default async function employeeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -834,7 +740,7 @@ export default async function employeeRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false, error: error.message })
         }
 
@@ -851,7 +757,7 @@ export default async function employeeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -906,7 +812,7 @@ export default async function employeeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -959,26 +865,20 @@ export default async function employeeRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false, error: error.message })
         }
 
         // Auto-insert missing break timbrature when a final USCITA is saved
         if (tipo === 'USCITA') {
           try {
-            console.log('[AUTO-INSERT] USCITA salvata, avvio controllo...')
             const { data: empFull, error: empErr } = await supabase.from('dipendenti').select('id, turni_attivi').eq('id', id).single()
-            console.log('[AUTO-INSERT] dipendente:', empFull, 'errore:', empErr)
             if (empFull?.turni_attivi) {
               const dateStr   = getLocalDateStr(ts)
               const newMins   = getLocalTimeMinutes(ts)
               const dayName   = getDayName(dateStr)
-              console.log('[AUTO-INSERT] dateStr:', dateStr, 'dayName:', dayName, 'newMins:', newMins)
               const { data: shifts, error: shiftsErr } = await supabase.from('turni').select('*').eq('dipendente_id', id)
-              console.log('[AUTO-INSERT] turni trovati:', shifts?.length, 'errore:', shiftsErr)
-              console.log('[AUTO-INSERT] turni:', JSON.stringify(shifts?.map(s => ({ g: s.giorno_settimana, u1: s.uscita_1, i2: s.ingresso_2 }))))
               const dayShift  = (shifts || []).find(s => s.giorno_settimana === dayName && s.uscita_1 && s.ingresso_2)
-              console.log('[AUTO-INSERT] turno doppio trovato:', dayShift ? `${dayShift.uscita_1}-${dayShift.ingresso_2}` : 'NO')
               if (dayShift && newMins >= timeToMinutes(dayShift.ingresso_2)) {
                 const { data: todayReads, error: readsErr } = await supabase.from('presenza')
                   .select('tipo, created_at')
@@ -987,20 +887,16 @@ export default async function employeeRoutes(fastify) {
                   .gte('created_at', `${dateStr}T00:00:00`)
                   .lte('created_at', `${dateStr}T23:59:59`)
                   .order('created_at', { ascending: true })
-                console.log('[AUTO-INSERT] reads oggi:', todayReads?.map(r => r.tipo), 'errore:', readsErr)
                 await autoInsertBreakTimbrature(supabase, id, companyId, employee.badge_uid, todayReads || [], dayShift, dateStr)
               } else {
-                console.log('[AUTO-INSERT] condizione non soddisfatta — dayShift:', !!dayShift, 'newMins >= ingresso_2:', newMins, '>=', dayShift ? timeToMinutes(dayShift.ingresso_2) : 'N/A')
               }
             } else {
-              console.log('[AUTO-INSERT] turni_attivi non abilitato, skip')
             }
-          } catch (err) { console.log('[AUTO-INSERT] ERRORE:', err) }
         }
 
         return reply.send({ success: true, presenza: data })
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
       }
     }
@@ -1050,13 +946,13 @@ export default async function employeeRoutes(fastify) {
           .eq('id', id)
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false })
         }
 
         return reply.send({ success: true })
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
       }
     }
@@ -1098,13 +994,13 @@ export default async function employeeRoutes(fastify) {
           .from('presenza').update(updates).eq('id', id).select().single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false, error: error.message })
         }
 
         return reply.send({ success: true, presenza: data })
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
       }
     }
@@ -1130,7 +1026,7 @@ export default async function employeeRoutes(fastify) {
         return reply.send({ success: true, ...data })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
@@ -1152,7 +1048,7 @@ export default async function employeeRoutes(fastify) {
         auto_cleanup_retention_months:   data?.auto_cleanup_retention_months ?? 12
       })
     } catch (err) {
-      console.log(err)
+      request.log.error(err)
       return reply.status(500).send({ success: false })
     }
   })
@@ -1178,12 +1074,11 @@ export default async function employeeRoutes(fastify) {
           cleanup.auto_cleanup_retention_months = isNaN(m) ? 12 : Math.max(1, Math.min(120, m))
         }
         const { error: cErr } = await supabase.from('company').update(cleanup).eq('id', req.user.company_id)
-        if (cErr) console.log('auto_cleanup settings skipped (migration pending):', cErr.message)
       }
 
       return reply.send({ success: true })
     } catch (err) {
-      console.log(err)
+      request.log.error(err)
       return reply.status(500).send({ success: false })
     }
   })
@@ -1222,7 +1117,7 @@ export default async function employeeRoutes(fastify) {
       }
       return reply.send({ success: true, deleted: idsToDelete.length })
     } catch (err) {
-      console.log(err)
+      request.log.error(err)
       return reply.status(500).send({ success: false })
     }
   })
@@ -1292,7 +1187,6 @@ export default async function employeeRoutes(fastify) {
             .update({ username, email: newEmail, password: hashedPwd, dipendente_id: id })
             .eq('id', account.id)
           if (updateError) {
-            console.log('Error updating account:', updateError)
             return reply.send({ success: false, error: 'ACCOUNT_UPDATE_FAILED', detail: updateError.message })
           }
         } else {
@@ -1313,7 +1207,6 @@ export default async function employeeRoutes(fastify) {
             two_factor_enabled: false
           })
           if (insertError) {
-            console.log('Error creating account:', insertError)
             return reply.send({ success: false, error: 'ACCOUNT_CREATE_FAILED', detail: insertError.message })
           }
         }
@@ -1322,12 +1215,11 @@ export default async function employeeRoutes(fastify) {
           const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
           await sendCredenziali({ email: newEmail, nome: newNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
           credenziali_inviate = true
-        } catch (e) { console.log('sendCredenziali error:', e?.message) }
       }
 
       return reply.send({ success: true, credenziali_inviate })
     } catch (err) {
-      console.log(err)
+      request.log.error(err)
       return reply.status(500).send({ success: false })
     }
   })
@@ -1354,7 +1246,7 @@ export default async function employeeRoutes(fastify) {
 
       return reply.send({ success: true })
     } catch (err) {
-      console.log(err)
+      request.log.error(err)
       return reply.status(500).send({ success: false })
     }
   })

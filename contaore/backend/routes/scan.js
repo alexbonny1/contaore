@@ -2,9 +2,7 @@ import { supabase }    from '../services/supabase.js'
 import { authenticate } from '../middleware/auth.js'
 import latestReads      from '../state/LatestReads.js'
 import { onBadgeNonRiconosciuto, onRitardo } from '../services/notifiche.js'
-
-const GIORNI_IT = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato']
-function timeMins(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+import { GIORNI, timeToMinutes } from '../utils/timeHelpers.js'
 
 export default async function scanRoutes(fastify) {
 
@@ -156,7 +154,7 @@ export default async function scanRoutes(fastify) {
                 tipo:       effectiveTipo
               })
               if (insertErr) {
-                console.log(insertErr)
+                request.log.error(insertErr)
                 return reply.send({ success: false })
               }
               if (effectiveTipo === 'ENTRATA') onRitardo({ uid, companyId: readerCompanyId })
@@ -175,7 +173,7 @@ export default async function scanRoutes(fastify) {
 
             if (emp?.turni_attivi) {
               const now     = new Date()
-              const dayName = GIORNI_IT[now.getDay()]
+              const dayName = GIORNI[now.getDay()]
               const nowMins = now.getHours() * 60 + now.getMinutes()
               const todayStr = now.toISOString().split('T')[0]
 
@@ -191,11 +189,11 @@ export default async function scanRoutes(fastify) {
                 if (!hasEntrataToday) {
                   const inShiftWindow = turni.some(t => {
                     if (!t.ingresso_1 || !t.uscita_1) return false
-                    const ingr  = timeMins(t.ingresso_1)
-                    const usc1  = timeMins(t.uscita_1)
-                    const usc2  = t.uscita_2 ? timeMins(t.uscita_2) : null
+                    const ingr  = timeToMinutes(t.ingresso_1)
+                    const usc1  = timeToMinutes(t.uscita_1)
+                    const usc2  = t.uscita_2 ? timeToMinutes(t.uscita_2) : null
                     const inF1  = nowMins >= ingr  && nowMins <= usc1 + 120
-                    const inF2  = usc2 && t.ingresso_2 && nowMins >= timeMins(t.ingresso_2) && nowMins <= usc2 + 120
+                    const inF2  = usc2 && t.ingresso_2 && nowMins >= timeToMinutes(t.ingresso_2) && nowMins <= usc2 + 120
                     return inF1 || inF2
                   })
                   if (inShiftWindow) sessionOpen = true // no ENTRATA today + in shift window → USCITA
@@ -217,7 +215,7 @@ export default async function scanRoutes(fastify) {
           })
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.send({ success: false })
         }
 
@@ -230,7 +228,7 @@ export default async function scanRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -269,7 +267,7 @@ export default async function scanRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }

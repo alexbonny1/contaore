@@ -43,7 +43,7 @@ export default async function notificheRoutes(fastify) {
 
       return reply.send({ success: true, settings })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.send({ success: false })
     }
   })
@@ -83,13 +83,13 @@ export default async function notificheRoutes(fastify) {
         .single()
 
       if (error) {
-        console.error(error)
+        request.log.error(error)
         return reply.send({ success: false, error: error.message })
       }
 
       return reply.send({ success: true, setting: data })
     } catch (err) {
-      console.error(err)
+      request.log.error(err)
       return reply.send({ success: false })
     }
   })

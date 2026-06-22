@@ -43,7 +43,7 @@ export default function EmployeeTurni() {
         setTurni(data.employee.shifts || []);
         setTurniAttivi(!!data.employee.turni_attivi);
       }
-    } catch (err) { console.log(err); }
+    } catch (err) { }
     finally { setLoading(false); }
   }
 
@@ -82,7 +82,7 @@ export default function EmployeeTurni() {
       }
       resetForm();
       loadData();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
     finally { setSaving(false); }
   }
 
@@ -94,7 +94,7 @@ export default function EmployeeTurni() {
       const data  = await res.json();
       if (!data.success) { showToast("Errore eliminazione", "error"); return; }
       loadData();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
   }
 
   async function toggleTurni() {
@@ -108,7 +108,7 @@ export default function EmployeeTurni() {
         body: JSON.stringify({ turni_attivi: value })
       });
       loadData();
-    } catch (err) { console.log(err); }
+    } catch (err) { }
   }
 
   function startEditShift(shift) {

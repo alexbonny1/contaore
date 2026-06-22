@@ -81,7 +81,6 @@ export default function Readers() {
       const data =
         await response.json();
 
-      console.log(data);
 
       if (data.success) {
 
@@ -93,7 +92,6 @@ export default function Readers() {
 
     } catch (err) {
 
-      console.log(err);
 
     }
 

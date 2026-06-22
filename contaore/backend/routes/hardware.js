@@ -1,18 +1,7 @@
 import { supabase } from '../services/supabase.js'
 import latestReads from '../state/LatestReads.js'
 import { onComponenteErrore } from '../services/notifiche.js'
-
-/*
-────────────────────────────────────
-HELPERS
-────────────────────────────────────
-*/
-
-function timeToMinutes(timeStr) {
-  if (!timeStr) return null
-  const parts = timeStr.split(':')
-  return parseInt(parts[0]) * 60 + parseInt(parts[1])
-}
+import { timeToMinutes } from '../utils/timeHelpers.js'
 
 function nowMinutes() {
   const now = new Date()
@@ -195,7 +184,7 @@ export default async function hardwareRoutes(fastify) {
 
       } catch (err) {
 
-        console.error(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }
@@ -409,7 +398,7 @@ export default async function hardwareRoutes(fastify) {
 
       } catch (err) {
 
-        console.error(err)
+        request.log.error(err)
         return reply.send({ success: false })
 
       }

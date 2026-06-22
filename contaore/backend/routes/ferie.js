@@ -28,14 +28,14 @@ export default async function ferieRoutes(fastify) {
         const { data, error } = await query
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, ferie: data || [] })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -84,7 +84,7 @@ export default async function ferieRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
@@ -103,7 +103,7 @@ export default async function ferieRoutes(fastify) {
         return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -153,7 +153,7 @@ export default async function ferieRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
@@ -171,7 +171,7 @@ export default async function ferieRoutes(fastify) {
         return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -205,14 +205,14 @@ export default async function ferieRoutes(fastify) {
         const { data, error } = await query
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, giustificazioni: data || [] })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -250,14 +250,14 @@ export default async function ferieRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, giustificazione: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -295,14 +295,14 @@ export default async function ferieRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, giustificazione: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -394,7 +394,7 @@ export default async function ferieRoutes(fastify) {
         })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -427,7 +427,7 @@ export default async function ferieRoutes(fastify) {
         return reply.send({ success: true })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }

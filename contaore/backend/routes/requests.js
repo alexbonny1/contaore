@@ -88,14 +88,14 @@ export default async function requestsRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richiesta: result })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -119,14 +119,14 @@ export default async function requestsRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richieste: data || [] })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -167,7 +167,7 @@ export default async function requestsRoutes(fastify) {
         return reply.send({ success: true })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -232,14 +232,14 @@ export default async function requestsRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richiesta: result })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -273,14 +273,14 @@ export default async function requestsRoutes(fastify) {
         const { data, error } = await query
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richieste: data || [] })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -326,7 +326,7 @@ export default async function requestsRoutes(fastify) {
             .eq('company_id', company_id)
 
           if (updateError) {
-            console.log(updateError)
+            request.log.error(updateError)
             return reply.status(500).send({ error: 'PRESENCE_UPDATE_ERROR' })
           }
         } else {
@@ -347,7 +347,7 @@ export default async function requestsRoutes(fastify) {
             .single()
 
           if (presenzaError) {
-            console.log(presenzaError)
+            request.log.error(presenzaError)
             return reply.status(500).send({ error: 'PRESENCE_INSERT_ERROR' })
           }
         }
@@ -365,14 +365,14 @@ export default async function requestsRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -420,14 +420,14 @@ export default async function requestsRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -459,7 +459,7 @@ export default async function requestsRoutes(fastify) {
         return reply.send({ success: true })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -507,14 +507,14 @@ export default async function requestsRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -562,14 +562,14 @@ export default async function requestsRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -617,14 +617,14 @@ export default async function requestsRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -672,14 +672,14 @@ export default async function requestsRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, richiesta: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }

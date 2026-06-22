@@ -22,14 +22,14 @@ export default async function pauseRoutes(fastify) {
           .order('data_inizio', { ascending: true })
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, pause: data || [] })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -138,14 +138,14 @@ export default async function pauseRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'INSERT_ERROR', detail: error.message })
         }
 
         return reply.send({ success: true, tipo: 'pausa_aziendale', pausa })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -186,14 +186,14 @@ export default async function pauseRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'UPDATE_ERROR' })
         }
 
         return reply.send({ success: true, pausa: updated })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }

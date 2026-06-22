@@ -87,17 +87,18 @@ function AppWithInactivity2FA() {
   );
 }
 
-// fix ngrok in dev
-const originalFetch = window.fetch;
-window.fetch = (url, options = {}) => {
-  if (typeof url === "string" && url.includes("ngrok")) {
-    options.headers = {
-      "ngrok-skip-browser-warning": "1",
-      ...options.headers,
-    };
-  }
-  return originalFetch(url, options);
-};
+if (import.meta.env.DEV) {
+  const originalFetch = window.fetch;
+  window.fetch = (url, options = {}) => {
+    if (typeof url === "string" && url.includes("ngrok")) {
+      options.headers = {
+        "ngrok-skip-browser-warning": "1",
+        ...options.headers,
+      };
+    }
+    return originalFetch(url, options);
+  };
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

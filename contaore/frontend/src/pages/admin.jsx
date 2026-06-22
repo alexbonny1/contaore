@@ -229,7 +229,6 @@ export default function Admin() {
       const data = await response.json();
       if (data.success) setCompanies(data.companies || []);
     } catch (err) {
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -270,7 +269,6 @@ export default function Admin() {
       }
       loadCompanies();
     } catch (err) {
-      console.error(err);
       setError("Errore di connessione");
     } finally {
       setSaving(false);
@@ -296,7 +294,6 @@ export default function Admin() {
       showToast("Azienda eliminata");
       loadCompanies();
     } catch (err) {
-      console.error(err);
       showToast("Errore di connessione", "error");
     }
   }
@@ -321,7 +318,6 @@ export default function Admin() {
         showToast("Password aggiornata — email non inviata", "error");
       }
     } catch (err) {
-      console.error(err);
       showToast("Errore di connessione", "error");
     } finally {
       setResetLoading(false);
@@ -346,7 +342,6 @@ export default function Admin() {
         prev.map(c => c.id === companyId ? { ...c, portale_dipendenti: !attivoAttuale } : c)
       );
     } catch (err) {
-      console.error(err);
       showToast("Errore di connessione", "error");
     } finally {
       setTogglingPortale(null);
@@ -489,7 +484,6 @@ export default function Admin() {
       showToast("Fascia oraria aggiunta");
       loadCompanies();
     } catch (err) {
-      console.error(err);
       showToast("Errore di connessione", "error");
     } finally {
       setSavingFascia(false);
@@ -515,7 +509,6 @@ export default function Admin() {
       showToast("Fascia eliminata");
       loadCompanies();
     } catch (err) {
-      console.error(err);
       showToast("Errore di connessione", "error");
     }
   }

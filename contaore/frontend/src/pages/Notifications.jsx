@@ -346,7 +346,7 @@ export default function Notifications() {
       const res  = await fetch(`${API_URL}/api/notifications/settings`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.success) setSettings(data.settings || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { }
     finally { setLoading(false); }
   }
 
@@ -359,7 +359,7 @@ export default function Notifications() {
       const [empData, readerData] = await Promise.all([empRes.json(), readerRes.json()]);
       if (empData.success)    setEmployees((empData.employees || []).map(e => ({ id: e.id, nome: e.nome })));
       if (readerData.success) setReaders((readerData.readers || []).map(r => ({ id: r.id, nome: r.nome || r.reader_id })));
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   }
 
   const saveDebounceRef = {};
@@ -386,7 +386,6 @@ export default function Notifications() {
           setToast({ msg: "Errore salvataggio", type: "error" });
         }
       } catch (e) {
-        console.error(e);
         setToast({ msg: "Errore server", type: "error" });
       } finally { setSaving(false); }
     }, 600);

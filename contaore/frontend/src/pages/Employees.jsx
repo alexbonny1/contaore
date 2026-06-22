@@ -263,7 +263,6 @@ function ExportModal({ employees, onClose, token, initialIds }) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -296,7 +295,6 @@ function ExportModal({ employees, onClose, token, initialIds }) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -610,10 +608,8 @@ export default function Employees() {
         setApiError(true);
         const detail = data.detail || data.error || 'Errore sconosciuto';
         setApiErrorDetail(detail);
-        console.log('GET /api/employees error:', data);
       }
     } catch (err) {
-      console.log(err);
       setApiError(true);
       setApiErrorDetail(err?.message || 'Network error');
     } finally {

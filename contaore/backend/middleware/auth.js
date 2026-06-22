@@ -16,7 +16,7 @@ export async function authenticate(request, reply) {
     const decoded = jwt.verify(token, JWT_SECRET)
     request.user  = decoded
   } catch (err) {
-    console.log(err)
+    request.log.error(err)
     return reply.status(401).send({ error: 'INVALID_TOKEN' })
   }
 }
@@ -35,7 +35,7 @@ export async function authenticateSuperadmin(request, reply) {
     }
     request.user = decoded
   } catch (err) {
-    console.log(err)
+    request.log.error(err)
     return reply.status(401).send({ error: 'INVALID_TOKEN' })
   }
 }
@@ -54,7 +54,7 @@ export async function authenticateOwner(request, reply) {
     }
     request.user = decoded
   } catch (err) {
-    console.log(err)
+    request.log.error(err)
     return reply.status(401).send({ error: 'INVALID_TOKEN' })
   }
 }
@@ -73,7 +73,7 @@ export async function authenticateDipendente(request, reply) {
     }
     request.user = decoded
   } catch (err) {
-    console.log(err)
+    request.log.error(err)
     return reply.status(401).send({ error: 'INVALID_TOKEN' })
   }
 }
@@ -89,7 +89,7 @@ export async function authenticateWithInactivity(request, reply) {
     const decoded = jwt.verify(token, JWT_SECRET)
     request.user = decoded
   } catch (err) {
-    console.log(err)
+    request.log.error(err)
     return reply.status(401).send({ error: 'INVALID_TOKEN' })
   }
 }
@@ -138,7 +138,7 @@ export async function checkInactivity(request, reply) {
       status: 'INACTIVITY_2FA_REQUIRED'
     })
   } catch (err) {
-    console.log(err)
+    request.log.error(err)
     return reply.status(401).send({ error: 'INVALID_TOKEN' })
   }
 }

@@ -93,7 +93,7 @@ export default function Badges() {
       const res   = await fetch(API_URL + "/api/tags", { headers: { Authorization: `Bearer ${token}` } });
       const data  = await res.json();
       if (data.success) setBadges(data.tags || []);
-    } catch (err) { console.log(err); }
+    } catch (err) { }
   }
 
   // ─── polling NFC ────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ export default function Badges() {
           setWaitingScan(false);
           clearInterval(interval);
         }
-      } catch (err) { console.log(err); }
+      } catch (err) { }
     }, 1000);
     return () => clearInterval(interval);
   }, [waitingScan]);
@@ -162,7 +162,6 @@ export default function Badges() {
       loadBadges();
 
     } catch (err) {
-      console.log(err);
       showToast("Errore server", "error");
     }
   }
@@ -184,7 +183,7 @@ export default function Badges() {
       if (!data.success) { showToast(data.error || "Errore", "error"); return; }
       showToast("Badge eliminato");
       loadBadges();
-    } catch (err) { console.log(err); showToast("Errore server", "error"); }
+    } catch (err) { showToast("Errore server", "error"); }
   }
 
   function startEditUid(badge) {

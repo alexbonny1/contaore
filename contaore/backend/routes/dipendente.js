@@ -5,70 +5,9 @@ import { sendNotificaRichiestaFerie, sendCredenziali } from '../services/email.j
 import { generatePassword } from '../utils/userHelpers.js'
 import {
   GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours,
-  getLocalDateStr, getLocalTimeMinutes, getLocalDayOfWeek
+  getLocalDateStr, getLocalTimeMinutes, getLocalDayOfWeek,
+  buildSessions, buildCoppie, computeBreakDeductionMins, isInFerie
 } from '../utils/timeHelpers.js'
-
-function buildSessions(scans) {
-  const sorted = [...scans].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-  const sessions = []
-  let openEntrata = null
-  for (const scan of sorted) {
-    if (scan.tipo === 'ENTRATA') {
-      if (openEntrata) {
-        sessions.push({
-          entrata: openEntrata, uscita: null,
-          date: getLocalDateStr(openEntrata.created_at),
-          uscita_giorno_dopo: false, hours: 0, incomplete: true
-        })
-      }
-      openEntrata = scan
-    } else if (scan.tipo === 'USCITA') {
-      if (openEntrata) {
-        const ms = new Date(scan.created_at) - new Date(openEntrata.created_at)
-        sessions.push({
-          entrata: openEntrata, uscita: scan,
-          date: getLocalDateStr(openEntrata.created_at),
-          uscita_giorno_dopo: getLocalDateStr(scan.created_at) !== getLocalDateStr(openEntrata.created_at),
-          hours: ms > 0 ? ms / 3600000 : 0,
-          incomplete: false
-        })
-        openEntrata = null
-      } else {
-        sessions.push({
-          entrata: null, uscita: scan,
-          date: getLocalDateStr(scan.created_at),
-          uscita_giorno_dopo: false, hours: 0, incomplete: true
-        })
-      }
-    }
-  }
-  if (openEntrata) {
-    sessions.push({
-      entrata: openEntrata, uscita: null,
-      date: getLocalDateStr(openEntrata.created_at),
-      uscita_giorno_dopo: false, hours: 0, incomplete: false
-    })
-  }
-  return sessions
-}
-
-function buildCoppie(sessions) {
-  return sessions.map(s => ({
-    entrata:            s.entrata ? new Date(s.entrata.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null,
-    uscita:             s.uscita  ? new Date(s.uscita.created_at).toLocaleTimeString('it-IT',  { hour: '2-digit', minute: '2-digit' }) : null,
-    entrata_id:         s.entrata?.id || null,
-    uscita_id:          s.uscita?.id  || null,
-    entrata_manuale:    s.entrata ? !!s.entrata.manuale : false,
-    uscita_manuale:     s.uscita  ? !!s.uscita.manuale  : false,
-    uscita_giorno_dopo: !!s.uscita_giorno_dopo,
-    incomplete:         !!s.incomplete
-  }))
-}
-
-// ─── controlla se una data cade in un periodo di ferie approvate ──────────────
-function isInFerie(dateStr, ferie = []) {
-  return ferie.some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
-}
 
 function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, snapToShift = false) {
 
@@ -347,7 +286,7 @@ export default async function dipendenteRoutes(fastify) {
         })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -402,14 +341,14 @@ export default async function dipendenteRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
         return reply.send({ success: true, giustificazione: result })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -470,7 +409,7 @@ export default async function dipendenteRoutes(fastify) {
         })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -535,7 +474,7 @@ export default async function dipendenteRoutes(fastify) {
           .single()
 
         if (error) {
-          console.log(error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
@@ -570,13 +509,12 @@ export default async function dipendenteRoutes(fastify) {
             })
           }
         } catch (mailErr) {
-          console.log('Notifica email non inviata:', mailErr.message)
         }
 
         return reply.send({ success: true, richiesta })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -617,7 +555,7 @@ export default async function dipendenteRoutes(fastify) {
         return reply.send({ success: true })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -641,14 +579,14 @@ export default async function dipendenteRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.log('Error fetching richieste_permessi:', error)
+          request.log.error(error)
           return reply.send({ success: true, richieste: [] })
         }
 
         return reply.send({ success: true, richieste: richieste || [] })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: true, richieste: [] })
       }
     }
@@ -672,14 +610,14 @@ export default async function dipendenteRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.log('Error fetching richieste_turni:', error)
+          request.log.error(error)
           return reply.send({ success: true, richieste: [] })
         }
 
         return reply.send({ success: true, richieste: richieste || [] })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.send({ success: true, richieste: [] })
       }
     }
@@ -719,14 +657,14 @@ export default async function dipendenteRoutes(fastify) {
         })
 
         if (error) {
-          console.log('Insert richiesta_permesso error:', error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'INSERT_FAILED' })
         }
 
         return reply.send({ success: true, message: 'Richiesta permesso inviata' })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -767,7 +705,7 @@ export default async function dipendenteRoutes(fastify) {
         return reply.send({ success: true })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -810,14 +748,14 @@ export default async function dipendenteRoutes(fastify) {
         })
 
         if (error) {
-          console.log('Insert richiesta_turni error:', error)
+          request.log.error(error)
           return reply.status(500).send({ error: 'INSERT_FAILED' })
         }
 
         return reply.send({ success: true, message: 'Richiesta modifica turni inviata' })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -858,7 +796,7 @@ export default async function dipendenteRoutes(fastify) {
         return reply.send({ success: true })
 
       } catch (err) {
-        console.log(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -962,7 +900,7 @@ export default async function dipendenteRoutes(fastify) {
         return reply.send({ success: true, credenziali_reinviate: false })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }
@@ -1014,7 +952,7 @@ export default async function dipendenteRoutes(fastify) {
         return reply.send({ success: true })
 
       } catch (err) {
-        console.error(err)
+        request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
     }

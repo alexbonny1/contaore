@@ -69,3 +69,93 @@ export function getLocalDayOfWeek(dateStr, timezone = 'Europe/Rome') {
 export function getDayName(dateStr) {
   return GIORNI[getLocalDayOfWeek(dateStr)]
 }
+
+export function buildSessions(scans) {
+  const sorted = [...scans].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const sessions = []
+  let openEntrata = null
+  for (const scan of sorted) {
+    if (scan.tipo === 'ENTRATA') {
+      if (openEntrata) {
+        sessions.push({
+          entrata: openEntrata, uscita: null,
+          date: getLocalDateStr(openEntrata.created_at),
+          uscita_giorno_dopo: false, hours: 0, incomplete: true
+        })
+      }
+      openEntrata = scan
+    } else if (scan.tipo === 'USCITA') {
+      if (openEntrata) {
+        const ms = new Date(scan.created_at) - new Date(openEntrata.created_at)
+        sessions.push({
+          entrata: openEntrata, uscita: scan,
+          date: getLocalDateStr(openEntrata.created_at),
+          uscita_giorno_dopo: getLocalDateStr(scan.created_at) !== getLocalDateStr(openEntrata.created_at),
+          hours: ms > 0 ? ms / 3600000 : 0,
+          incomplete: false
+        })
+        openEntrata = null
+      } else {
+        // Lone USCITA: entrata dimenticata — resa visibile invece di essere ignorata
+        sessions.push({
+          entrata: null, uscita: scan,
+          date: getLocalDateStr(scan.created_at),
+          uscita_giorno_dopo: false, hours: 0, incomplete: true
+        })
+      }
+    }
+  }
+  if (openEntrata) {
+    sessions.push({
+      entrata: openEntrata, uscita: null,
+      date: getLocalDateStr(openEntrata.created_at),
+      uscita_giorno_dopo: false, hours: 0, incomplete: false
+    })
+  }
+  return sessions
+}
+
+export function buildCoppie(sessions) {
+  return sessions.map(s => ({
+    entrata:             s.entrata ? new Date(s.entrata.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null,
+    uscita:              s.uscita  ? new Date(s.uscita.created_at).toLocaleTimeString('it-IT',  { hour: '2-digit', minute: '2-digit' }) : null,
+    entrata_id:          s.entrata?.id || null,
+    uscita_id:           s.uscita?.id  || null,
+    entrata_manuale:     s.entrata ? !!s.entrata.manuale    : false,
+    uscita_manuale:      s.uscita  ? !!s.uscita.manuale     : false,
+    entrata_automatica:  s.entrata ? !!s.entrata.automatica : false,
+    uscita_automatica:   s.uscita  ? !!s.uscita.automatica  : false,
+    uscita_giorno_dopo:  !!s.uscita_giorno_dopo,
+    incomplete:          !!s.incomplete
+  }))
+}
+
+// Minutes of shift-break time that the employee "covered" without explicit badge
+export function computeBreakDeductionMins(sortedReads, breakStartMins, breakEndMins) {
+  let deductionMins   = 0
+  let lastEntrataMins = null
+  const nowMins = getLocalTimeMinutes(new Date().toISOString())
+
+  for (const read of sortedReads) {
+    const readMins = getLocalTimeMinutes(read.created_at)
+    if (read.tipo === 'ENTRATA') {
+      lastEntrataMins = readMins
+    } else if (read.tipo === 'USCITA' && lastEntrataMins !== null) {
+      const winStart = Math.max(lastEntrataMins, breakStartMins)
+      const winEnd   = Math.min(readMins, breakEndMins)
+      if (winEnd > winStart) deductionMins += winEnd - winStart
+      lastEntrataMins = null
+    }
+  }
+  // Employee still inside — deduct break time that has already elapsed
+  if (lastEntrataMins !== null) {
+    const winStart = Math.max(lastEntrataMins, breakStartMins)
+    const winEnd   = Math.min(nowMins, breakEndMins)
+    if (winEnd > winStart) deductionMins += winEnd - winStart
+  }
+  return deductionMins
+}
+
+export function isInFerie(dateStr, ferie = []) {
+  return ferie.some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
+}

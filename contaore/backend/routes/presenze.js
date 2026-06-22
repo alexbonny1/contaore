@@ -34,7 +34,7 @@ export default async function presenzeRoutes(fastify) {
 
         if (error) {
 
-          console.log(error)
+          request.log.error(error)
 
           return reply.send({
             success: false
@@ -52,7 +52,7 @@ export default async function presenzeRoutes(fastify) {
 
       } catch (err) {
 
-        console.log(err)
+        request.log.error(err)
 
         return reply.send({
           success: false
