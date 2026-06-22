@@ -368,27 +368,32 @@ export default async function userSettingsRoutes(fastify) {
         .eq('id', userId)
         .single()
 
-      const updateData = {}
-      if (nome !== undefined)    updateData.nome    = nome?.trim()    || null
-      if (cognome !== undefined) updateData.cognome = cognome?.trim() || null
-      if (email !== undefined)   updateData.email   = email?.trim()   || null
-
-      const { error: updateErr } = await supabase
-        .from('user_account')
-        .update(updateData)
-        .eq('id', userId)
-
-      if (updateErr) {
-        console.error('owner profile update:', updateErr.message)
-        return reply.status(500).send({ error: 'SERVER_ERROR' })
+      // Update email — colonna garantita
+      const baseUpdate = {}
+      if (email !== undefined) baseUpdate.email = email?.trim() || null
+      if (Object.keys(baseUpdate).length > 0) {
+        const { error: updateErr } = await supabase
+          .from('user_account')
+          .update(baseUpdate)
+          .eq('id', userId)
+        if (updateErr) {
+          console.error('owner profile update:', updateErr.message)
+          return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
       }
 
-      // Se nome, cognome o email sono cambiati → genera nuova password e reinvia credenziali
-      const nomeChanged    = nome !== undefined    && (nome?.trim()    || null) !== (currentUser?.nome    || null)
-      const cognomeChanged = cognome !== undefined && (cognome?.trim() || null) !== (currentUser?.cognome || null)
-      const emailChanged   = email !== undefined   && (email?.trim()   || null) !== (currentUser?.email   || null)
+      // Update nome/cognome — silente se colonne non esistono ancora
+      const extUpdate = {}
+      if (nome !== undefined)    extUpdate.nome    = nome?.trim()    || null
+      if (cognome !== undefined) extUpdate.cognome = cognome?.trim() || null
+      if (Object.keys(extUpdate).length > 0) {
+        await supabase.from('user_account').update(extUpdate).eq('id', userId).catch(() => {})
+      }
 
-      if (nomeChanged || cognomeChanged || emailChanged) {
+      // Rigenera password e reinvia credenziali solo se cambia l'email
+      const emailChanged = email !== undefined && (email?.trim() || null) !== (currentUser?.email || null)
+
+      if (emailChanged) {
         const emailDest = email?.trim() || currentUser?.email
         if (emailDest) {
           const newPwd    = generatePassword()
