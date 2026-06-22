@@ -38,7 +38,7 @@ export default function SettingsProfilo() {
       const json = await res.json();
       if (json.success) {
         setProfile(json.profile);
-        setEditNome(json.profile.nome || "");
+        setEditNome(json.profile.nome || json.profile.username || "");
         setEditCognome(json.profile.cognome || "");
         setEditEmail(json.profile.email || "");
       }
@@ -47,7 +47,7 @@ export default function SettingsProfilo() {
   }
 
   function startEdit() {
-    setEditNome(profile.nome || "");
+    setEditNome(profile.nome || profile.username || "");
     setEditCognome(profile.cognome || "");
     setEditEmail(profile.email || "");
     setEditing(true);
