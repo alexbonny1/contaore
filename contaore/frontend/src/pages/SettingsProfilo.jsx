@@ -8,7 +8,13 @@ export default function SettingsProfilo() {
   const token    = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  const [profile, setProfile]             = useState({ nome: "", cognome: "", email: "", username: "" });
+  // Precarica da localStorage così username/email sono visibili subito
+  const [profile, setProfile]             = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      return { nome: u.nome || "", cognome: u.cognome || "", email: u.email || "", username: u.username || "" };
+    } catch { return { nome: "", cognome: "", email: "", username: "" }; }
+  });
   const [loading, setLoading]             = useState(true);
   const [editing, setEditing]             = useState(false);
   const [editNome, setEditNome]           = useState("");
