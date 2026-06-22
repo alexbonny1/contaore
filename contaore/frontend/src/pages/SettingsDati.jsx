@@ -2,13 +2,45 @@ import { useEffect, useState } from "react";
 import { API_URL } from "../api";
 import { Toast, Toggle, SettingsHeader } from "../components/SettingsUI";
 
-const MESI = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+const MESI = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 
 function meseLabelFromInput(value) {
-  // value = "YYYY-MM"
   if (!value) return null;
   const [y, m] = value.split("-").map(Number);
-  return `${MESI[m - 1]} ${y}`;
+  return `${MESI[m - 1].toLowerCase()} ${y}`;
+}
+
+const annoCorrente = new Date().getFullYear();
+const ANNI = Array.from({ length: 5 }, (_, i) => annoCorrente - i);
+
+function MeseSelector({ value, onChange }) {
+  const meseVal = value ? Number(value.split("-")[1]) : "";
+  const annoVal = value ? Number(value.split("-")[0]) : annoCorrente;
+
+  function aggiorna(nuovoMese, nuovoAnno) {
+    if (!nuovoMese) { onChange(""); return; }
+    onChange(`${nuovoAnno}-${String(nuovoMese).padStart(2, "0")}`);
+  }
+
+  return (
+    <div className="flex gap-2">
+      <select
+        value={meseVal}
+        onChange={e => aggiorna(e.target.value, annoVal)}
+        className="flex-1 h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+      >
+        <option value="">Seleziona mese</option>
+        {MESI.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+      </select>
+      <select
+        value={annoVal}
+        onChange={e => aggiorna(meseVal, e.target.value)}
+        className="w-28 h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+      >
+        {ANNI.map(a => <option key={a} value={a}>{a}</option>)}
+      </select>
+    </div>
+  );
 }
 
 const RETENTION_OPTS = [
@@ -143,8 +175,7 @@ export default function SettingsDati() {
           {modo === "mese" ? (
             <div className="space-y-2">
               <p className="text-xs text-zinc-500">Verranno eliminate tutte le timbrature del mese scelto</p>
-              <input type="month" value={mese} onChange={e => setMese(e.target.value)}
-                className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+              <MeseSelector value={mese} onChange={setMese} />
             </div>
           ) : (
             <div className="space-y-2">
