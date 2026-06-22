@@ -872,15 +872,15 @@ export default async function employeeRoutes(fastify) {
         // Auto-insert missing break timbrature when a final USCITA is saved
         if (tipo === 'USCITA') {
           try {
-            const { data: empFull, error: empErr } = await supabase.from('dipendenti').select('id, turni_attivi').eq('id', id).single()
+            const { data: empFull } = await supabase.from('dipendenti').select('id, turni_attivi').eq('id', id).single()
             if (empFull?.turni_attivi) {
-              const dateStr   = getLocalDateStr(ts)
-              const newMins   = getLocalTimeMinutes(ts)
-              const dayName   = getDayName(dateStr)
-              const { data: shifts, error: shiftsErr } = await supabase.from('turni').select('*').eq('dipendente_id', id)
-              const dayShift  = (shifts || []).find(s => s.giorno_settimana === dayName && s.uscita_1 && s.ingresso_2)
+              const dateStr  = getLocalDateStr(ts)
+              const newMins  = getLocalTimeMinutes(ts)
+              const dayName  = getDayName(dateStr)
+              const { data: shifts } = await supabase.from('turni').select('*').eq('dipendente_id', id)
+              const dayShift = (shifts || []).find(s => s.giorno_settimana === dayName && s.uscita_1 && s.ingresso_2)
               if (dayShift && newMins >= timeToMinutes(dayShift.ingresso_2)) {
-                const { data: todayReads, error: readsErr } = await supabase.from('presenza')
+                const { data: todayReads } = await supabase.from('presenza')
                   .select('tipo, created_at')
                   .eq('tag_uid', employee.badge_uid)
                   .eq('company_id', companyId)
@@ -888,10 +888,9 @@ export default async function employeeRoutes(fastify) {
                   .lte('created_at', `${dateStr}T23:59:59`)
                   .order('created_at', { ascending: true })
                 await autoInsertBreakTimbrature(supabase, id, companyId, employee.badge_uid, todayReads || [], dayShift, dateStr)
-              } else {
               }
-            } else {
             }
+          } catch (_) {}
         }
 
         return reply.send({ success: true, presenza: data })
@@ -1215,6 +1214,7 @@ export default async function employeeRoutes(fastify) {
           const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
           await sendCredenziali({ email: newEmail, nome: newNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
           credenziali_inviate = true
+        } catch (_) {}
       }
 
       return reply.send({ success: true, credenziali_inviate })
