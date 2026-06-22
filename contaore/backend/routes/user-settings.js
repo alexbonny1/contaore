@@ -361,28 +361,33 @@ export default async function userSettingsRoutes(fastify) {
         return reply.status(400).send({ error: 'EMAIL_INVALID' })
       }
 
-      // Carica dati attuali — fallback se nome/cognome non esistono ancora
-      let { data: currentUser } = await supabase
+      // Carica dati attuali — maybeSingle non lancia mai eccezione
+      let { data: currentUser, error: fetchErr } = await supabase
         .from('user_account')
         .select('username, email, nome, cognome')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
-      if (!currentUser) {
+      if (fetchErr || !currentUser) {
         const { data: fallback } = await supabase
           .from('user_account')
           .select('username, email')
           .eq('id', userId)
-          .single()
+          .maybeSingle()
         if (!fallback) return reply.status(404).send({ error: 'USER_NOT_FOUND' })
         currentUser = { ...fallback, nome: null, cognome: null }
       }
 
-      const newNome    = nome    !== undefined ? (nome?.trim()    || null) : (currentUser.nome    || null)
-      const newCognome = cognome !== undefined ? (cognome?.trim() || null) : (currentUser.cognome || null)
-      const emailChanged   = email   !== undefined && (email?.trim()    || null) !== (currentUser.email    || null)
-      const nomeChanged    = nome    !== undefined && (nome?.trim()     || null) !== (currentUser.nome     || null)
-      const cognomeChanged = cognome !== undefined && (cognome?.trim()  || null) !== (currentUser.cognome  || null)
+      // Per account vecchi (nome/cognome null): deriva i valori effettivi dall'username
+      const usernameParts    = (currentUser.username || '').split('.')
+      const effectiveNome    = currentUser.nome    ?? (usernameParts[0] || null)
+      const effectiveCognome = currentUser.cognome ?? (usernameParts.slice(1).join('.') || null)
+
+      const newNome    = nome    !== undefined ? (nome?.trim()    || null) : effectiveNome
+      const newCognome = cognome !== undefined ? (cognome?.trim() || null) : effectiveCognome
+      const emailChanged   = email   !== undefined && (email?.trim()    || null) !== (currentUser.email || null)
+      const nomeChanged    = nome    !== undefined && (nome?.trim()     || null) !== effectiveNome
+      const cognomeChanged = cognome !== undefined && (cognome?.trim()  || null) !== effectiveCognome
 
       // Aggiorna email solo se cambiata
       if (emailChanged) {
@@ -391,7 +396,7 @@ export default async function userSettingsRoutes(fastify) {
           .update({ email: email?.trim() || null })
           .eq('id', userId)
         if (updateErr) {
-          console.error('owner profile update email:', updateErr.message)
+          request.log.error(updateErr)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
       }
@@ -404,26 +409,29 @@ export default async function userSettingsRoutes(fastify) {
         await supabase.from('user_account').update(extUpdate).eq('id', userId).catch(() => {})
       }
 
-      // Se nome, cognome o email cambiano → rigenera username + password e reinvia credenziali
+      // Se nome, cognome o email cambiano → rigenera username + credenziali
       if (nomeChanged || cognomeChanged || emailChanged) {
         const emailDest = (emailChanged ? email?.trim() : null) || currentUser.email
 
-        // Rigenera username se nome/cognome cambiati
+        // Rigenera username se nome/cognome cambiati — esclude l'utente stesso dal check collisioni
         let newUsername = currentUser.username
         if ((nomeChanged || cognomeChanged) && newNome) {
-          const base = buildUsername(newNome, newCognome || '')
-          newUsername = await findAvailableUsername(base)
+          const candidateUsername = buildUsername(newNome, newCognome || '')
+          const { data: conflict } = await supabase
+            .from('user_account').select('id')
+            .eq('username', candidateUsername).neq('id', userId).maybeSingle()
+          newUsername = conflict ? await findAvailableUsername(candidateUsername) : candidateUsername
           await supabase.from('user_account').update({ username: newUsername }).eq('id', userId)
         }
 
-        // Rigenera password
-        const newPwd    = generatePassword()
-        const hashedPwd = await bcrypt.hash(newPwd, 10)
-        await supabase.from('user_account').update({ password: hashedPwd }).eq('id', userId)
-
+        // Rigenera password e invia credenziali solo se c'è un'email destinatario
         if (emailDest) {
+          const newPwd    = generatePassword()
+          const hashedPwd = await bcrypt.hash(newPwd, 10)
+          await supabase.from('user_account').update({ password: hashedPwd }).eq('id', userId)
+
           const { data: company } = await supabase
-            .from('company').select('nome').eq('id', companyId).single()
+            .from('company').select('nome').eq('id', companyId).maybeSingle()
 
           await sendCredenzialiOwner({
             email:       emailDest,
@@ -431,7 +439,7 @@ export default async function userSettingsRoutes(fastify) {
             password:    newPwd,
             companyNome: company?.nome || '',
             loginUrl:    process.env.FRONTEND_URL || 'https://timbry.it'
-          }).catch(e => console.error('sendCredenzialiOwner owner profile:', e?.message))
+          }).catch(e => request.log.error(e))
         }
 
         return reply.send({ success: true, credenziali_reinviate: !!emailDest })
@@ -440,7 +448,7 @@ export default async function userSettingsRoutes(fastify) {
       return reply.send({ success: true, credenziali_reinviate: false })
 
     } catch (err) {
-      console.error('owner profile error:', err)
+      request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
     }
   })
