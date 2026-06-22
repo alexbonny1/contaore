@@ -357,10 +357,6 @@ export default async function userSettingsRoutes(fastify) {
       const companyId  = request.user.company_id
       const { nome, cognome, email } = request.body
 
-      if (!nome || !nome.trim()) {
-        return reply.status(400).send({ error: 'NOME_REQUIRED' })
-      }
-
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return reply.status(400).send({ error: 'EMAIL_INVALID' })
       }
@@ -372,11 +368,10 @@ export default async function userSettingsRoutes(fastify) {
         .eq('id', userId)
         .single()
 
-      const updateData = {
-        nome:    nome.trim(),
-        cognome: cognome?.trim() || null,
-      }
-      if (email !== undefined) updateData.email = email?.trim() || null
+      const updateData = {}
+      if (nome !== undefined)    updateData.nome    = nome?.trim()    || null
+      if (cognome !== undefined) updateData.cognome = cognome?.trim() || null
+      if (email !== undefined)   updateData.email   = email?.trim()   || null
 
       const { error: updateErr } = await supabase
         .from('user_account')
@@ -388,41 +383,41 @@ export default async function userSettingsRoutes(fastify) {
         return reply.status(500).send({ error: 'SERVER_ERROR' })
       }
 
-      // Se nome o email sono cambiati → genera nuova password e reinvia credenziali
-      const nomeChanged  = nome.trim() !== (currentUser?.nome || '')
-      const emailChanged = email !== undefined && (email?.trim() || null) !== (currentUser?.email || null)
+      // Se nome, cognome o email sono cambiati → genera nuova password e reinvia credenziali
+      const nomeChanged    = nome !== undefined    && (nome?.trim()    || null) !== (currentUser?.nome    || null)
+      const cognomeChanged = cognome !== undefined && (cognome?.trim() || null) !== (currentUser?.cognome || null)
+      const emailChanged   = email !== undefined   && (email?.trim()   || null) !== (currentUser?.email   || null)
 
-      if (nomeChanged || emailChanged) {
+      if (nomeChanged || cognomeChanged || emailChanged) {
         const emailDest = email?.trim() || currentUser?.email
-        if (!emailDest) {
-          return reply.status(400).send({ error: 'EMAIL_REQUIRED' })
+        if (emailDest) {
+          const newPwd    = generatePassword()
+          const hashedPwd = await bcrypt.hash(newPwd, 10)
+
+          await supabase
+            .from('user_account')
+            .update({ password: hashedPwd })
+            .eq('id', userId)
+
+          const { data: company } = await supabase
+            .from('company')
+            .select('nome')
+            .eq('id', companyId)
+            .single()
+
+          const loginUrl = process.env.FRONTEND_URL || 'https://timbry.it'
+
+          await sendCredenzialiOwner({
+            email:       emailDest,
+            username:    currentUser.username,
+            password:    newPwd,
+            companyNome: company?.nome || '',
+            loginUrl
+          }).catch(e => console.error('sendCredenzialiOwner owner profile:', e?.message))
+
+          return reply.send({ success: true, credenziali_reinviate: true })
         }
-
-        const newPwd    = generatePassword()
-        const hashedPwd = await bcrypt.hash(newPwd, 10)
-
-        await supabase
-          .from('user_account')
-          .update({ password: hashedPwd })
-          .eq('id', userId)
-
-        const { data: company } = await supabase
-          .from('company')
-          .select('nome')
-          .eq('id', companyId)
-          .single()
-
-        const loginUrl = process.env.FRONTEND_URL || 'https://timbry.it'
-
-        await sendCredenzialiOwner({
-          email:       emailDest,
-          username:    currentUser.username,
-          password:    newPwd,
-          companyNome: company?.nome || '',
-          loginUrl
-        }).catch(e => console.error('sendCredenzialiOwner owner profile:', e?.message))
-
-        return reply.send({ success: true, credenziali_reinviate: true })
+        // Nessuna email disponibile → salva senza reinviare credenziali
       }
 
       return reply.send({ success: true, credenziali_reinviate: false })
