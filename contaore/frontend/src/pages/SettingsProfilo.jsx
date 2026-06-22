@@ -135,7 +135,6 @@ export default function SettingsProfilo() {
                   {profile.email && (
                     <p className="text-xs text-zinc-500 truncate">{profile.email}</p>
                   )}
-                  <p className="text-xs text-zinc-400 truncate">@{profile.username}</p>
                 </div>
               </div>
               <button
@@ -150,7 +149,7 @@ export default function SettingsProfilo() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
                 <span className="text-zinc-500">Nome</span>
-                <span className="text-zinc-900 dark:text-zinc-100 font-medium">{profile.nome || "—"}</span>
+                <span className="text-zinc-900 dark:text-zinc-100 font-medium">{profile.nome || profile.username || "—"}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
                 <span className="text-zinc-500">Cognome</span>
@@ -159,10 +158,6 @@ export default function SettingsProfilo() {
               <div className="flex justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
                 <span className="text-zinc-500">Email</span>
                 <span className="text-zinc-900 dark:text-zinc-100 font-medium">{profile.email || "—"}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-zinc-500">Username</span>
-                <span className="text-zinc-900 dark:text-zinc-100 font-medium">{profile.username}</span>
               </div>
             </div>
           </div>
