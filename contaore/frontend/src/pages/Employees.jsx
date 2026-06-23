@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Download, X, CheckSquare, Square, FileText, Table2, UserPlus
+  Download, X, CheckSquare, Square, FileText, Table2, UserPlus, Trash2
 } from "lucide-react";
 import { API_URL, apiFetch } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
@@ -564,7 +564,39 @@ export default function Employees() {
   const [selectionMode, setSelectionMode]           = useState(false);
   const [selectedEmployeeIds, setSelectedEmpIds]    = useState([]);
   const [showAssignShift, setShowAssignShift]       = useState(false);
+  const [deleteConfirm, setDeleteConfirm]           = useState(false);
+  const [deleteLoading, setDeleteLoading]           = useState(false);
+  const [toast, setToast]                           = useState(null);
   const token = localStorage.getItem("token");
+
+  function showToast(msg, type = 'success') {
+    setToast({ message: msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  async function deleteSelectedEmployees() {
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/employees/batch`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: selectedEmployeeIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`${selectedEmployeeIds.length} dipendente${selectedEmployeeIds.length > 1 ? 'i' : ''} eliminat${selectedEmployeeIds.length > 1 ? 'i' : 'o'}`);
+        exitSelectionMode();
+        loadEmployees();
+      } else {
+        showToast('Errore durante l\'eliminazione', 'error');
+      }
+    } catch {
+      showToast('Errore di connessione', 'error');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteConfirm(false);
+    }
+  }
 
   function toggleEmployeeSelect(id) {
     setSelectedEmpIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -632,6 +664,54 @@ export default function Employees() {
         />
       )}
 
+      {/* DIALOG CONFERMA ELIMINAZIONE */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={18} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Elimina dipendenti</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">Operazione non reversibile</p>
+              </div>
+            </div>
+            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-6 leading-relaxed">
+              Stai per eliminare <strong>{selectedEmployeeIds.length} dipendente{selectedEmployeeIds.length > 1 ? 'i' : ''}</strong>.
+              Verranno rimossi anche badge, presenze, turni, ferie e account di accesso associati.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                disabled={deleteLoading}
+                className="flex-1 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={deleteSelectedEmployees}
+                disabled={deleteLoading}
+                className="flex-1 h-11 rounded-2xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+              >
+                {deleteLoading
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Eliminando…</>
+                  : <><Trash2 size={15} />Elimina</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST */}
+      {toast && (
+        <div className={`fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium whitespace-nowrap ${
+          toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
@@ -682,6 +762,13 @@ export default function Employees() {
                 className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
               >
                 Assegna turno
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(true)}
+                disabled={selectedEmployeeIds.length === 0}
+                className="flex items-center gap-1.5 h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-red-500 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 hover:bg-red-600 transition-all"
+              >
+                <Trash2 size={15} /> Elimina
               </button>
               <button onClick={exitSelectionMode} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                 <X size={16} className="text-zinc-500 dark:text-zinc-400" />

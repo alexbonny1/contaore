@@ -11,7 +11,9 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(
-    searchParams.get("session_expired") === "1"
+    searchParams.get("password_changed") === "1"
+      ? "Password aggiornata con successo. Accedi con le nuove credenziali."
+      : searchParams.get("session_expired") === "1"
       ? "Sessione scaduta: password modificata su un altro dispositivo. Accedi di nuovo."
       : ""
   );

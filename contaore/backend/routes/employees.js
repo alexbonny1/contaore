@@ -1250,4 +1250,46 @@ export default async function employeeRoutes(fastify) {
       return reply.status(500).send({ success: false })
     }
   })
+
+  // ─── ELIMINA DIPENDENTI (batch) ───────────────────────────────────────────
+  fastify.delete('/api/employees/batch', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const companyId = request.user.company_id
+      const { ids } = request.body
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return reply.status(400).send({ success: false, error: 'IDS_REQUIRED' })
+      }
+
+      for (const dipId of ids) {
+        // Verifica appartenenza all'azienda
+        const { data: emp } = await supabase
+          .from('dipendenti')
+          .select('id, badge_uid')
+          .eq('id', dipId)
+          .eq('company_id', companyId)
+          .single()
+
+        if (!emp) continue
+
+        // Elimina cascade
+        await supabase.from('user_account').delete().eq('dipendente_id', emp.id)
+        if (emp.badge_uid) {
+          await supabase.from('presenza').delete().eq('tag_uid', emp.badge_uid).eq('company_id', companyId)
+        }
+        await supabase.from('turni').delete().eq('dipendente_id', emp.id).eq('company_id', companyId)
+        await supabase.from('richieste_ferie').delete().eq('dipendente_id', emp.id)
+        await supabase.from('giustificazioni').delete().eq('dipendente_id', emp.id)
+        await supabase.from('richieste_permessi').delete().eq('dipendente_id', emp.id)
+        await supabase.from('richieste_turni').delete().eq('dipendente_id', emp.id)
+        await supabase.from('tag').delete().eq('dipendente_id', emp.id).eq('company_id', companyId)
+        await supabase.from('dipendenti').delete().eq('id', emp.id).eq('company_id', companyId)
+      }
+
+      return reply.send({ success: true })
+    } catch (err) {
+      request.log.error(err)
+      return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+    }
+  })
 }
