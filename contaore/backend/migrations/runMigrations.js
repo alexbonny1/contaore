@@ -85,6 +85,49 @@ export async function runMigrations() {
       sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS cognome varchar(100);`
     }).catch(() => ({}))
 
+    // Tabelle richieste permessi e turni (migration 002)
+    await supabase.rpc('exec', {
+      sql: `CREATE TABLE IF NOT EXISTS richieste_permessi (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
+        dipendente_id uuid NOT NULL REFERENCES dipendenti(id) ON DELETE CASCADE,
+        data_uscita date,
+        ora_uscita time,
+        data_entrata date,
+        ora_entrata time,
+        tipo varchar(50) DEFAULT 'personale',
+        motivo text NOT NULL,
+        stato varchar(20) DEFAULT 'in_attesa',
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now(),
+        approved_at timestamptz,
+        approved_by uuid REFERENCES user_account(id) ON DELETE SET NULL
+      );`
+    }).catch(() => ({}))
+
+    await supabase.rpc('exec', {
+      sql: `CREATE TABLE IF NOT EXISTS richieste_turni (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
+        dipendente_id uuid NOT NULL REFERENCES dipendenti(id) ON DELETE CASCADE,
+        data_dal date NOT NULL,
+        data_al date NOT NULL,
+        giorni varchar(255) NOT NULL,
+        orari jsonb,
+        motivo text NOT NULL,
+        stato varchar(20) DEFAULT 'in_attesa',
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now(),
+        approved_at timestamptz,
+        approved_by uuid REFERENCES user_account(id) ON DELETE SET NULL
+      );`
+    }).catch(() => ({}))
+
+    // Colonna per invalidazione sessioni al cambio password
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS password_changed_at timestamptz DEFAULT NULL;`
+    }).catch(() => ({}))
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)

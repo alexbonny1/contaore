@@ -80,15 +80,16 @@ export default async function authRoutes(fastify) {
 
       const token = jwt.sign(
         {
-          id:                    user.id,
-          username:              user.username,
-          email:                 user.email,
-          company_id:            user.company_id,
-          role:                  user.role,
-          dipendente_id:         user.dipendente_id || null,
+          id:                      user.id,
+          username:                user.username,
+          email:                   user.email,
+          company_id:              user.company_id,
+          role:                    user.role,
+          dipendente_id:           user.dipendente_id || null,
           portale_dipendenti,
-          two_factor_enabled:    user.two_factor_enabled || false,
-          last_activity_timestamp: lastActivityTimestamp
+          two_factor_enabled:      user.two_factor_enabled || false,
+          last_activity_timestamp: lastActivityTimestamp,
+          password_version:        user.password_changed_at ? new Date(user.password_changed_at).getTime() : 0
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -198,7 +199,8 @@ export default async function authRoutes(fastify) {
           dipendente_id:           user.dipendente_id || null,
           portale_dipendenti,
           two_factor_enabled:      user.two_factor_enabled || false,
-          last_activity_timestamp: lastActivityTimestamp
+          last_activity_timestamp: lastActivityTimestamp,
+          password_version:        user.password_changed_at ? new Date(user.password_changed_at).getTime() : 0
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -354,17 +356,42 @@ export default async function authRoutes(fastify) {
       }
 
       const hashed = await bcrypt.hash(newPassword, 10)
+      const changedAt = new Date().toISOString()
 
       const { error: updateError } = await supabase
         .from('user_account')
-        .update({ password: hashed })
+        .update({ password: hashed, password_changed_at: changedAt })
         .eq('id', decoded.id)
 
       if (updateError) {
         return reply.status(500).send({ error: 'UPDATE_ERROR' })
       }
 
-      return reply.send({ success: true })
+      // Emetti nuovo JWT valido per il dispositivo corrente
+      const { data: updatedUser } = await supabase
+        .from('user_account')
+        .select('*, company:company(portale_dipendenti)')
+        .eq('id', decoded.id)
+        .single()
+
+      const newToken = jwt.sign(
+        {
+          id:                      updatedUser.id,
+          username:                updatedUser.username,
+          email:                   updatedUser.email,
+          company_id:              updatedUser.company_id,
+          role:                    updatedUser.role,
+          dipendente_id:           updatedUser.dipendente_id || null,
+          portale_dipendenti:      updatedUser.company?.portale_dipendenti ?? false,
+          two_factor_enabled:      updatedUser.two_factor_enabled || false,
+          last_activity_timestamp: new Date().toISOString(),
+          password_version:        new Date(changedAt).getTime()
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+
+      return reply.send({ success: true, token: newToken })
 
     } catch (err) {
       request.log.error(err)
@@ -535,7 +562,8 @@ export default async function authRoutes(fastify) {
         .update({
           password:               hashed,
           reset_token:            null,
-          reset_token_expires_at: null
+          reset_token_expires_at: null,
+          password_changed_at:    new Date().toISOString()
         })
         .eq('id', user.id)
 
@@ -611,7 +639,8 @@ export default async function authRoutes(fastify) {
         .update({
           password:               decoded.hashedPassword,
           reset_token:            null,
-          reset_token_expires_at: null
+          reset_token_expires_at: null,
+          password_changed_at:    new Date().toISOString()
         })
         .eq('id', decoded.userId)
 

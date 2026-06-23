@@ -64,6 +64,7 @@ export default function Badges() {
   const [newUid, setNewUid]                 = useState("");
   const [updatingUid, setUpdatingUid]       = useState(false);
   const [informativaConsegnata, setInformativaConsegnata] = useState(false);
+  const [formErrors, setFormErrors]         = useState({});
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -121,10 +122,12 @@ export default function Badges() {
   async function createBadge(e) {
     e.preventDefault();
 
-    if (portaleAttivo && !employeeEmail.trim()) {
-      showToast("Il portale dipendenti è attivo: inserisci l'email", "error");
-      return;
-    }
+    const newErrors = {};
+    if (!employeeName.trim())                      newErrors.nome  = "Campo obbligatorio";
+    if (!employeeCognome.trim())                   newErrors.cognome = "Campo obbligatorio";
+    if (portaleAttivo && !employeeEmail.trim())    newErrors.email = "Campo obbligatorio (portale attivo)";
+    if (Object.keys(newErrors).length > 0) { setFormErrors(newErrors); return; }
+    setFormErrors({});
 
     try {
       const token = localStorage.getItem("token");
@@ -159,6 +162,7 @@ export default function Badges() {
       setUid(""); setEmployeeName(""); setEmployeeCognome(""); setEmployeeEmail("");
       setWaitingScan(false);
       setInformativaConsegnata(false);
+      setFormErrors({});
       loadBadges();
 
     } catch (err) {
@@ -281,15 +285,19 @@ export default function Badges() {
               {/* CAMPI DIPENDENTE */}
               <div className={`grid gap-2.5 sm:gap-4 ${portaleAttivo ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
 
-                <input type="text" placeholder="Nome" value={employeeName}
-                  onChange={(e) => setEmployeeName(e.target.value)}
-                  className="h-10 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none"
-                  required />
+                <div>
+                  <input type="text" placeholder="Nome *" value={employeeName}
+                    onChange={(e) => { setEmployeeName(e.target.value); if (formErrors.nome) setFormErrors(p => ({...p, nome: ""})); }}
+                    className={`w-full h-10 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none ${formErrors.nome ? "border-red-400 dark:border-red-500" : "border-zinc-200 dark:border-zinc-800"}`} />
+                  {formErrors.nome && <p className="text-xs text-red-500 mt-1">{formErrors.nome}</p>}
+                </div>
 
-                <input type="text" placeholder="Cognome" value={employeeCognome}
-                  onChange={(e) => setEmployeeCognome(e.target.value)}
-                  className="h-10 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none"
-                  required />
+                <div>
+                  <input type="text" placeholder="Cognome *" value={employeeCognome}
+                    onChange={(e) => { setEmployeeCognome(e.target.value); if (formErrors.cognome) setFormErrors(p => ({...p, cognome: ""})); }}
+                    className={`w-full h-10 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none ${formErrors.cognome ? "border-red-400 dark:border-red-500" : "border-zinc-200 dark:border-zinc-800"}`} />
+                  {formErrors.cognome && <p className="text-xs text-red-500 mt-1">{formErrors.cognome}</p>}
+                </div>
 
                 {portaleAttivo && (
                   <div className="relative sm:col-span-2">
@@ -298,10 +306,10 @@ export default function Badges() {
                       type="email"
                       placeholder="Email dipendente *"
                       value={employeeEmail}
-                      onChange={(e) => setEmployeeEmail(e.target.value)}
-                      className="w-full h-10 sm:h-12 pl-8 sm:pl-10 pr-3 sm:pr-4 rounded-xl sm:rounded-2xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none focus:border-blue-500 placeholder-zinc-400"
-                      required={portaleAttivo}
+                      onChange={(e) => { setEmployeeEmail(e.target.value); if (formErrors.email) setFormErrors(p => ({...p, email: ""})); }}
+                      className={`w-full h-10 sm:h-12 pl-8 sm:pl-10 pr-3 sm:pr-4 rounded-xl sm:rounded-2xl border bg-blue-50 dark:bg-blue-500/10 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none focus:border-blue-500 placeholder-zinc-400 ${formErrors.email ? "border-red-400 dark:border-red-500" : "border-blue-300 dark:border-blue-500/40"}`}
                     />
+                    {formErrors.email && <p className="text-xs text-red-500 mt-1">{formErrors.email}</p>}
                   </div>
                 )}
 

@@ -13,6 +13,7 @@ export default function ResetPassword() {
   const [confirm, setConfirm]       = useState("");
   const [loading, setLoading]       = useState(false);
   const [message, setMessage]       = useState(null); // { type: "success"|"error", text }
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     if (!token) setMode("forgot");
@@ -21,6 +22,8 @@ export default function ResetPassword() {
   // ─── Richiesta reset (forgot) ─────────────────────────────────────────────
   async function handleForgot(e) {
     e.preventDefault();
+    if (!email.trim()) { setFieldErrors({ email: "Campo obbligatorio" }); return; }
+    setFieldErrors({});
     setLoading(true);
     setMessage(null);
     try {
@@ -44,14 +47,13 @@ export default function ResetPassword() {
   // ─── Imposta nuova password (dal link email) ──────────────────────────────
   async function handleReset(e) {
     e.preventDefault();
-    if (newPassword !== confirm) {
-      setMessage({ type: "error", text: "Le password non coincidono." });
-      return;
-    }
-    if (newPassword.length < 6) {
-      setMessage({ type: "error", text: "La password deve essere di almeno 6 caratteri." });
-      return;
-    }
+    const errs = {};
+    if (!newPassword)             errs.newPassword = "Campo obbligatorio";
+    else if (newPassword.length < 6) errs.newPassword = "Minimo 6 caratteri";
+    if (!confirm)                 errs.confirm = "Campo obbligatorio";
+    else if (confirm !== newPassword) errs.confirm = "Le password non coincidono";
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    setFieldErrors({});
     setLoading(true);
     setMessage(null);
     try {
@@ -105,14 +107,16 @@ export default function ResetPassword() {
             <p className="text-sm text-zinc-500">
               Inserisci l'email del tuo account e ti invieremo un link per reimpostare la password.
             </p>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-12 px-4 rounded-2xl border border-zinc-200 outline-none focus:border-zinc-400"
-              required
-            />
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors({}); }}
+                className={`w-full h-12 px-4 rounded-2xl border outline-none focus:border-zinc-400 ${fieldErrors.email ? "border-red-400" : "border-zinc-200"}`}
+              />
+              {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
+            </div>
             {message && (
               <p className={`text-sm text-center ${message.type === "success" ? "text-green-600" : "text-red-500"}`}>
                 {message.text}
@@ -134,24 +138,26 @@ export default function ResetPassword() {
             <p className="text-sm text-zinc-500">
               Scegli una nuova password per il tuo account.
             </p>
-            <input
-              type="password"
-              placeholder="Nuova password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full h-12 px-4 rounded-2xl border border-zinc-200 outline-none focus:border-zinc-400"
-              required
-              minLength={6}
-            />
-            <input
-              type="password"
-              placeholder="Conferma password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              className="w-full h-12 px-4 rounded-2xl border border-zinc-200 outline-none focus:border-zinc-400"
-              required
-              minLength={6}
-            />
+            <div>
+              <input
+                type="password"
+                placeholder="Nuova password"
+                value={newPassword}
+                onChange={(e) => { setNewPassword(e.target.value); if (fieldErrors.newPassword) setFieldErrors(p => ({...p, newPassword: ""})); }}
+                className={`w-full h-12 px-4 rounded-2xl border outline-none focus:border-zinc-400 ${fieldErrors.newPassword ? "border-red-400" : "border-zinc-200"}`}
+              />
+              {fieldErrors.newPassword && <p className="text-xs text-red-500 mt-1">{fieldErrors.newPassword}</p>}
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="Conferma password"
+                value={confirm}
+                onChange={(e) => { setConfirm(e.target.value); if (fieldErrors.confirm) setFieldErrors(p => ({...p, confirm: ""})); }}
+                className={`w-full h-12 px-4 rounded-2xl border outline-none focus:border-zinc-400 ${fieldErrors.confirm ? "border-red-400" : "border-zinc-200"}`}
+              />
+              {fieldErrors.confirm && <p className="text-xs text-red-500 mt-1">{fieldErrors.confirm}</p>}
+            </div>
             {message && (
               <p className={`text-sm text-center ${message.type === "success" ? "text-green-600" : "text-red-500"}`}>
                 {message.text}

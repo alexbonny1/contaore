@@ -1,15 +1,20 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_URL } from "../api";
 import LegalFooter from "../components/LegalFooter";
 
 export default function Login() {
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
+  const [error, setError]       = useState(
+    searchParams.get("session_expired") === "1"
+      ? "Sessione scaduta: password modificata su un altro dispositivo. Accedi di nuovo."
+      : ""
+  );
 
   useEffect(() => {
     const token = localStorage.getItem("token");

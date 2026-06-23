@@ -144,12 +144,13 @@ export default async function tagRoutes(fastify) {
             const { error: accountError } = await supabase
               .from('user_account')
               .insert({
-                company_id:    companyId,
-                dipendente_id: employee.id,
+                company_id:         companyId,
+                dipendente_id:      employee.id,
                 username,
-                email:         employee_email,
-                password:      hashedPwd,
-                role:          'dipendente'
+                email:              employee_email,
+                password:           hashedPwd,
+                role:               'dipendente',
+                two_factor_enabled: false
               })
 
             if (accountError) {

@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { supabase } from '../services/supabase.js'
 import { authenticateSuperadmin } from '../middleware/auth.js'
 import { sendCredenzialiOwner } from '../services/email.js'
+import { buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
 
 // Genera password casuale sicura (12 caratteri: lettere + numeri)
 function generaPassword() {
@@ -86,23 +87,17 @@ export default async function adminRoutes(fastify) {
     { preHandler: authenticateSuperadmin },
     async (request, reply) => {
       try {
-        const { company_name, username, email, nome, cognome } = request.body
+        const { company_name, email, nome, cognome } = request.body
         // password opzionale: se non fornita viene auto-generata
         const passwordInChiaro = request.body.password || generaPassword()
 
-        if (!company_name || !username || !email) {
+        if (!company_name || !email || !nome || !cognome) {
           return reply.status(400).send({ success: false, error: 'MISSING_FIELDS' })
         }
 
-        const { data: existingUser } = await supabase
-          .from('user_account')
-          .select('id')
-          .eq('username', username)
-          .maybeSingle()
-
-        if (existingUser) {
-          return reply.status(400).send({ success: false, error: 'USERNAME_ALREADY_EXISTS' })
-        }
+        // Username generato automaticamente da nome.cognome (univoco)
+        const usernameBase = buildUsername(nome, cognome)
+        const username     = await findAvailableUsername(usernameBase)
 
         const slug = company_name
           .toLowerCase()
@@ -126,12 +121,13 @@ export default async function adminRoutes(fastify) {
           .from('user_account')
           .insert({
             username,
-            password:   hashedPassword,
+            password:             hashedPassword,
             email,
-            nome:       nome || null,
-            cognome:    cognome || null,
-            role:       'owner',
-            company_id: company.id
+            nome,
+            cognome,
+            role:                 'owner',
+            company_id:           company.id,
+            two_factor_enabled:   false
           })
           .select()
           .single()
