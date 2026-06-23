@@ -98,14 +98,13 @@ function AppWithInactivity2FA() {
 
     const response = await _fetch(input, init);
 
-    // Controlla SESSION_EXPIRED solo per chiamate alle nostre API (status 401)
-    if (response.status === 401) {
+    // Controlla SESSION_EXPIRED da qualsiasi risposta API
+    if (localStorage.getItem('token')) {
       try {
         const clone = response.clone();
         const data  = await clone.json();
         if (data?.error === 'SESSION_EXPIRED') {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          localStorage.clear();
           window.location.href = '/?session_expired=1';
         }
       } catch {}

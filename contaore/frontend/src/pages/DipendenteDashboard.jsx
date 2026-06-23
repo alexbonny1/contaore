@@ -166,6 +166,11 @@ export default function DipendenteDashboard() {
       setLoading(true);
       const res  = await fetch(API_URL + "/api/dipendente/me", { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
+      if (json.error === 'SESSION_EXPIRED') {
+        localStorage.clear();
+        window.location.href = '/?session_expired=1';
+        return;
+      }
       if (!json.success) { navigate("/"); return; }
       setData(json);
     } catch (err) { }
