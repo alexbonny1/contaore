@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt    from 'jsonwebtoken'
 import crypto from 'crypto'
 import { supabase } from '../services/supabase.js'
-import { sendResetPassword, sendTwoFactorEmail } from '../services/email.js'
+import { sendResetPassword, sendTwoFactorEmail, sendPasswordChanged } from '../services/email.js'
 import {
   generateTwoFactorCode,
   sendTwoFactorCode
@@ -367,31 +367,12 @@ export default async function authRoutes(fastify) {
         return reply.status(500).send({ error: 'UPDATE_ERROR' })
       }
 
-      // Emetti nuovo JWT valido per il dispositivo corrente
-      const { data: updatedUser } = await supabase
-        .from('user_account')
-        .select('*, company:company(portale_dipendenti)')
-        .eq('id', decoded.id)
-        .single()
+      // Invia email di notifica cambio password
+      const loginUrl = process.env.APP_URL || null
+      sendPasswordChanged({ email: user.email, username: user.username, loginUrl }).catch(() => {})
 
-      const newToken = jwt.sign(
-        {
-          id:                      updatedUser.id,
-          username:                updatedUser.username,
-          email:                   updatedUser.email,
-          company_id:              updatedUser.company_id,
-          role:                    updatedUser.role,
-          dipendente_id:           updatedUser.dipendente_id || null,
-          portale_dipendenti:      updatedUser.company?.portale_dipendenti ?? false,
-          two_factor_enabled:      updatedUser.two_factor_enabled || false,
-          last_activity_timestamp: new Date().toISOString(),
-          password_version:        new Date(changedAt).getTime()
-        },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      )
-
-      return reply.send({ success: true, token: newToken })
+      // Non emettere nuovo token: tutti i dispositivi (incluso quello corrente) devono ri-autenticarsi
+      return reply.send({ success: true })
 
     } catch (err) {
       request.log.error(err)

@@ -270,6 +270,62 @@ export async function sendResetPassword({ email, username, resetUrl }) {
   }
 }
 
+// ─── Notifica cambio password ─────────────────────────────────────────────────
+export async function sendPasswordChanged({ email, username, loginUrl }) {
+  try {
+    const loginSection = loginUrl ? `
+              <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Accedi a Timbry</p>
+              <p style="margin:0;font-size:15px;font-weight:600;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>
+            ` : ''
+    const { data, error } = await resend.emails.send({
+      from:    FROM,
+      to:      email,
+      subject: 'Password aggiornata — Timbry',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#f5f4f0;">
+          <div style="background:#fff;border-radius:8px;padding:32px;border:1px solid #dddbd7;">
+            <p style="font-family:monospace;font-size:13px;color:#2563eb;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 16px;">TIMBRY</p>
+            <h2 style="font-size:22px;font-weight:600;color:#1a1a1a;margin:0 0 8px;">Password aggiornata</h2>
+            <p style="font-size:15px;color:#6b6b6b;margin:0 0 24px;line-height:1.6;">
+              Ciao <strong style="color:#1a1a1a;">${username}</strong>, la tua password è stata modificata con successo.
+              Tutti i dispositivi connessi con il vecchio accesso sono stati disconnessi automaticamente.
+            </p>
+
+            <div style="background:#f5f4f0;border-radius:6px;padding:20px 24px;margin-bottom:24px;">
+              <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Username</p>
+              <p style="margin:0 0 16px;font-family:monospace;font-size:18px;font-weight:600;color:#1a1a1a;">${username}</p>
+              ${loginSection}
+            </div>
+
+            ${PWA_TUTORIAL_HTML}
+
+            <div style="background:#fef3c7;border-radius:6px;padding:14px 18px;margin-bottom:20px;border:1px solid #fde68a;">
+              <p style="margin:0;font-size:13px;color:#92400e;line-height:1.6;">
+                ⚠️ <strong>Non sei stato tu?</strong> Contatta immediatamente il tuo responsabile o l'assistenza Timbry per bloccare l'accesso.
+              </p>
+            </div>
+
+            <p style="font-size:12px;color:#aaa;margin:0;line-height:1.5;">
+              Questa notifica è stata inviata automaticamente per la tua sicurezza.
+            </p>
+          </div>
+        </div>
+      `
+    })
+
+    if (error) {
+      console.error('Resend error (password changed):', error)
+      return false
+    }
+
+    return true
+
+  } catch (err) {
+    console.error('sendPasswordChanged error:', err)
+    return false
+  }
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 function emailWrap(companyNome, title, accentColor, bodyHtml) {

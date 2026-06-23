@@ -25,6 +25,7 @@ export default function Requests({ initialView = 'richieste' }) {
   const { portaleAttivo, requestsData, refreshRequests } = useOutletContext()
   const [vista, setVista]           = useState(initialView)
   const [activeTab, setActiveTab]   = useState('all')
+  const [statusFilter, setStatusFilter] = useState('in_attesa')
   const [expandedId, setExpandedId] = useState(null)
   const [toast, setToast]           = useState(null)
   const [actionLoading, setActionLoading] = useState({})
@@ -97,7 +98,22 @@ export default function Requests({ initialView = 'richieste' }) {
   else if (activeTab === 'timbratura')     richiesteFiltrate = richieste_timbratura.map(r => ({...r,type:'timbratura'}))
   else if (activeTab === 'permessi')       richiesteFiltrate = richieste_permessi.map(r => ({...r,type:'permessi'}))
   else if (activeTab === 'modifica-turni') richiesteFiltrate = richieste_turni.map(r => ({...r,type:'modifica-turni'}))
+  richiesteFiltrate = richiesteFiltrate.filter(r => r.stato === statusFilter)
   richiesteFiltrate.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+  const allByType = activeTab === 'all'
+    ? [...ferie.map(r => ({...r,type:'ferie'})), ...giustificazioni.map(r => ({...r,type:'giustificazioni'})), ...richieste_timbratura.map(r => ({...r,type:'timbratura'})), ...richieste_permessi.map(r => ({...r,type:'permessi'})), ...richieste_turni.map(r => ({...r,type:'modifica-turni'}))]
+    : activeTab === 'ferie' ? ferie.map(r => ({...r,type:'ferie'}))
+    : activeTab === 'giustificazioni' ? giustificazioni.map(r => ({...r,type:'giustificazioni'}))
+    : activeTab === 'timbratura' ? richieste_timbratura.map(r => ({...r,type:'timbratura'}))
+    : activeTab === 'permessi' ? richieste_permessi.map(r => ({...r,type:'permessi'}))
+    : richieste_turni.map(r => ({...r,type:'modifica-turni'}))
+
+  const statusCounts = {
+    in_attesa: allByType.filter(r => r.stato === 'in_attesa').length,
+    approvata: allByType.filter(r => r.stato === 'approvata').length,
+    rifiutata: allByType.filter(r => r.stato === 'rifiutata').length,
+  }
 
   const counts = richieste?.counts || {}
   const STATS = [
@@ -172,6 +188,38 @@ export default function Requests({ initialView = 'richieste' }) {
               </button>
             )
           })}
+        </div>
+
+        {/* STATUS SEGMENTED CONTROL (Apple-style) */}
+        <div className="flex p-1 mb-4 sm:mb-6 rounded-2xl bg-zinc-100 dark:bg-zinc-800/60">
+          {[
+            { id: 'in_attesa', label: 'In attesa', count: statusCounts.in_attesa },
+            { id: 'approvata', label: 'Approvate', count: statusCounts.approvata },
+            { id: 'rifiutata', label: 'Rifiutate', count: statusCounts.rifiutata },
+          ].map(seg => (
+            <button
+              key={seg.id}
+              onClick={() => { setStatusFilter(seg.id); setExpandedId(null); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                statusFilter === seg.id
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                  : 'text-zinc-500 dark:text-zinc-400'
+              }`}
+            >
+              {seg.label}
+              {seg.count > 0 && (
+                <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold flex items-center justify-center ${
+                  statusFilter === seg.id
+                    ? seg.id === 'in_attesa' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300'
+                      : seg.id === 'approvata' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300'
+                      : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'
+                    : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400'
+                }`}>
+                  {seg.count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
         {/* LIST */}

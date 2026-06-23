@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, Lock, CheckCircle2, XCircle } from "lucide-react";
 import { API_URL } from "../api";
 
@@ -10,6 +11,7 @@ import { API_URL } from "../api";
  *   onClose: () => void
  */
 export default function ChangePasswordModal({ onClose }) {
+  const navigate = useNavigate();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword]         = useState("");
   const [confirm, setConfirm]                 = useState("");
@@ -56,10 +58,12 @@ export default function ChangePasswordModal({ onClose }) {
         };
         setMessage({ type: "error", text: msgs[data.error] || "Errore. Riprova." });
       } else {
-        // Aggiorna il token locale: gli altri dispositivi verranno disconnessi
-        if (data.token) localStorage.setItem("token", data.token);
-        setMessage({ type: "success", text: "Password aggiornata! Gli altri dispositivi connessi verranno disconnessi." });
-        setTimeout(onClose, 2200);
+        // Logout completo: tutti i dispositivi (incluso questo) devono ri-autenticarsi
+        setMessage({ type: "success", text: "Password aggiornata! Verrai reindirizzato al login." });
+        setTimeout(() => {
+          localStorage.clear();
+          navigate("/?password_changed=1");
+        }, 1800);
       }
     } catch {
       setMessage({ type: "error", text: "Errore di connessione. Riprova." });
