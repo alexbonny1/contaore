@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Outlet } from "react-router-dom";
-import { API_URL } from "../api";
+import { apiFetch } from "../api";
 import OwnerHeader from "./OwnerHeader";
 import BottomNav from "./BottomNav";
 
@@ -22,22 +22,16 @@ export default function OwnerLayout() {
   }, []);
 
   const refreshRequests = useCallback(() => {
-    const token = localStorage.getItem("token");
-    return fetch(`${API_URL}/api/requests/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+    return apiFetch('/api/requests/dashboard')
       .then(d => { if (d.success) setRequestsData(d); })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    fetch(`${API_URL}/api/company/info`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+    apiFetch('/api/company/info')
       .then(d => {
         if (d.success) {
           setPortaleAttivo(!!d.portale_dipendenti);
-          // persiste lo stato così il primo paint successivo è corretto (no flip)
           const u = JSON.parse(localStorage.getItem("user") || "{}");
           u.portale_dipendenti = !!d.portale_dipendenti;
           localStorage.setItem("user", JSON.stringify(u));
