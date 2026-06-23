@@ -6,7 +6,7 @@ import {
   Sun, Moon, TrendingUp, UserCheck, Umbrella, Pencil, Download,
   User, Shield, ChevronLeft, Trash2
 } from "lucide-react";
-import { API_URL } from "../api";
+import { API_URL, apiFetch } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import DipendenteBottomNav from "../components/DipendenteBottomNav";
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
@@ -280,6 +280,13 @@ export default function DipendenteDashboard() {
     loadPermesi();
     loadRichiesteTurni();
     loadUserSettings();
+  }, []);
+
+  // Controlla validità sessione ogni 30s — se la password è cambiata su un altro
+  // dispositivo apiFetch rileva SESSION_EXPIRED e reindirizza automaticamente al login
+  useEffect(() => {
+    const i = setInterval(() => apiFetch('/api/dipendente/me').catch(() => {}), 30000);
+    return () => clearInterval(i);
   }, []);
 
   // ── giustifica assenza ───────────────────────────────────────────────────
