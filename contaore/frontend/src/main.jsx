@@ -87,18 +87,33 @@ function AppWithInactivity2FA() {
   );
 }
 
-if (import.meta.env.DEV) {
-  const originalFetch = window.fetch;
-  window.fetch = (url, options = {}) => {
-    if (typeof url === "string" && url.includes("ngrok")) {
-      options.headers = {
-        "ngrok-skip-browser-warning": "1",
-        ...options.headers,
-      };
+// Interceptor globale: rileva SESSION_EXPIRED da qualsiasi fetch e fa logout immediato
+;(function() {
+  const _fetch = window.fetch;
+  window.fetch = async function(input, init = {}) {
+    // In DEV aggiungi header ngrok per evitare la browser-warning page
+    if (import.meta.env.DEV && typeof input === "string" && input.includes("ngrok")) {
+      init = { ...init, headers: { "ngrok-skip-browser-warning": "1", ...(init.headers || {}) } };
     }
-    return originalFetch(url, options);
+
+    const response = await _fetch(input, init);
+
+    // Controlla SESSION_EXPIRED solo per chiamate alle nostre API (status 401)
+    if (response.status === 401) {
+      try {
+        const clone = response.clone();
+        const data  = await clone.json();
+        if (data?.error === 'SESSION_EXPIRED') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/?session_expired=1';
+        }
+      } catch {}
+    }
+
+    return response;
   };
-}
+})();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
