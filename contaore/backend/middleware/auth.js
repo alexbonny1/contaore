@@ -1,9 +1,26 @@
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
+import { supabase } from '../services/supabase.js'
 
 dotenv.config()
 
 const JWT_SECRET = process.env.JWT_SECRET || 'SUPER_SECRET_KEY'
+
+// Verifica che il token non sia stato invalidato da un cambio password
+async function checkPasswordVersion(decoded, reply) {
+  if (decoded.password_version === undefined) return true // token pre-feature: ok
+  const { data: u } = await supabase
+    .from('user_account')
+    .select('password_changed_at')
+    .eq('id', decoded.id)
+    .single()
+  const currentVersion = u?.password_changed_at ? new Date(u.password_changed_at).getTime() : 0
+  if (decoded.password_version !== currentVersion) {
+    reply.status(401).send({ error: 'SESSION_EXPIRED' })
+    return false
+  }
+  return true
+}
 
 // ─── qualsiasi utente loggato (owner, superadmin, dipendente) ────────────────
 export async function authenticate(request, reply) {
@@ -14,6 +31,7 @@ export async function authenticate(request, reply) {
     }
     const token   = authHeader.replace('Bearer ', '')
     const decoded = jwt.verify(token, JWT_SECRET)
+    if (!await checkPasswordVersion(decoded, reply)) return
     request.user  = decoded
   } catch (err) {
     request.log.error(err)
@@ -33,6 +51,7 @@ export async function authenticateSuperadmin(request, reply) {
     if (decoded.role !== 'superadmin') {
       return reply.status(403).send({ error: 'FORBIDDEN' })
     }
+    if (!await checkPasswordVersion(decoded, reply)) return
     request.user = decoded
   } catch (err) {
     request.log.error(err)
@@ -52,6 +71,7 @@ export async function authenticateOwner(request, reply) {
     if (!['owner', 'superadmin'].includes(decoded.role)) {
       return reply.status(403).send({ error: 'FORBIDDEN' })
     }
+    if (!await checkPasswordVersion(decoded, reply)) return
     request.user = decoded
   } catch (err) {
     request.log.error(err)
@@ -71,6 +91,7 @@ export async function authenticateDipendente(request, reply) {
     if (decoded.role !== 'dipendente') {
       return reply.status(403).send({ error: 'FORBIDDEN' })
     }
+    if (!await checkPasswordVersion(decoded, reply)) return
     request.user = decoded
   } catch (err) {
     request.log.error(err)
@@ -87,6 +108,7 @@ export async function authenticateWithInactivity(request, reply) {
     }
     const token = authHeader.replace('Bearer ', '')
     const decoded = jwt.verify(token, JWT_SECRET)
+    if (!await checkPasswordVersion(decoded, reply)) return
     request.user = decoded
   } catch (err) {
     request.log.error(err)

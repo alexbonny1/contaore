@@ -15,18 +15,23 @@ export default function ChangePasswordModal({ onClose }) {
   const [confirm, setConfirm]                 = useState("");
   const [loading, setLoading]                 = useState(false);
   const [message, setMessage]                 = useState(null); // { type, text }
+  const [fieldErrors, setFieldErrors]         = useState({});
+
+  function clearFieldError(field) {
+    if (fieldErrors[field]) setFieldErrors(p => ({ ...p, [field]: "" }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (newPassword !== confirm) {
-      setMessage({ type: "error", text: "Le nuove password non coincidono." });
-      return;
-    }
-    if (newPassword.length < 6) {
-      setMessage({ type: "error", text: "La password deve essere di almeno 6 caratteri." });
-      return;
-    }
+    const errs = {};
+    if (!currentPassword) errs.currentPassword = "Campo obbligatorio";
+    if (!newPassword)     errs.newPassword     = "Campo obbligatorio";
+    else if (newPassword.length < 6) errs.newPassword = "Minimo 6 caratteri";
+    if (!confirm)         errs.confirm         = "Campo obbligatorio";
+    else if (confirm !== newPassword) errs.confirm = "Le password non coincidono";
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    setFieldErrors({});
 
     setLoading(true);
     setMessage(null);
@@ -51,8 +56,10 @@ export default function ChangePasswordModal({ onClose }) {
         };
         setMessage({ type: "error", text: msgs[data.error] || "Errore. Riprova." });
       } else {
-        setMessage({ type: "success", text: "Password aggiornata con successo!" });
-        setTimeout(onClose, 1800);
+        // Aggiorna il token locale: gli altri dispositivi verranno disconnessi
+        if (data.token) localStorage.setItem("token", data.token);
+        setMessage({ type: "success", text: "Password aggiornata! Gli altri dispositivi connessi verranno disconnessi." });
+        setTimeout(onClose, 2200);
       }
     } catch {
       setMessage({ type: "error", text: "Errore di connessione. Riprova." });
@@ -90,13 +97,11 @@ export default function ChangePasswordModal({ onClose }) {
             <input
               type="password"
               value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
+              onChange={(e) => { setCurrentPassword(e.target.value); clearFieldError("currentPassword"); }}
               placeholder="••••••••"
-              required
-              className="w-full h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700
-                         bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100
-                         outline-none focus:border-zinc-400 dark:focus:border-zinc-500 text-sm"
+              className={`w-full h-11 px-4 rounded-xl border bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 outline-none text-sm ${fieldErrors.currentPassword ? "border-red-400 dark:border-red-500" : "border-zinc-200 dark:border-zinc-700 focus:border-zinc-400 dark:focus:border-zinc-500"}`}
             />
+            {fieldErrors.currentPassword && <p className="text-xs text-red-500 mt-1">{fieldErrors.currentPassword}</p>}
           </div>
 
           <div>
@@ -106,14 +111,11 @@ export default function ChangePasswordModal({ onClose }) {
             <input
               type="password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => { setNewPassword(e.target.value); clearFieldError("newPassword"); }}
               placeholder="Min. 6 caratteri"
-              required
-              minLength={6}
-              className="w-full h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700
-                         bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100
-                         outline-none focus:border-zinc-400 dark:focus:border-zinc-500 text-sm"
+              className={`w-full h-11 px-4 rounded-xl border bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 outline-none text-sm ${fieldErrors.newPassword ? "border-red-400 dark:border-red-500" : "border-zinc-200 dark:border-zinc-700 focus:border-zinc-400 dark:focus:border-zinc-500"}`}
             />
+            {fieldErrors.newPassword && <p className="text-xs text-red-500 mt-1">{fieldErrors.newPassword}</p>}
           </div>
 
           <div>
@@ -123,14 +125,11 @@ export default function ChangePasswordModal({ onClose }) {
             <input
               type="password"
               value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={(e) => { setConfirm(e.target.value); clearFieldError("confirm"); }}
               placeholder="••••••••"
-              required
-              minLength={6}
-              className="w-full h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700
-                         bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100
-                         outline-none focus:border-zinc-400 dark:focus:border-zinc-500 text-sm"
+              className={`w-full h-11 px-4 rounded-xl border bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 outline-none text-sm ${fieldErrors.confirm ? "border-red-400 dark:border-red-500" : "border-zinc-200 dark:border-zinc-700 focus:border-zinc-400 dark:focus:border-zinc-500"}`}
             />
+            {fieldErrors.confirm && <p className="text-xs text-red-500 mt-1">{fieldErrors.confirm}</p>}
           </div>
 
           {/* Feedback */}

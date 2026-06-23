@@ -63,12 +63,12 @@ export default function Admin() {
 
   const [showCreate, setShowCreate]         = useState(false);
   const [companyName, setCompanyName]       = useState("");
-  const [username, setUsername]             = useState("");
   const [ownerEmail, setOwnerEmail]         = useState("");
   const [ownerNome, setOwnerNome]           = useState("");
   const [ownerCognome, setOwnerCognome]     = useState("");
   const [saving, setSaving]                 = useState(false);
   const [error, setError]                   = useState("");
+  const [formErrors, setFormErrors]         = useState({});
 
   const [resettingPassword, setResettingPassword] = useState(null);
   const [resetLoading, setResetLoading]     = useState(false);
@@ -236,6 +236,13 @@ export default function Admin() {
 
   async function createCompany(e) {
     e.preventDefault();
+    const newErrors = {};
+    if (!companyName.trim()) newErrors.companyName = "Campo obbligatorio";
+    if (!ownerNome.trim())   newErrors.ownerNome   = "Campo obbligatorio";
+    if (!ownerCognome.trim()) newErrors.ownerCognome = "Campo obbligatorio";
+    if (!ownerEmail.trim())  newErrors.ownerEmail  = "Campo obbligatorio";
+    if (Object.keys(newErrors).length > 0) { setFormErrors(newErrors); return; }
+    setFormErrors({});
     setSaving(true);
     setError("");
     try {
@@ -243,18 +250,17 @@ export default function Admin() {
       const response = await fetch(API_URL + "/api/admin/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ company_name: companyName, username, email: ownerEmail, nome: ownerNome, cognome: ownerCognome })
+        body: JSON.stringify({ company_name: companyName, email: ownerEmail, nome: ownerNome, cognome: ownerCognome })
       });
       const data = await response.json();
       if (!data.success) {
-        if (data.error === "USERNAME_ALREADY_EXISTS") setError("Username già esistente");
-        else if (data.error === "MISSING_FIELDS") setError("Compila tutti i campi obbligatori");
+        if (data.error === "MISSING_FIELDS") setError("Compila tutti i campi obbligatori");
         else setError("Errore nella creazione");
         return;
       }
-      const savedEmail = ownerEmail;
-      const savedUsername = username;
-      setCompanyName(""); setUsername(""); setOwnerEmail(""); setOwnerNome(""); setOwnerCognome("");
+      const savedEmail    = ownerEmail;
+      const savedUsername = data.user?.username || "";
+      setCompanyName(""); setOwnerEmail(""); setOwnerNome(""); setOwnerCognome("");
       setShowCreate(false);
       setNewCredentials({
         username: savedUsername,
@@ -942,27 +948,39 @@ export default function Admin() {
                 <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Nuova azienda</h3>
                 <p className="text-xs text-zinc-500 mt-1 leading-relaxed">La password viene generata automaticamente e inviata via email al titolare</p>
               </div>
-              <button onClick={() => { setShowCreate(false); setError(""); }} className="ml-3 shrink-0 p-1">
+              <button onClick={() => { setShowCreate(false); setError(""); setFormErrors({}); }} className="ml-3 shrink-0 p-1">
                 <X size={20} className="text-zinc-500" />
               </button>
             </div>
             <form onSubmit={createCompany} className="flex flex-col gap-3">
-              <input type="text" placeholder="Nome azienda *" value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)} className={inputCls} required />
-              <input type="text" placeholder="Username titolare *" value={username}
-                onChange={(e) => setUsername(e.target.value)} className={inputCls} required />
-              <div className="grid grid-cols-2 gap-3">
-                <input type="text" placeholder="Nome titolare" value={ownerNome}
-                  onChange={(e) => setOwnerNome(e.target.value)} className={inputCls} />
-                <input type="text" placeholder="Cognome titolare" value={ownerCognome}
-                  onChange={(e) => setOwnerCognome(e.target.value)} className={inputCls} />
+              <div>
+                <input type="text" placeholder="Nome azienda *" value={companyName}
+                  onChange={(e) => { setCompanyName(e.target.value); if (formErrors.companyName) setFormErrors(p => ({...p, companyName: ""})); }}
+                  className={`${inputCls} ${formErrors.companyName ? "border-red-400 dark:border-red-500" : ""}`} />
+                {formErrors.companyName && <p className="text-xs text-red-500 mt-1">{formErrors.companyName}</p>}
               </div>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-                <input type="email" placeholder="Email titolare * (riceverà le credenziali)" value={ownerEmail}
-                  onChange={(e) => setOwnerEmail(e.target.value)}
-                  className="w-full h-11 pl-9 pr-3 rounded-xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-[16px] sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 placeholder-zinc-400"
-                  required />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <input type="text" placeholder="Nome titolare *" value={ownerNome}
+                    onChange={(e) => { setOwnerNome(e.target.value); if (formErrors.ownerNome) setFormErrors(p => ({...p, ownerNome: ""})); }}
+                    className={`${inputCls} ${formErrors.ownerNome ? "border-red-400 dark:border-red-500" : ""}`} />
+                  {formErrors.ownerNome && <p className="text-xs text-red-500 mt-1">{formErrors.ownerNome}</p>}
+                </div>
+                <div>
+                  <input type="text" placeholder="Cognome titolare *" value={ownerCognome}
+                    onChange={(e) => { setOwnerCognome(e.target.value); if (formErrors.ownerCognome) setFormErrors(p => ({...p, ownerCognome: ""})); }}
+                    className={`${inputCls} ${formErrors.ownerCognome ? "border-red-400 dark:border-red-500" : ""}`} />
+                  {formErrors.ownerCognome && <p className="text-xs text-red-500 mt-1">{formErrors.ownerCognome}</p>}
+                </div>
+              </div>
+              <div>
+                <div className="relative">
+                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                  <input type="email" placeholder="Email titolare * (riceverà le credenziali)" value={ownerEmail}
+                    onChange={(e) => { setOwnerEmail(e.target.value); if (formErrors.ownerEmail) setFormErrors(p => ({...p, ownerEmail: ""})); }}
+                    className={`w-full h-11 pl-9 pr-3 rounded-xl border bg-blue-50 dark:bg-blue-500/10 text-[16px] sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-blue-500 placeholder-zinc-400 ${formErrors.ownerEmail ? "border-red-400 dark:border-red-500" : "border-blue-300 dark:border-blue-500/40"}`} />
+                </div>
+                {formErrors.ownerEmail && <p className="text-xs text-red-500 mt-1">{formErrors.ownerEmail}</p>}
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <button type="submit" disabled={saving}
