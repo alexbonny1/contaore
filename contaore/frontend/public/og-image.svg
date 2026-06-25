@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0f0f10"/>
+  <rect x="0" y="0" width="1200" height="630" fill="#111113"/>
+
+  <!-- Logo area -->
+  <text x="100" y="240" font-family="monospace, sans-serif" font-size="18" fill="#2563eb" letter-spacing="4" text-anchor="start">TIMBRY</text>
+
+  <!-- Main headline -->
+  <text x="100" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="#ffffff" text-anchor="start">Gestione presenze</text>
+  <text x="100" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="#ffffff" text-anchor="start">NFC per la tua azienda</text>
+
+  <!-- Subtitle -->
+  <text x="100" y="470" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#71717a" text-anchor="start">Badge NFC · Timbrature · Turni · Ferie · Report</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="580" width="1200" height="50" fill="#18181b"/>
+  <text x="100" y="612" font-family="system-ui, sans-serif" font-size="18" fill="#52525b">timbry.it</text>
+</svg>

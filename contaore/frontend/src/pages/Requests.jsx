@@ -7,6 +7,7 @@ import {
 import { API_URL } from '../api'
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
 import PauseManager from '../components/PauseManager'
+import { track } from '../main'
 
 function statoBadge(stato) {
   switch (stato) {
@@ -51,8 +52,11 @@ export default function Requests({ initialView = 'richieste' }) {
                : `/api/requests/missing-scans/${id}/approva`
       const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
-      if (data.success) { showToast('Richiesta approvata ✓', 'success'); refreshRequests() }
-      else {
+      if (data.success) {
+        track('request_approved', { type })
+        showToast('Richiesta approvata ✓', 'success')
+        refreshRequests()
+      } else {
         setOptimistic(o => { const n = { ...o }; prev === undefined ? delete n[id] : (n[id] = prev); return n })
         showToast('Errore approvazione', 'error')
       }
@@ -76,8 +80,11 @@ export default function Requests({ initialView = 'richieste' }) {
                : `/api/requests/missing-scans/${id}/rifiuta`
       const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
-      if (data.success) { showToast('Richiesta rifiutata', 'success'); refreshRequests() }
-      else {
+      if (data.success) {
+        track('request_rejected', { type })
+        showToast('Richiesta rifiutata', 'success')
+        refreshRequests()
+      } else {
         setOptimistic(o => { const n = { ...o }; prev === undefined ? delete n[id] : (n[id] = prev); return n })
         showToast('Errore rifiuto', 'error')
       }

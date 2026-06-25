@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /employees
+Disallow: /badges
+Disallow: /readers
+Disallow: /requests
+Disallow: /pause
+Disallow: /notifications
+Disallow: /impostazioni
+Disallow: /portale
+Disallow: /admin
+Disallow: /verify-2fa
+Disallow: /reset-password
+
+Sitemap: https://timbry.it/sitemap.xml
