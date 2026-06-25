@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_URL } from "../api";
 import LegalFooter from "../components/LegalFooter";
+import { track } from "../main";
 
 export default function Login() {
 
@@ -58,6 +59,8 @@ export default function Login() {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+
+      track("user_logged_in", { role: data.user.role });
 
       if (data.user.role === "superadmin") {
         window.location.href = "/admin";

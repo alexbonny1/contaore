@@ -1,3 +1,14 @@
+import * as Sentry from '@sentry/node'
+
+// Sentry must be initialised before any other imports
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn:              process.env.SENTRY_DSN,
+    environment:      process.env.NODE_ENV || 'production',
+    tracesSampleRate: 0.1,
+  })
+}
+
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import compress from '@fastify/compress'
@@ -20,6 +31,7 @@ import ferieRoutes      from './routes/ferie.js'
 import requestsRoutes   from './routes/requests.js'    // ← nuovo
 import pauseRoutes      from './routes/pause.js'       // ← nuovo
 import notificheRoutes  from './routes/notifiche.js'
+import billingRoutes    from './routes/billing.js'
 import { startScheduler } from './services/notifiche.js'
 
 dotenv.config()
@@ -27,6 +39,10 @@ dotenv.config()
 const fastify = Fastify({
   logger: true
 })
+
+if (process.env.SENTRY_DSN) {
+  Sentry.setupFastifyErrorHandler(fastify)
+}
 
 await fastify.register(cors, {
   origin: (origin, callback) => {
@@ -83,6 +99,7 @@ await fastify.register(ferieRoutes)
 await fastify.register(requestsRoutes)     // ← nuovo
 await fastify.register(pauseRoutes)        // ← nuovo
 await fastify.register(notificheRoutes)
+await fastify.register(billingRoutes)
 
 fastify.get('/', async () => {
   return {

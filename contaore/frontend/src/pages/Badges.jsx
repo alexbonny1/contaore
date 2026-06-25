@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
+import { track } from "../main";
 import {
   CreditCard, CheckCircle2, XCircle, Mail, Pencil, X, ArrowLeft
 } from "lucide-react";
@@ -158,6 +159,7 @@ export default function Badges() {
         ? `Badge registrato — credenziali inviate a ${employeeEmail}`
         : "Badge registrato";
 
+      track("employee_created", { portal_account: !!data.account_creato });
       showToast(successMsg);
       setUid(""); setEmployeeName(""); setEmployeeCognome(""); setEmployeeEmail("");
       setWaitingScan(false);

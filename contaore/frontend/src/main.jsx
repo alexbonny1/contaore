@@ -1,39 +1,80 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import posthog from "posthog-js";
+import * as Sentry from "@sentry/react";
 
 import "./index.css";
 
+// ─── PostHog analytics ────────────────────────────────────────────────────────
+if (import.meta.env.VITE_POSTHOG_KEY) {
+  posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
+    api_host:            import.meta.env.VITE_POSTHOG_HOST || "https://eu.i.posthog.com",
+    capture_pageview:    true,
+    session_recording:   { maskAllInputs: true },
+    loaded: (ph) => {
+      if (import.meta.env.DEV) ph.opt_out_capturing();
+    },
+  });
+}
+export function track(event, props) {
+  if (import.meta.env.VITE_POSTHOG_KEY) posthog.capture(event, props);
+}
+
+// ─── Sentry error tracking ────────────────────────────────────────────────────
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn:              import.meta.env.VITE_SENTRY_DSN,
+    environment:      import.meta.env.MODE,
+    tracesSampleRate: 0.1,
+  });
+}
+
+// ─── Lazy-loaded pages ────────────────────────────────────────────────────────
+// Public / auth pages (keep eager: they're tiny and needed immediately)
 import Login               from "./pages/Login";
-import Dashboard           from "./pages/Dashboard";
-import Requests            from "./pages/Requests";
-import Employees           from "./pages/Employees";
-import EmployeeDetails     from "./pages/EmployeeDetails";
-import EmployeeTurni       from "./pages/EmployeeTurni";
-import Badges              from "./pages/Badges";
-import Readers             from "./pages/Readers";
-import Admin               from "./pages/admin";
-import DipendenteDashboard from "./pages/DipendenteDashboard";
 import ResetPassword       from "./pages/ResetPassword";
 import TwoFactorVerify     from "./pages/TwoFactorVerify";
 import TwoFactorVerifyReset from "./pages/TwoFactorVerifyReset";
-import Notifications       from "./pages/Notifications";
-import Settings            from "./pages/Settings";
-import SettingsProfilo     from "./pages/SettingsProfilo";
-import SettingsPresenze    from "./pages/SettingsPresenze";
-import SettingsGrafici     from "./pages/SettingsGrafici";
-import SettingsSicurezza   from "./pages/SettingsSicurezza";
-import SettingsDati        from "./pages/SettingsDati";
 import PrivacyPolicy       from "./pages/PrivacyPolicy";
 import CookiePolicy        from "./pages/CookiePolicy";
+import TermsOfService      from "./pages/TermsOfService";
+import NotFound            from "./pages/NotFound";
+
+// App pages — lazy loaded for better initial bundle size
+const Dashboard           = lazy(() => import("./pages/Dashboard"));
+const Requests            = lazy(() => import("./pages/Requests"));
+const Employees           = lazy(() => import("./pages/Employees"));
+const EmployeeDetails     = lazy(() => import("./pages/EmployeeDetails"));
+const EmployeeTurni       = lazy(() => import("./pages/EmployeeTurni"));
+const Badges              = lazy(() => import("./pages/Badges"));
+const Readers             = lazy(() => import("./pages/Readers"));
+const Admin               = lazy(() => import("./pages/admin"));
+const DipendenteDashboard = lazy(() => import("./pages/DipendenteDashboard"));
+const Notifications       = lazy(() => import("./pages/Notifications"));
+const Settings            = lazy(() => import("./pages/Settings"));
+const SettingsProfilo     = lazy(() => import("./pages/SettingsProfilo"));
+const SettingsPresenze    = lazy(() => import("./pages/SettingsPresenze"));
+const SettingsGrafici     = lazy(() => import("./pages/SettingsGrafici"));
+const SettingsSicurezza   = lazy(() => import("./pages/SettingsSicurezza"));
+const SettingsDati        = lazy(() => import("./pages/SettingsDati"));
+const Billing             = lazy(() => import("./pages/Billing"));
 
 import ProtectedRoute from "./ProtectedRoute";
 import OwnerLayout from "./components/OwnerLayout";
 
-function AppWithInactivity2FA() {
-
+// Minimal inline fallback — no extra component needed
+function PageLoader() {
   return (
-    <>
+    <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function AppWithInactivity2FA() {
+  return (
+    <Suspense fallback={<PageLoader />}>
       <Routes>
 
         <Route path="/" element={<Login />} />
@@ -42,6 +83,7 @@ function AppWithInactivity2FA() {
         <Route path="/verify-2fa-reset" element={<TwoFactorVerifyReset />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
+        <Route path="/termini" element={<TermsOfService />} />
 
         {/* superadmin */}
         <Route path="/admin" element={
@@ -65,13 +107,14 @@ function AppWithInactivity2FA() {
           <Route path="/badges"        element={<Badges />} />
           <Route path="/readers"       element={<Readers />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/impostazioni"            element={<Settings />} />
-          <Route path="/impostazioni/profilo"    element={<SettingsProfilo />} />
-          <Route path="/impostazioni/presenze"   element={<SettingsPresenze />} />
-          <Route path="/impostazioni/grafici"    element={<SettingsGrafici />} />
-          <Route path="/impostazioni/notifiche"  element={<Notifications />} />
-          <Route path="/impostazioni/sicurezza"  element={<SettingsSicurezza />} />
-          <Route path="/impostazioni/dati"       element={<SettingsDati />} />
+          <Route path="/impostazioni"              element={<Settings />} />
+          <Route path="/impostazioni/profilo"      element={<SettingsProfilo />} />
+          <Route path="/impostazioni/presenze"     element={<SettingsPresenze />} />
+          <Route path="/impostazioni/grafici"      element={<SettingsGrafici />} />
+          <Route path="/impostazioni/notifiche"    element={<Notifications />} />
+          <Route path="/impostazioni/sicurezza"    element={<SettingsSicurezza />} />
+          <Route path="/impostazioni/dati"         element={<SettingsDati />} />
+          <Route path="/impostazioni/abbonamento"  element={<Billing />} />
         </Route>
 
         {/* portale dipendente */}
@@ -81,9 +124,11 @@ function AppWithInactivity2FA() {
           </ProtectedRoute>
         } />
 
-      </Routes>
+        {/* catch-all 404 */}
+        <Route path="*" element={<NotFound />} />
 
-    </>
+      </Routes>
+    </Suspense>
   );
 }
 

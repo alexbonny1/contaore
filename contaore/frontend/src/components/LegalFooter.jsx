@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 export default function LegalFooter() {
   return (
     <div className="mt-6 text-center">
-      <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs text-zinc-400">
+      <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs text-zinc-400 flex-wrap">
         <Link to="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-200 transition">
           Privacy Policy
         </Link>
@@ -12,8 +12,13 @@ export default function LegalFooter() {
           Cookie Policy
         </Link>
         <span aria-hidden>·</span>
+        <Link to="/termini" className="hover:text-zinc-600 dark:hover:text-zinc-200 transition">
+          Termini di Servizio
+        </Link>
+        <span aria-hidden>·</span>
         <span className="text-zinc-300 dark:text-zinc-600">© 2025 Timbry</span>
       </div>
     </div>
   );
 }
+

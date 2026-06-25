@@ -1,0 +1,4 @@
+Contact: mailto:security@timbry.it
+Expires: 2027-01-01T00:00:00.000Z
+Preferred-Languages: it, en
+Scope: https://timbry.it
