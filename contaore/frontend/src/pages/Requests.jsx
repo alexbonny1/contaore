@@ -29,6 +29,8 @@ export default function Requests({ initialView = 'richieste' }) {
   const [expandedId, setExpandedId] = useState(null)
   const [toast, setToast]           = useState(null)
   const [actionLoading, setActionLoading] = useState({})
+  // optimistic: { [id]: 'approvata' | 'rifiutata' | 'deleted' }
+  const [optimistic, setOptimistic] = useState({})
 
   // dati richieste dal layout persistente (render immediato, niente spinner ad ogni apertura)
   const richieste = requestsData
@@ -37,8 +39,10 @@ export default function Requests({ initialView = 'richieste' }) {
   const { pulling, refreshing, distance } = usePullToRefresh(refreshRequests)
 
   async function approveRequest(type, id) {
+    const prev = optimistic[id]
+    setOptimistic(o => ({ ...o, [id]: 'approvata' }))
+    setActionLoading(p => ({ ...p, [id]: true }))
     try {
-      setActionLoading(p => ({ ...p, [id]: true }))
       const token = localStorage.getItem('token')
       const ep = type === 'ferie' ? `/api/ferie/${id}/approva`
                : type === 'giustificazioni' ? `/api/giustificazioni/${id}/approva`
@@ -48,14 +52,22 @@ export default function Requests({ initialView = 'richieste' }) {
       const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
       if (data.success) { showToast('Richiesta approvata ✓', 'success'); refreshRequests() }
-      else showToast('Errore approvazione', 'error')
-    } catch { showToast('Errore', 'error') }
+      else {
+        setOptimistic(o => { const n = { ...o }; prev === undefined ? delete n[id] : (n[id] = prev); return n })
+        showToast('Errore approvazione', 'error')
+      }
+    } catch {
+      setOptimistic(o => { const n = { ...o }; prev === undefined ? delete n[id] : (n[id] = prev); return n })
+      showToast('Errore', 'error')
+    }
     finally { setActionLoading(p => ({ ...p, [id]: false })) }
   }
 
   async function rejectRequest(type, id) {
+    const prev = optimistic[id]
+    setOptimistic(o => ({ ...o, [id]: 'rifiutata' }))
+    setActionLoading(p => ({ ...p, [id]: true }))
     try {
-      setActionLoading(p => ({ ...p, [id]: true }))
       const token = localStorage.getItem('token')
       const ep = type === 'ferie' ? `/api/ferie/${id}/rifiuta`
                : type === 'giustificazioni' ? `/api/giustificazioni/${id}/rifiuta`
@@ -65,22 +77,35 @@ export default function Requests({ initialView = 'richieste' }) {
       const res  = await fetch(`${API_URL}${ep}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
       if (data.success) { showToast('Richiesta rifiutata', 'success'); refreshRequests() }
-      else showToast('Errore rifiuto', 'error')
-    } catch { showToast('Errore', 'error') }
+      else {
+        setOptimistic(o => { const n = { ...o }; prev === undefined ? delete n[id] : (n[id] = prev); return n })
+        showToast('Errore rifiuto', 'error')
+      }
+    } catch {
+      setOptimistic(o => { const n = { ...o }; prev === undefined ? delete n[id] : (n[id] = prev); return n })
+      showToast('Errore', 'error')
+    }
     finally { setActionLoading(p => ({ ...p, [id]: false })) }
   }
 
   async function deleteRequest(type, id) {
     if (!window.confirm('Eliminare questa richiesta?')) return
+    setOptimistic(o => ({ ...o, [id]: 'deleted' }))
+    setActionLoading(p => ({ ...p, [`del_${id}`]: true }))
     try {
-      setActionLoading(p => ({ ...p, [`del_${id}`]: true }))
       const token = localStorage.getItem('token')
       const ep = type === 'ferie' ? `/api/ferie/${id}/admin` : `/api/requests/missing-scans/${id}/admin`
       const res  = await fetch(`${API_URL}${ep}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
       if (data.success) { showToast('Richiesta eliminata', 'success'); refreshRequests() }
-      else showToast('Errore eliminazione', 'error')
-    } catch { showToast('Errore', 'error') }
+      else {
+        setOptimistic(o => { const n = { ...o }; delete n[id]; return n })
+        showToast('Errore eliminazione', 'error')
+      }
+    } catch {
+      setOptimistic(o => { const n = { ...o }; delete n[id]; return n })
+      showToast('Errore', 'error')
+    }
     finally { setActionLoading(p => ({ ...p, [`del_${id}`]: false })) }
   }
 
@@ -98,6 +123,10 @@ export default function Requests({ initialView = 'richieste' }) {
   else if (activeTab === 'timbratura')     richiesteFiltrate = richieste_timbratura.map(r => ({...r,type:'timbratura'}))
   else if (activeTab === 'permessi')       richiesteFiltrate = richieste_permessi.map(r => ({...r,type:'permessi'}))
   else if (activeTab === 'modifica-turni') richiesteFiltrate = richieste_turni.map(r => ({...r,type:'modifica-turni'}))
+  // apply optimistic state before status filter so the UI updates instantly
+  richiesteFiltrate = richiesteFiltrate
+    .filter(r => optimistic[r.id] !== 'deleted')
+    .map(r => optimistic[r.id] ? { ...r, stato: optimistic[r.id] } : r)
   richiesteFiltrate = richiesteFiltrate.filter(r => r.stato === statusFilter)
   richiesteFiltrate.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 

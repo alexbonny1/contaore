@@ -13,10 +13,21 @@
 */
 
 import { Resend } from 'resend'
+import { makeBreaker, withRetry } from './circuitBreaker.js'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM = process.env.EMAIL_FROM || 'Timbry <onboarding@resend.dev>'
+
+const resendBreaker = makeBreaker(
+  payload => resend.emails.send(payload),
+  'resend-email',
+  { timeout: 8000 }
+)
+
+async function safeSend(payload) {
+  return withRetry(() => resendBreaker.fire(payload), 2)
+}
 
 // ─── Tutorial PWA condiviso ───────────────────────────────────────────────────
 const PWA_TUTORIAL_HTML = `
@@ -55,7 +66,7 @@ export async function sendCredenzialiOwner({ email, username, password, companyN
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Sito di accesso</p>
               <p style="margin:0;font-size:15px;font-weight:600;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>
             ` : ''
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await safeSend({
       from:    FROM,
       to:      email,
       subject: `Benvenuto su Timbry — Le credenziali di ${companyNome}`,
@@ -112,7 +123,7 @@ export async function sendCredenziali({ email, nome, username, password, company
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Sito di accesso</p>
               <p style="margin:0;font-size:15px;font-weight:600;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>
             ` : ''
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await safeSend({
       from:    FROM,
       to:      email,
       subject: `Le tue credenziali Timbry — ${companyNome}`,
@@ -166,7 +177,7 @@ export async function sendCredenziali({ email, nome, username, password, company
 // ─── Notifica al titolare: nuova richiesta ferie ──────────────────────────────
 export async function sendNotificaRichiestaFerie({ emailOwner, nomeDipendente, dataInizio, dataFine, companyNome }) {
   try {
-    await resend.emails.send({
+    await safeSend({
       from:    FROM,
       to:      emailOwner,
       subject: `Nuova richiesta ferie — ${nomeDipendente}`,
@@ -198,7 +209,7 @@ export async function sendNotificaRichiestaFerie({ emailOwner, nomeDipendente, d
 // ─── Notifica al dipendente: ferie approvate o rifiutate ─────────────────────
 export async function sendEsitoFerie({ emailDipendente, nome, dataInizio, dataFine, approvata }) {
   try {
-    await resend.emails.send({
+    await safeSend({
       from:    FROM,
       to:      emailDipendente,
       subject: `Richiesta ferie ${approvata ? 'approvata' : 'rifiutata'}`,
@@ -225,7 +236,7 @@ export async function sendEsitoFerie({ emailDipendente, nome, dataInizio, dataFi
 // ─── Reset password: invia link all'utente (owner o dipendente) ──────────────
 export async function sendResetPassword({ email, username, resetUrl }) {
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await safeSend({
       from:    FROM,
       to:      email,
       subject: 'Reimposta la tua password — Timbry',
@@ -277,7 +288,7 @@ export async function sendPasswordChanged({ email, username, loginUrl }) {
               <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;">Accedi a Timbry</p>
               <p style="margin:0;font-size:15px;font-weight:600;"><a href="${loginUrl}" style="color:#2563eb;text-decoration:none;">${loginUrl}</a></p>
             ` : ''
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await safeSend({
       from:    FROM,
       to:      email,
       subject: 'Password aggiornata — Timbry',
@@ -342,7 +353,7 @@ function emailWrap(companyNome, title, accentColor, bodyHtml) {
 
 async function send(to, subject, html) {
   try {
-    const { error } = await resend.emails.send({ from: FROM, to, subject, html })
+    const { error } = await safeSend({ from: FROM, to, subject, html })
     if (error) console.error('Resend error:', error)
     return !error
   } catch (e) { console.error('email send error:', e); return false }
@@ -495,7 +506,7 @@ export async function sendRiepilogoSettimanale({ emailOwner, companyNome, weekSt
 
 export async function sendTwoFactorEmail(email, code) {
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await safeSend({
       from: FROM,
       to: email,
       subject: 'Codice di verifica (2FA)',

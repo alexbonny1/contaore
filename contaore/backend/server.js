@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import compress from '@fastify/compress'
 import rateLimit from '@fastify/rate-limit'
 import helmet from '@fastify/helmet'
 import dotenv from 'dotenv'
@@ -53,6 +54,14 @@ await fastify.register(helmet, {
   permittedCrossDomainPolicies: false,  // Not needed for API
   referrerPolicy:               false,  // Browser-only
   xssFilter:                    false   // Deprecated, browser-only
+})
+
+await fastify.register(compress, {
+  global: true,
+  threshold: 1024,
+  encodings: ['gzip', 'deflate'],
+  // skip already-compressed binary formats
+  customTypes: /^(?!application\/pdf|application\/vnd\.ms-excel|application\/vnd\.openxmlformats)/
 })
 
 await fastify.register(rateLimit, {

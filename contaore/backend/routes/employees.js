@@ -85,16 +85,18 @@ async function autoInsertBreakTimbrature(supabase, dipendenteId, companyId, tagU
     inserts.push({ tipo: 'USCITA',  created_at: toTs(u1Time) })
   }
 
-  for (const ins of inserts) {
-    await supabase.from('presenza').insert({
-      company_id: companyId,
-      tag_uid:    tagUid,
-      reader_id:  null,
-      manuale:    false,
-      automatica: true,
-      timestamp:  ins.created_at,
-      ...ins
-    })
+  if (inserts.length > 0) {
+    await supabase.from('presenza').insert(
+      inserts.map(ins => ({
+        company_id: companyId,
+        tag_uid:    tagUid,
+        reader_id:  null,
+        manuale:    false,
+        automatica: true,
+        timestamp:  ins.created_at,
+        ...ins
+      }))
+    )
   }
 }
 
@@ -1261,30 +1263,35 @@ export default async function employeeRoutes(fastify) {
         return reply.status(400).send({ success: false, error: 'IDS_REQUIRED' })
       }
 
-      for (const dipId of ids) {
-        // Verifica appartenenza all'azienda
-        const { data: emp } = await supabase
-          .from('dipendenti')
-          .select('id, badge_uid')
-          .eq('id', dipId)
-          .eq('company_id', companyId)
-          .single()
+      // Fetch all employees at once to verify company ownership
+      const { data: emps } = await supabase
+        .from('dipendenti')
+        .select('id, badge_uid')
+        .in('id', ids)
+        .eq('company_id', companyId)
 
-        if (!emp) continue
-
-        // Elimina cascade
-        await supabase.from('user_account').delete().eq('dipendente_id', emp.id)
-        if (emp.badge_uid) {
-          await supabase.from('presenza').delete().eq('tag_uid', emp.badge_uid).eq('company_id', companyId)
-        }
-        await supabase.from('turni').delete().eq('dipendente_id', emp.id).eq('company_id', companyId)
-        await supabase.from('richieste_ferie').delete().eq('dipendente_id', emp.id)
-        await supabase.from('giustificazioni').delete().eq('dipendente_id', emp.id)
-        await supabase.from('richieste_permessi').delete().eq('dipendente_id', emp.id)
-        await supabase.from('richieste_turni').delete().eq('dipendente_id', emp.id)
-        await supabase.from('tag').delete().eq('dipendente_id', emp.id).eq('company_id', companyId)
-        await supabase.from('dipendenti').delete().eq('id', emp.id).eq('company_id', companyId)
+      if (!emps || emps.length === 0) {
+        return reply.send({ success: true })
       }
+
+      const empIds    = emps.map(e => e.id)
+      const badgeUids = emps.map(e => e.badge_uid).filter(Boolean)
+
+      // Batch delete per-table in parallel; presenza keyed by badge_uid
+      const deletions = [
+        supabase.from('user_account').delete().in('dipendente_id', empIds),
+        supabase.from('turni').delete().in('dipendente_id', empIds).eq('company_id', companyId),
+        supabase.from('richieste_ferie').delete().in('dipendente_id', empIds),
+        supabase.from('giustificazioni').delete().in('dipendente_id', empIds),
+        supabase.from('richieste_permessi').delete().in('dipendente_id', empIds),
+        supabase.from('richieste_turni').delete().in('dipendente_id', empIds),
+        supabase.from('tag').delete().in('dipendente_id', empIds).eq('company_id', companyId),
+      ]
+      if (badgeUids.length > 0) {
+        deletions.push(supabase.from('presenza').delete().in('tag_uid', badgeUids).eq('company_id', companyId))
+      }
+      await Promise.all(deletions)
+      await supabase.from('dipendenti').delete().in('id', empIds).eq('company_id', companyId)
 
       return reply.send({ success: true })
     } catch (err) {
