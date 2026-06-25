@@ -62,41 +62,38 @@ export default async function pauseRoutes(fastify) {
 
         // ── FERIE PER DIPENDENTI SPECIFICI ────────────────────────────────────
         if (isDipendenti) {
-          const created  = []
-          const overlaps = []
+          // Single query to find all overlapping employees
+          const { data: existingOverlaps } = await supabase
+            .from('richieste_ferie')
+            .select('dipendente_id')
+            .eq('company_id', company_id)
+            .in('dipendente_id', dipendente_ids)
+            .neq('stato', 'rifiutata')
+            .lte('data_inizio', data_fine)
+            .gte('data_fine', data_inizio)
 
-          for (const dip_id of dipendente_ids) {
-            const { data: existing } = await supabase
+          const overlapSet = new Set((existingOverlaps || []).map(r => r.dipendente_id))
+          const overlaps   = dipendente_ids.filter(id => overlapSet.has(id))
+          const toInsert   = dipendente_ids.filter(id => !overlapSet.has(id))
+
+          let created = []
+          if (toInsert.length > 0) {
+            const now = new Date().toISOString()
+            const rows = toInsert.map(dip_id => ({
+              company_id,
+              dipendente_id: dip_id,
+              data_inizio,
+              data_fine,
+              note:         motivo.trim(),
+              stato:        'approvata',
+              approvato_da: request.user.id,
+              approvato_il: now
+            }))
+            const { data: inserted } = await supabase
               .from('richieste_ferie')
-              .select('id, data_inizio, data_fine')
-              .eq('company_id', company_id)
-              .eq('dipendente_id', dip_id)
-              .neq('stato', 'rifiutata')
-              .lte('data_inizio', data_fine)
-              .gte('data_fine', data_inizio)
-              .maybeSingle()
-
-            if (existing) {
-              overlaps.push(dip_id)
-              continue
-            }
-
-            const { data: feria } = await supabase
-              .from('richieste_ferie')
-              .insert({
-                company_id,
-                dipendente_id: dip_id,
-                data_inizio,
-                data_fine,
-                note:         motivo.trim(),
-                stato:        'approvata',
-                approvato_da: request.user.id,
-                approvato_il: new Date().toISOString()
-              })
+              .insert(rows)
               .select()
-              .single()
-
-            if (feria) created.push(feria)
+            created = inserted || []
           }
 
           return reply.send({

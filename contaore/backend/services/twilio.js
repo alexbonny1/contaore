@@ -1,12 +1,16 @@
 import twilio from 'twilio';
+import { makeBreaker, withRetry } from './circuitBreaker.js';
 
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
 
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER; // +39...
+const TWILIO_PHONE_NUMBER    = process.env.TWILIO_PHONE_NUMBER;    // +39...
 const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER; // whatsapp:+39...
+
+const smsBreaker      = makeBreaker(args => twilioClient.messages.create(args), 'twilio-sms')
+const whatsappBreaker = makeBreaker(args => twilioClient.messages.create(args), 'twilio-whatsapp')
 
 /**
  * Genera codice 2FA casuale di 6 cifre
@@ -19,20 +23,14 @@ export function generateTwoFactorCode() {
  * Invia codice 2FA via SMS
  */
 export async function sendTwoFactorSMS(phoneNumber, code) {
+  const message = `Il tuo codice di verifica è: ${code}\nValido per 10 minuti.`;
   try {
-    const message = `Il tuo codice di verifica è: ${code}\nValido per 10 minuti.`;
-
-    const result = await twilioClient.messages.create({
+    const result = await withRetry(() => smsBreaker.fire({
       body: message,
       from: TWILIO_PHONE_NUMBER,
-      to: phoneNumber // Deve essere in formato +39...
-    });
-
-    return {
-      success: true,
-      sid: result.sid,
-      method: 'sms'
-    };
+      to:   phoneNumber
+    }));
+    return { success: true, sid: result.sid, method: 'sms' };
   } catch (error) {
     console.error('[2FA SMS] Errore:', error.message);
     throw error;
@@ -43,25 +41,15 @@ export async function sendTwoFactorSMS(phoneNumber, code) {
  * Invia codice 2FA via WhatsApp
  */
 export async function sendTwoFactorWhatsApp(phoneNumber, code) {
+  const message = `Il tuo codice di verifica è: ${code}\nValido per 10 minuti.`;
+  const whatsappTo = phoneNumber.startsWith('whatsapp:') ? phoneNumber : `whatsapp:${phoneNumber}`;
   try {
-    const message = `Il tuo codice di verifica è: ${code}\nValido per 10 minuti.`;
-
-    // Formato: whatsapp:+39...
-    const whatsappTo = phoneNumber.startsWith('whatsapp:')
-      ? phoneNumber
-      : `whatsapp:${phoneNumber}`;
-
-    const result = await twilioClient.messages.create({
+    const result = await withRetry(() => whatsappBreaker.fire({
       body: message,
       from: TWILIO_WHATSAPP_NUMBER,
-      to: whatsappTo
-    });
-
-    return {
-      success: true,
-      sid: result.sid,
-      method: 'whatsapp'
-    };
+      to:   whatsappTo
+    }));
+    return { success: true, sid: result.sid, method: 'whatsapp' };
   } catch (error) {
     console.error('[2FA WhatsApp] Errore:', error.message);
     throw error;

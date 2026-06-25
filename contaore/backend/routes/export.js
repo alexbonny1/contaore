@@ -324,11 +324,8 @@ export default async function exportRoutes(fastify) {
     const toleranceMins = companySettings?.tolleranza_straordinario_minuti ?? 10
     const snapToShift   = companySettings?.arrotonda_ore_al_turno ?? false
 
-    const employeesData = []
-    for (const id of employee_ids) {
-      const d = await loadEmployeeFullData(id, companyId)
-      if (d) employeesData.push(d)
-    }
+    const results = await Promise.all(employee_ids.map(id => loadEmployeeFullData(id, companyId)))
+    const employeesData = results.filter(Boolean)
     if (!employeesData.length) return reply.status(404).send({ success: false, error: 'NO_DATA' })
 
     const pdfBuffer = await new Promise((resolve, reject) => {
@@ -537,11 +534,8 @@ export default async function exportRoutes(fastify) {
     const toleranceMins = companySettingsXls?.tolleranza_straordinario_minuti ?? 10
     const snapToShift   = companySettingsXls?.arrotonda_ore_al_turno ?? false
 
-    const employeesData = []
-    for (const id of employee_ids) {
-      const d = await loadEmployeeFullData(id, companyId)
-      if (d) employeesData.push(d)
-    }
+    const resultsXls = await Promise.all(employee_ids.map(id => loadEmployeeFullData(id, companyId)))
+    const employeesData = resultsXls.filter(Boolean)
     if (!employeesData.length) return reply.status(404).send({ success: false, error: 'NO_DATA' })
 
     const wb = XLSX.utils.book_new()
