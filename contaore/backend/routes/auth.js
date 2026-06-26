@@ -7,6 +7,7 @@ import {
   generateTwoFactorCode,
   sendTwoFactorCode
 } from '../services/twilio.js'
+import { createSession, deleteSession, deleteUserSessions, validateSession } from '../services/sessions.js'
 
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) throw new Error('Variabile d\'ambiente JWT_SECRET mancante')
@@ -89,11 +90,12 @@ export default async function authRoutes(fastify) {
           portale_dipendenti,
           two_factor_enabled:      user.two_factor_enabled || false,
           last_activity_timestamp: lastActivityTimestamp,
-          password_version:        user.password_changed_at ? new Date(user.password_changed_at).getTime() : 0
         },
         JWT_SECRET,
         { expiresIn: '7d' }
       )
+
+      await createSession(user.id, token)
 
       return reply.send({
         success: true,
@@ -200,11 +202,12 @@ export default async function authRoutes(fastify) {
           portale_dipendenti,
           two_factor_enabled:      user.two_factor_enabled || false,
           last_activity_timestamp: lastActivityTimestamp,
-          password_version:        user.password_changed_at ? new Date(user.password_changed_at).getTime() : 0
         },
         JWT_SECRET,
         { expiresIn: '7d' }
       )
+
+      await createSession(user.id, token)
 
       return reply.send({
         success: true,
@@ -367,11 +370,13 @@ export default async function authRoutes(fastify) {
         return reply.status(500).send({ error: 'UPDATE_ERROR' })
       }
 
+      // Invalida tutte le sessioni attive dell'utente su tutti i dispositivi
+      await deleteUserSessions(decoded.id)
+
       // Invia email di notifica cambio password
       const loginUrl = process.env.APP_URL || null
       sendPasswordChanged({ email: user.email, username: user.username, loginUrl }).catch(() => {})
 
-      // Non emettere nuovo token: tutti i dispositivi (incluso quello corrente) devono ri-autenticarsi
       return reply.send({ success: true })
 
     } catch (err) {
@@ -553,6 +558,9 @@ export default async function authRoutes(fastify) {
         return reply.status(500).send({ error: 'UPDATE_ERROR' })
       }
 
+      // Invalida tutte le sessioni attive dell'utente su tutti i dispositivi
+      await deleteUserSessions(user.id)
+
       return reply.send({ success: true })
 
     } catch (err) {
@@ -629,6 +637,9 @@ export default async function authRoutes(fastify) {
         console.error('2FA reset: errore update password:', resetError.message)
         return reply.status(500).send({ error: 'UPDATE_ERROR' })
       }
+
+      // Invalida tutte le sessioni attive dell'utente su tutti i dispositivi
+      await deleteUserSessions(decoded.userId)
 
       return reply.send({ success: true, message: 'Password resettata con successo' })
 
@@ -827,6 +838,11 @@ export default async function authRoutes(fastify) {
         return reply.status(401).send({ error: 'INVALID_TOKEN' })
       }
 
+      const rawToken = authHeader.replace('Bearer ', '')
+      if (!await validateSession(rawToken)) {
+        return reply.status(401).send({ error: 'SESSION_EXPIRED' })
+      }
+
       // Se 2FA non è abilitato, passa
       if (!decoded.two_factor_enabled) {
         return reply.send({ success: true, needsTwoFactor: false })
@@ -891,7 +907,8 @@ export default async function authRoutes(fastify) {
         })
       }
 
-      // Inattività < 15 minuti, aggiorna timestamp
+      // Inattività < 15 minuti, aggiorna timestamp e ruota sessione
+      const oldToken = authHeader.replace('Bearer ', '')
       const newToken = jwt.sign(
         {
           ...decoded,
@@ -901,7 +918,33 @@ export default async function authRoutes(fastify) {
         { expiresIn: '7d' }
       )
 
+      await createSession(decoded.id, newToken)
+      await deleteSession(oldToken)
+
       return reply.send({ success: true, needsTwoFactor: false, token: newToken })
+    } catch (err) {
+      request.log.error(err)
+      return reply.status(500).send({ error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── LOGOUT ───────────────────────────────────────────────────────────────────
+  fastify.post('/api/auth/logout', async (request, reply) => {
+    try {
+      const authHeader = request.headers.authorization
+      if (!authHeader) return reply.status(401).send({ error: 'TOKEN_MISSING' })
+
+      const token = authHeader.replace('Bearer ', '')
+
+      try {
+        jwt.verify(token, JWT_SECRET)
+      } catch {
+        return reply.status(401).send({ error: 'INVALID_TOKEN' })
+      }
+
+      await deleteSession(token)
+
+      return reply.send({ success: true })
     } catch (err) {
       request.log.error(err)
       return reply.status(500).send({ error: 'SERVER_ERROR' })
