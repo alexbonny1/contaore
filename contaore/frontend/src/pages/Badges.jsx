@@ -126,7 +126,6 @@ export default function Badges() {
     const newErrors = {};
     if (!employeeName.trim())                      newErrors.nome  = "Campo obbligatorio";
     if (!employeeCognome.trim())                   newErrors.cognome = "Campo obbligatorio";
-    if (portaleAttivo && !employeeEmail.trim())    newErrors.email = "Campo obbligatorio (portale attivo)";
     if (Object.keys(newErrors).length > 0) { setFormErrors(newErrors); return; }
     setFormErrors({});
 
@@ -148,8 +147,7 @@ export default function Badges() {
 
       if (!data.success) {
         const msg =
-          data.error === "UID_ALREADY_EXISTS"   ? "Badge già registrato" :
-          data.error === "EMAIL_REQUIRED"        ? "Email obbligatoria (portale attivo)" :
+          data.error === "UID_ALREADY_EXISTS" ? "Badge già registrato" :
           data.error || "Errore registrazione";
         showToast(msg, "error");
         return;
@@ -258,7 +256,7 @@ export default function Badges() {
           <div className="flex items-start sm:items-center gap-2 sm:gap-3 mb-5 sm:mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-3">
             <Mail size={14} className="sm:w-4 sm:h-4 text-blue-500 flex-shrink-0 mt-0.5 sm:mt-0" />
             <p className="text-[10px] sm:text-sm text-blue-700 dark:text-blue-300 leading-snug">
-              <strong>Portale dipendenti attivo</strong> — inserisci l'email del dipendente per creare automaticamente il suo account e inviargli le credenziali di accesso.
+              <strong>Portale dipendenti attivo</strong> — inserisci l'email per creare automaticamente l'account portale e inviare le credenziali al dipendente (opzionale).
             </p>
           </div>
         )}
@@ -306,7 +304,7 @@ export default function Badges() {
                     <Mail size={14} className="sm:w-4 sm:h-4 absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                     <input
                       type="email"
-                      placeholder="Email dipendente *"
+                      placeholder="Email dipendente (opzionale)"
                       value={employeeEmail}
                       onChange={(e) => { setEmployeeEmail(e.target.value); if (formErrors.email) setFormErrors(p => ({...p, email: ""})); }}
                       className={`w-full h-10 sm:h-12 pl-8 sm:pl-10 pr-3 sm:pr-4 rounded-xl sm:rounded-2xl border bg-blue-50 dark:bg-blue-500/10 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm outline-none focus:border-blue-500 placeholder-zinc-400 ${formErrors.email ? "border-red-400 dark:border-red-500" : "border-blue-300 dark:border-blue-500/40"}`}
