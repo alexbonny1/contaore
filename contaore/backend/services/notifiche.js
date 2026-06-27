@@ -49,7 +49,7 @@ function canSend(key) {
 
 async function ownerEmail(companyId) {
   const { data } = await supabase
-    .from('utenti').select('email')
+    .from('user_account').select('email')
     .eq('company_id', companyId).eq('role', 'owner').maybeSingle()
   return data?.email || null
 }
