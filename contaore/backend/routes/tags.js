@@ -89,14 +89,6 @@ export default async function tagRoutes(fastify) {
 
         const portaleAttivo = !!company?.portale_dipendenti
 
-        if (portaleAttivo && !employee_email) {
-          return reply.send({
-            success: false,
-            error:   'EMAIL_REQUIRED',
-            message: 'Il portale dipendenti è attivo: l\'email del dipendente è obbligatoria'
-          })
-        }
-
         const informativaFlag = informativa_consegnata === true
         const { data: employee, error: employeeError } = await supabase
           .from('dipendenti')

@@ -662,160 +662,169 @@ export default function DipendenteDashboard() {
 
         {/* ══════════ TAB: PRESENZE (storico) ══════════ */}
         {tab === "presenze" && (
-          <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100">Storico presenze</h3>
-            {Object.keys(months).length === 0 && (
-              <div className="text-center py-12 sm:py-16 text-sm sm:text-base text-zinc-400">Nessuna presenza registrata</div>
-            )}
-            {Object.entries(months).map(([mese, giorni]) => {
-              const oreM   = Number(giorni.reduce((s, d) => s + d.ore_totali, 0).toFixed(2));
-              const assM   = giorni.filter(d => d.assente).length;
-              const isOpen = openMonth === mese;
-              return (
-                <div key={mese} className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-
-                  {/* header mese */}
-                  <div className="w-full flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 gap-2">
-                    <button className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 text-left" onClick={() => setOpenMonth(isOpen ? null : mese)}>
-                      <Calendar size={14} className="sm:w-4 sm:h-4 text-zinc-400 flex-shrink-0" />
-                      <span className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize truncate">{mese}</span>
-                    </button>
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                      <span className="text-[10px] sm:text-xs text-zinc-400 whitespace-nowrap">{oreM}h</span>
-                      {assM > 0 && <span className="text-[10px] sm:text-xs text-red-500 whitespace-nowrap hidden xs:inline">{assM} ass.</span>}
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Storico presenze</h3>
+            </div>
+            {Object.keys(months).length === 0 ? (
+              <p className="text-center py-12 text-sm text-zinc-400">Nessuna presenza registrata</p>
+            ) : (
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {Object.entries(months).map(([mese, giorni]) => {
+                  const oreM   = Number(giorni.reduce((s, d) => s + d.ore_totali, 0).toFixed(2));
+                  const assM   = giorni.filter(d => d.assente).length;
+                  const isOpen = openMonth === mese;
+                  return (
+                    <div key={mese}>
+                      {/* HEADER MESE */}
                       <button
-                        onClick={() => downloadMonthPDF(mese)}
-                        className="flex items-center gap-1 h-8 px-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[11px] font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                        title={`Scarica PDF ${mese}`}
+                        className="w-full flex items-center justify-between px-4 sm:px-6 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors text-left"
+                        onClick={() => setOpenMonth(isOpen ? null : mese)}
                       >
-                        <Download size={12} />
-                        <span className="hidden sm:inline">PDF</span>
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize">{mese}</span>
+                        <div className="flex items-center gap-2.5">
+                          {assM > 0 && <span className="text-xs text-red-400">{assM} ass.</span>}
+                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{oreM}h</span>
+                          <button
+                            onClick={e => { e.stopPropagation(); downloadMonthPDF(mese); }}
+                            className="flex items-center gap-1 h-7 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 text-[11px] font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                            title={`Scarica PDF ${mese}`}
+                          >
+                            <Download size={11} />
+                            <span className="hidden sm:inline">PDF</span>
+                          </button>
+                          {isOpen ? <ChevronUp size={15} className="text-zinc-400" /> : <ChevronDown size={15} className="text-zinc-400" />}
+                        </div>
                       </button>
-                      <button onClick={() => setOpenMonth(isOpen ? null : mese)} className="flex items-center justify-center h-8 w-8 rounded-xl text-zinc-400">
-                        {isOpen ? <ChevronUp size={14} className="sm:w-4 sm:h-4" /> : <ChevronDown size={14} className="sm:w-4 sm:h-4" />}
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* riepilogo mese NASCOSTO - mostro direttamente i giorni */}
-                  {isOpen && (
-                    <div className="border-t border-zinc-100 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800">
-                      {giorni.map(g => {
-                        const { label, color } = statoBadge(g.stato, g.ritardo_minuti);
-                        const isDayOpen = openDay === g.giorno;
-                        // controlla se esiste già una giustificazione per questo giorno
-                        const giust = giustificazioni.find(j => j.data === g.giorno);
-                        return (
-                          <div key={g.giorno}>
-                            <div className="w-full flex items-center justify-between px-6 py-3 gap-4 flex-wrap">
-                              <div className="flex items-center gap-3">
-                                <span className="text-sm text-zinc-700 dark:text-zinc-300 w-24 text-left">
-                                  {new Date(g.giorno).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
-                                </span>
-                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${color}`}>{label}</span>
-                              </div>
-                              <div className="flex items-center gap-3 text-xs text-zinc-500">
-                                {g.coppie.length > 0 ? (
-                                  g.coppie.map((c, i) => (
-                                    <div key={i} className="flex items-center gap-2">
-                                      <span className="text-green-600 font-medium">↑ {c.entrata || "—"}</span>
-                                      <span className="text-zinc-300">|</span>
-                                      <span className="text-red-500 font-medium">↓ {c.uscita || "..."}</span>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <span className="text-zinc-400">Nessuna timbratura</span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-4 ml-auto">
-                                {g.ore_totali > 0 && <span className="text-xs text-zinc-400">{g.ore_totali}h</span>}
-                              </div>
-                            </div>
-
-                            {/* dettaglio giorno */}
-                            {isDayOpen && (
-                              <div className="px-6 pb-4 bg-zinc-50 dark:bg-zinc-900/50">
-
-                                {/* coppie entrata/uscita */}
-                                {g.coppie.length > 0 ? (
-                                  <div className="space-y-1 mb-3">
-                                    {g.coppie.map((c, i) => (
-                                      <div key={i} className="flex items-center gap-2 text-xs text-zinc-500">
-                                        <span className="text-green-600 font-medium">↑ {c.entrata || "—"}</span>
-                                        {c.entrata_id && (
-                                          <button onClick={() => openModifyModal(c.entrata_id, g.giorno, c.entrata)}
-                                            className="text-zinc-300 hover:text-blue-500 transition-colors flex-shrink-0">
-                                            <Pencil size={10} />
-                                          </button>
-                                        )}
-                                        <span className="text-zinc-300">|</span>
-                                        <span className="text-red-500 font-medium">↓ {c.uscita || "ancora dentro"}</span>
-                                        {c.uscita && c.uscita_giorno_dopo && (
-                                          <span className="text-indigo-500 dark:text-indigo-400 font-medium">+1</span>
-                                        )}
-                                        {c.uscita_id && (
-                                          <button onClick={() => openModifyModal(c.uscita_id, g.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
-                                            className="text-zinc-300 hover:text-blue-500 transition-colors flex-shrink-0">
-                                            <Pencil size={10} />
-                                          </button>
-                                        )}
-                                      </div>
-                                    ))}
+                      {/* GIORNI */}
+                      {isOpen && (
+                        <div className="border-t border-zinc-100 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                          {giorni.map(g => {
+                            const { label, color } = statoBadge(g.stato, g.ritardo_minuti);
+                            const isDayOpen = openDay === g.giorno;
+                            const giust = giustificazioni.find(j => j.data === g.giorno);
+                            return (
+                              <div key={g.giorno}>
+                                {/* ROW GIORNO */}
+                                <button
+                                  onClick={() => setOpenDay(isDayOpen ? null : g.giorno)}
+                                  className="w-full flex items-center px-4 sm:px-6 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors text-left gap-3"
+                                >
+                                  <span className="text-xs text-zinc-500 w-20 shrink-0 tabular-nums">
+                                    {new Date(g.giorno).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                                  </span>
+                                  <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-medium ${color}`}>{label}</span>
+                                  <div className="flex items-center gap-2 ml-auto text-xs text-zinc-400">
+                                    {g.coppie.length > 0 ? (
+                                      g.coppie.map((c, i) => (
+                                        <span key={i} className="tabular-nums hidden sm:inline">
+                                          {c.entrata || "—"} → {c.uscita || "..."}
+                                        </span>
+                                      ))
+                                    ) : null}
+                                    {g.ore_totali > 0 && (
+                                      <span className="font-medium text-zinc-600 dark:text-zinc-300">{g.ore_totali}h</span>
+                                    )}
+                                    {isDayOpen ? <ChevronUp size={13} className="text-zinc-300" /> : <ChevronDown size={13} className="text-zinc-300" />}
                                   </div>
-                                ) : (
-                                  <p className="text-xs text-zinc-400 mb-3">Nessuna timbratura</p>
-                                )}
+                                </button>
 
-                                {/* pulsante giustifica — solo se assente e non già giustificato */}
-                                {g.assente && !giust && (
-                                  <div>
-                                    {showJustForm === g.giorno ? (
-                                      <div className="mt-3 space-y-2">
-                                        <textarea
-                                          rows={2}
-                                          placeholder="Motivo dell'assenza..."
-                                          value={justMotivo}
-                                          onChange={e => setJustMotivo(e.target.value)}
-                                          className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none resize-none"
-                                        />
-                                        <div className="flex gap-2">
-                                          <button onClick={() => inviaGiustificazione(g.giorno)} disabled={savingJust}
-                                            className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium disabled:opacity-50">
-                                            <Send size={12} /> {savingJust ? "Invio..." : "Invia"}
-                                          </button>
-                                          <button onClick={() => { setShowJustForm(null); setJustMotivo(""); }}
-                                            className="h-9 px-3 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs">
-                                            Annulla
-                                          </button>
-                                        </div>
+                                {/* DETAIL PANEL */}
+                                {isDayOpen && (
+                                  <div className="px-4 sm:px-6 pb-4 bg-zinc-50/60 dark:bg-zinc-900/30">
+
+                                    {g.coppie.length > 0 ? (
+                                      <div className="space-y-2 pt-3">
+                                        {g.coppie.map((c, i) => (
+                                          <div key={i} className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs">
+                                            <div className="flex items-center gap-2">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                              <span className="text-zinc-400">Entrata</span>
+                                              <span className="font-medium text-zinc-800 dark:text-zinc-200 tabular-nums">{c.entrata || "—"}</span>
+                                              {c.entrata_id && (
+                                                <button
+                                                  onClick={() => openModifyModal(c.entrata_id, g.giorno, c.entrata)}
+                                                  className="text-zinc-300 hover:text-blue-500 transition-colors"
+                                                  title="Richiedi modifica"
+                                                >
+                                                  <Pencil size={11} />
+                                                </button>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                                              <span className="text-zinc-400">Uscita</span>
+                                              <span className="font-medium text-zinc-800 dark:text-zinc-200 tabular-nums">{c.uscita || "ancora dentro"}</span>
+                                              {c.uscita && c.uscita_giorno_dopo && (
+                                                <span className="text-indigo-500 text-[10px] font-medium">+1</span>
+                                              )}
+                                              {c.uscita_id && (
+                                                <button
+                                                  onClick={() => openModifyModal(c.uscita_id, g.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
+                                                  className="text-zinc-300 hover:text-blue-500 transition-colors"
+                                                  title="Richiedi modifica"
+                                                >
+                                                  <Pencil size={11} />
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
                                       </div>
                                     ) : (
-                                      <button onClick={() => setShowJustForm(g.giorno)}
-                                        className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 mt-1">
-                                        <AlertCircle size={13} /> Giustifica assenza
-                                      </button>
+                                      <p className="text-xs text-zinc-400 pt-3">Nessuna timbratura</p>
+                                    )}
+
+                                    {g.assente && !giust && (
+                                      <div className="mt-3">
+                                        {showJustForm === g.giorno ? (
+                                          <div className="space-y-2">
+                                            <textarea
+                                              rows={2}
+                                              placeholder="Motivo dell'assenza..."
+                                              value={justMotivo}
+                                              onChange={e => setJustMotivo(e.target.value)}
+                                              className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 outline-none resize-none"
+                                            />
+                                            <div className="flex gap-2">
+                                              <button onClick={() => inviaGiustificazione(g.giorno)} disabled={savingJust}
+                                                className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium disabled:opacity-50">
+                                                <Send size={12} /> {savingJust ? "Invio..." : "Invia"}
+                                              </button>
+                                              <button onClick={() => { setShowJustForm(null); setJustMotivo(""); }}
+                                                className="h-8 px-3 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs">
+                                                Annulla
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <button onClick={() => setShowJustForm(g.giorno)}
+                                            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">
+                                            <AlertCircle size={12} /> Giustifica assenza
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {giust && (
+                                      <div className={`mt-3 px-3 py-2 rounded-xl text-xs ${statoBadge("giustificata").color}`}>
+                                        <strong>Giustificazione {statoBadgeFerie(giust.stato).label.toLowerCase()}</strong>
+                                        {giust.motivo && <span className="text-zinc-500 ml-1">— {giust.motivo}</span>}
+                                      </div>
                                     )}
                                   </div>
                                 )}
-
-                                {/* stato giustificazione esistente */}
-                                {giust && (
-                                  <div className={`mt-2 px-3 py-2 rounded-xl text-xs ${statoBadge("giustificata").color}`}>
-                                    <strong>Giustificazione {statoBadgeFerie(giust.stato).label.toLowerCase()}</strong>
-                                    {giust.motivo && <span className="text-zinc-500 ml-1">— {giust.motivo}</span>}
-                                  </div>
-                                )}
-
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
