@@ -921,10 +921,8 @@ export default function EmployeeDetails() {
 
                   {/* GIORNI */}
                   {expandedMonth === month.mese && (
-                    <div className="border-t border-zinc-100 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                    <div className="border-t border-zinc-100 dark:border-zinc-800">
                       {month.giorni.map(day => {
-                        const isDayOpen = expandedDay === day.giorno;
-
                         let badgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
                         let badgeLabel = 'Presente'
                         if (day.assente) {
@@ -945,109 +943,72 @@ export default function EmployeeDetails() {
                         }
 
                         return (
-                          <div key={day.giorno}>
-                            {/* ROW GIORNO */}
-                            <button
-                              onClick={() => setExpandedDay(isDayOpen ? null : day.giorno)}
-                              className="w-full flex items-center px-5 sm:px-6 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors text-left gap-3"
-                            >
-                              <span className="text-xs text-zinc-500 w-20 shrink-0 tabular-nums">
-                                {new Date(day.giorno + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
-                              </span>
-                              <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-medium ${badgeColor}`}>{badgeLabel}</span>
-                              <div className="flex items-center gap-2 ml-auto text-xs text-zinc-400">
-                                {day.coppie.length > 0 ? (
-                                  day.coppie.map((c, i) => (
-                                    <span key={i} className="tabular-nums hidden sm:inline">
-                                      {c.entrata || "—"} → {c.uscita || "..."}
-                                    </span>
-                                  ))
-                                ) : null}
-                                {day.ore_totali > 0 && (
-                                  <span className="font-medium text-zinc-600 dark:text-zinc-300">{formatOre(day.ore_totali)}</span>
-                                )}
-                                {isDayOpen ? <ChevronUp size={13} className="text-zinc-300" /> : <ChevronDown size={13} className="text-zinc-300" />}
-                              </div>
-                            </button>
+                          <div key={day.giorno} className="flex items-center gap-3 px-5 sm:px-6 py-2.5 border-b border-zinc-50 dark:border-zinc-800/50 last:border-0">
 
-                            {/* DETAIL PANEL */}
-                            {isDayOpen && (
-                              <div className="px-5 sm:px-6 pb-4 bg-zinc-50/60 dark:bg-zinc-900/30">
+                            {/* DATA */}
+                            <span className="text-xs text-zinc-400 w-14 shrink-0 tabular-nums">
+                              {new Date(day.giorno + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                            </span>
 
-                                {day.coppie.length > 0 ? (
-                                  <div className="space-y-2 pt-3">
-                                    {day.coppie.map((c, i) => (
-                                      <div key={i} className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs">
-                                        <div className="flex items-center gap-2">
-                                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                          <span className="text-zinc-400">Entrata</span>
-                                          <span className="font-medium text-zinc-800 dark:text-zinc-200 tabular-nums">{c.entrata || "—"}</span>
-                                          {canManagePresence && c.entrata_id && (
-                                            <button
-                                              onClick={() => startEditPresence(c.entrata_id, "ENTRATA", day.giorno, c.entrata)}
-                                              className="text-zinc-300 hover:text-blue-500 transition-colors"
-                                            >
-                                              <Pencil size={11} />
-                                            </button>
-                                          )}
-                                          {canManagePresence && (c.entrata_manuale || c.entrata_automatica) && c.entrata_id && (
-                                            <button onClick={() => deletePresence(c.entrata_id)} className="text-zinc-300 hover:text-red-500 transition-colors">
-                                              <X size={11} />
-                                            </button>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                                          <span className="text-zinc-400">Uscita</span>
-                                          <span className="font-medium text-zinc-800 dark:text-zinc-200 tabular-nums">{c.uscita || "ancora dentro"}</span>
-                                          {c.uscita && c.uscita_giorno_dopo && (
-                                            <span className="text-indigo-500 text-[10px] font-medium">+1</span>
-                                          )}
-                                          {canManagePresence && c.uscita_id && (
-                                            <button
-                                              onClick={() => startEditPresence(c.uscita_id, "USCITA", day.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
-                                              className="text-zinc-300 hover:text-blue-500 transition-colors"
-                                            >
-                                              <Pencil size={11} />
-                                            </button>
-                                          )}
-                                          {canManagePresence && (c.uscita_manuale || c.uscita_automatica) && c.uscita_id && (
-                                            <button onClick={() => deletePresence(c.uscita_id)} className="text-zinc-300 hover:text-red-500 transition-colors">
-                                              <X size={11} />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs text-zinc-400 pt-3">Nessuna timbratura</p>
-                                )}
+                            {/* STATO */}
+                            <span className={`shrink-0 w-[72px] text-center px-2 py-0.5 rounded-md text-[11px] font-medium ${badgeColor}`}>{badgeLabel}</span>
 
-                                {(day.ore_totali > 0 || (turniAttivi && day.ore_previste > 0)) && (
-                                  <div className="flex gap-4 mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800/60 text-xs text-zinc-500">
-                                    {day.ore_totali > 0 && (
-                                      <span>Ore: <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">{formatOre(day.ore_totali)}</strong></span>
+                            {/* TIMBRATURE */}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0">
+                              {day.coppie.length > 0 ? day.coppie.map((c, i) => (
+                                <div key={i} className="flex items-center gap-3">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-emerald-500 font-semibold text-xs">↑</span>
+                                    <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 tabular-nums">{c.entrata || "—"}</span>
+                                    {canManagePresence && c.entrata_id && (
+                                      <button onClick={() => startEditPresence(c.entrata_id, "ENTRATA", day.giorno, c.entrata)}
+                                        className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
+                                        <Pencil size={11} />
+                                      </button>
                                     )}
-                                    {turniAttivi && day.ore_previste > 0 && (
-                                      <span>Previste: <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">{formatOre(day.ore_previste)}</strong></span>
-                                    )}
-                                    {turniAttivi && day.ore_straordinario > 0 && (
-                                      <span>Straord: <strong className="text-amber-600 dark:text-amber-400 font-semibold">{formatOre(day.ore_straordinario)}</strong></span>
+                                    {canManagePresence && (c.entrata_manuale || c.entrata_automatica) && c.entrata_id && (
+                                      <button onClick={() => deletePresence(c.entrata_id)}
+                                        className="text-zinc-300 hover:text-red-500 transition-colors">
+                                        <X size={11} />
+                                      </button>
                                     )}
                                   </div>
-                                )}
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-red-400 font-semibold text-xs">↓</span>
+                                    <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 tabular-nums">{c.uscita || "—"}</span>
+                                    {c.uscita && c.uscita_giorno_dopo && <span className="text-indigo-500 text-[10px] font-medium ml-0.5">+1</span>}
+                                    {canManagePresence && c.uscita_id && (
+                                      <button onClick={() => startEditPresence(c.uscita_id, "USCITA", day.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
+                                        className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
+                                        <Pencil size={11} />
+                                      </button>
+                                    )}
+                                    {canManagePresence && (c.uscita_manuale || c.uscita_automatica) && c.uscita_id && (
+                                      <button onClick={() => deletePresence(c.uscita_id)}
+                                        className="text-zinc-300 hover:text-red-500 transition-colors">
+                                        <X size={11} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )) : (
+                                <span className="text-xs text-zinc-400">—</span>
+                              )}
+                            </div>
 
-                                {canManagePresence && (
-                                  <button
-                                    onClick={() => startAddPresence(day.giorno)}
-                                    className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-                                  >
-                                    <Plus size={12} /> Aggiungi timbratura
-                                  </button>
-                                )}
-                              </div>
-                            )}
+                            {/* ORE + ADD */}
+                            <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                              {day.ore_totali > 0 && (
+                                <span className="text-xs text-zinc-400 tabular-nums">{formatOre(day.ore_totali)}</span>
+                              )}
+                              {canManagePresence && (
+                                <button onClick={() => startAddPresence(day.giorno)} title="Aggiungi timbratura"
+                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                  <Plus size={12} />
+                                </button>
+                              )}
+                            </div>
+
                           </div>
                         )
                       })}
