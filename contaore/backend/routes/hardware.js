@@ -398,8 +398,9 @@ export default async function hardwareRoutes(fastify) {
 
       } catch (err) {
 
+        console.error('[/api/hardware/tag] UNCAUGHT ERROR:', err?.message, err?.stack)
         request.log.error(err)
-        return reply.send({ success: false })
+        return reply.send({ success: false, error: err?.message || 'INTERNAL_ERROR' })
 
       }
 
