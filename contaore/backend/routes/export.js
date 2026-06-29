@@ -79,7 +79,7 @@ function buildCoppie(sorted) {
   Calcola stato giornaliero rispetto ai turni
   Ritorna: { stato, ritardoMin, straordinarioOre, orePreviste }
 */
-function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 10, snapToShift = false) {
+function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 10, toleranceDeficitMins = 15) {
   if (!turniAttivi || !shifts.length) {
     const ore = calcOreGiorno(sorted)
     return { stato: 'presente', ritardoMin: 0, straordinarioOre: 0, orePreviste: 0, oreEffettive: ore, oreLavorate: ore }
@@ -96,20 +96,25 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 1
   const orePreviste = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
   const oreLavorate = calcOreGiorno(sorted, dayShifts)
 
-  // straordinario con tolleranza
   let straordinarioOre = 0
+  let oreEffettive = oreLavorate
+
   if (orePreviste > 0) {
     const extraMins = (oreLavorate - orePreviste) * 60
-    straordinarioOre = extraMins >= toleranceMins ? Number((extraMins / 60).toFixed(2)) : 0
+    if (extraMins > 0) {
+      if (extraMins > toleranceMins) {
+        straordinarioOre = Number((extraMins / 60).toFixed(2))
+      } else {
+        oreEffettive = orePreviste
+      }
+    } else if (extraMins < 0) {
+      const deficitMins = -extraMins
+      if (deficitMins <= toleranceDeficitMins) {
+        oreEffettive = orePreviste
+      }
+    }
   } else {
     straordinarioOre = Number(oreLavorate.toFixed(2))
-  }
-
-  // ore effettive: se snap attivo e diff entro tolleranza → usa ore previste
-  let oreEffettive = oreLavorate
-  if (snapToShift && orePreviste > 0) {
-    const diffMins = Math.abs(oreLavorate - orePreviste) * 60
-    if (diffMins < toleranceMins) oreEffettive = orePreviste
   }
 
   // stato hierarchy
@@ -117,7 +122,8 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 1
   if (straordinarioOre > 0) {
     stato = 'straordinario'
   } else if (orePreviste > 0 && oreLavorate > 0 && oreLavorate < orePreviste) {
-    stato = 'parziale'
+    const deficitMins = (orePreviste - oreLavorate) * 60
+    if (deficitMins > toleranceDeficitMins) stato = 'parziale'
   }
 
   // ritardo: prima entrata vs ingresso_1 del primo turno
@@ -143,7 +149,7 @@ function calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins = 1
   Costruisce dati strutturati per dipendente:
   { months: [{ name, giorni: [...], totali }] }
 */
-function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedMonth, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, snapToShift = false) {
+function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedMonth, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, toleranceDeficitMins = 15) {
 
   const isInFerie = (dateStr) => (ferieApprovate || []).some(f => dateStr >= f.data_inizio && dateStr <= f.data_fine)
   const giustSet  = new Set((giustificazioni || []).filter(g => g.stato === 'approvata').map(g => g.data))
@@ -161,7 +167,7 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
   Object.entries(byDay).forEach(([dateStr, dayReads]) => {
     const sorted = [...dayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
     const coppie = buildCoppie(sorted)
-    const { stato, ritardoMin, straordinarioOre, orePreviste, oreEffettive, oreLavorate } = calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins, snapToShift)
+    const { stato, ritardoMin, straordinarioOre, orePreviste, oreEffettive, oreLavorate } = calcStatoGiorno(dateStr, sorted, shifts, turniAttivi, toleranceMins, toleranceDeficitMins)
 
     const meseName = new Date(dateStr + 'T00:00:00').toLocaleDateString('it-IT', {
       month: 'long', year: 'numeric'
@@ -320,9 +326,9 @@ export default async function exportRoutes(fastify) {
 
     if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
 
-    const { data: companySettings } = await supabase.from('company').select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno').eq('id', companyId).single()
-    const toleranceMins = companySettings?.tolleranza_straordinario_minuti ?? 10
-    const snapToShift   = companySettings?.arrotonda_ore_al_turno ?? false
+    const { data: companySettings } = await supabase.from('company').select('tolleranza_straordinario_minuti, tolleranza_difetto_minuti').eq('id', companyId).single()
+    const toleranceMins        = companySettings?.tolleranza_straordinario_minuti ?? 10
+    const toleranceDeficitMins = companySettings?.tolleranza_difetto_minuti ?? 15
 
     const results = await Promise.all(employee_ids.map(id => loadEmployeeFullData(id, companyId)))
     const employeesData = results.filter(Boolean)
@@ -346,7 +352,7 @@ export default async function exportRoutes(fastify) {
         const turniAttivi   = !!employee.turni_attivi
         const turniAttivatIl = employee.turni_attivati_il || null
 
-        const months = buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins, snapToShift)
+        const months = buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins, toleranceDeficitMins)
 
         // header dipendente
         doc.rect(40, 40, 515, 50).fill('#111827')
@@ -530,9 +536,9 @@ export default async function exportRoutes(fastify) {
 
     if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
 
-    const { data: companySettingsXls } = await supabase.from('company').select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno').eq('id', companyId).single()
-    const toleranceMins = companySettingsXls?.tolleranza_straordinario_minuti ?? 10
-    const snapToShift   = companySettingsXls?.arrotonda_ore_al_turno ?? false
+    const { data: companySettingsXls } = await supabase.from('company').select('tolleranza_straordinario_minuti, tolleranza_difetto_minuti').eq('id', companyId).single()
+    const toleranceMins        = companySettingsXls?.tolleranza_straordinario_minuti ?? 10
+    const toleranceDeficitMins = companySettingsXls?.tolleranza_difetto_minuti ?? 15
 
     const resultsXls = await Promise.all(employee_ids.map(id => loadEmployeeFullData(id, companyId)))
     const employeesData = resultsXls.filter(Boolean)
@@ -544,7 +550,7 @@ export default async function exportRoutes(fastify) {
     // Sheet riepilogo
     const riepilogoRows = [['Nome', 'Cognome', 'Ore totali', 'Ore previste', 'Straordinari', 'Assenze', 'Ritardi']]
     for (const { employee, reads, shifts, ferieApprovate, giustificazioni, pausaAziendale } of employeesData) {
-      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins, snapToShift)
+      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins, toleranceDeficitMins)
       const totOre    = months.reduce((s, m) => s + m.oreTotali, 0)
       const totPrev   = months.reduce((s, m) => s + m.orePreviste, 0)
       const totStraord = months.reduce((s, m) => s + m.straordinario, 0)
@@ -562,7 +568,7 @@ export default async function exportRoutes(fastify) {
 
     // Sheet per dipendente
     for (const { employee, reads, shifts, ferieApprovate, giustificazioni, pausaAziendale } of employeesData) {
-      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins, snapToShift)
+      const months = buildEmployeeData(reads, shifts, !!employee.turni_attivi, employee.turni_attivati_il, month, ferieApprovate, giustificazioni, pausaAziendale, toleranceMins, toleranceDeficitMins)
 
       const rows = [
         [`${employee.nome} ${employee.cognome || ''}`, '', '', '', '', '', ''],

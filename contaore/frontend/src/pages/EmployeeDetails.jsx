@@ -333,7 +333,6 @@ export default function EmployeeDetails() {
   const [turniAttivi, setTurniAttivi] = useState(false);
 
   const [historyMonths, setHistoryMonths] = useState([]);
-  const [expandedMonth, setExpandedMonth] = useState(null);
   const [expandedDay, setExpandedDay] = useState(null);
   const [showGrafici, setShowGrafici] = useState(false);
 
@@ -898,11 +897,8 @@ export default function EmployeeDetails() {
               historyMonths.map((month) => (
                 <div key={month.mese}>
 
-                  {/* MESE HEADER */}
-                  <button
-                    onClick={() => setExpandedMonth(expandedMonth === month.mese ? null : month.mese)}
-                    className="w-full flex items-center justify-between px-5 sm:px-6 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors text-left"
-                  >
+                  {/* MESE HEADER — sempre visibile, non cliccabile */}
+                  <div className="w-full flex items-center justify-between px-5 sm:px-6 py-3.5 bg-zinc-50 dark:bg-zinc-900/40">
                     <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize">{month.mese}</span>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{formatOre(month.ore_totali)}</span>
@@ -912,108 +908,113 @@ export default function EmployeeDetails() {
                       {month.giorni_assenti > 0 && (
                         <span className="text-xs text-red-400">{month.giorni_assenti} ass.</span>
                       )}
-                      {expandedMonth === month.mese
-                        ? <ChevronUp size={15} className="text-zinc-400" />
-                        : <ChevronDown size={15} className="text-zinc-400" />
+                    </div>
+                  </div>
+
+                  {/* GIORNI — sempre espansi */}
+                  <div className="border-t border-zinc-100 dark:border-zinc-800">
+                    {month.giorni.map(day => {
+                      let badgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                      let badgeLabel = 'Presente'
+                      if (day.assente) {
+                        badgeColor = 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                        badgeLabel = 'Assente'
+                      } else if (day.stato === 'ferie') {
+                        badgeColor = 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                        badgeLabel = 'Ferie'
+                      } else if (day.stato === 'giustificata') {
+                        badgeColor = 'bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400'
+                        badgeLabel = 'Giustificata'
+                      } else if (day.stato === 'parziale') {
+                        badgeColor = 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'
+                        badgeLabel = 'Parziale'
+                      } else if (day.ore_straordinario > 0) {
+                        badgeColor = 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-500'
+                        badgeLabel = 'Straord.'
                       }
-                    </div>
-                  </button>
 
-                  {/* GIORNI */}
-                  {expandedMonth === month.mese && (
-                    <div className="border-t border-zinc-100 dark:border-zinc-800">
-                      {month.giorni.map(day => {
-                        let badgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-                        let badgeLabel = 'Presente'
-                        if (day.assente) {
-                          badgeColor = 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                          badgeLabel = 'Assente'
-                        } else if (day.stato === 'ferie') {
-                          badgeColor = 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                          badgeLabel = 'Ferie'
-                        } else if (day.stato === 'giustificata') {
-                          badgeColor = 'bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400'
-                          badgeLabel = 'Giustificata'
-                        } else if (day.stato === 'parziale') {
-                          badgeColor = 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'
-                          badgeLabel = 'Parziale'
-                        } else if (day.ore_straordinario > 0) {
-                          badgeColor = 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-500'
-                          badgeLabel = 'Straord.'
-                        }
+                      function entrataColor(c) {
+                        if (c.entrata_manuale) return 'text-orange-500'
+                        if (c.entrata_automatica) return 'text-purple-500'
+                        return 'text-green-500'
+                      }
+                      function uscitaColor(c) {
+                        if (c.uscita_manuale) return 'text-orange-500'
+                        if (c.uscita_automatica) return 'text-purple-500'
+                        return 'text-red-400'
+                      }
 
-                        return (
-                          <div key={day.giorno} className="flex items-center gap-3 px-5 sm:px-6 py-2.5 border-b border-zinc-50 dark:border-zinc-800/50 last:border-0">
+                      return (
+                        <div key={day.giorno} className="flex items-center gap-3 px-5 sm:px-6 py-2.5 border-b border-zinc-50 dark:border-zinc-800/50 last:border-0">
 
-                            {/* DATA */}
-                            <span className="text-xs text-zinc-400 w-14 shrink-0 tabular-nums">
-                              {new Date(day.giorno + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
-                            </span>
+                          {/* DATA */}
+                          <span className="text-xs text-zinc-400 w-14 shrink-0 tabular-nums">
+                            {new Date(day.giorno + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                          </span>
 
-                            {/* STATO */}
-                            <span className={`shrink-0 w-[72px] text-center px-2 py-0.5 rounded-md text-[11px] font-medium ${badgeColor}`}>{badgeLabel}</span>
+                          {/* STATO */}
+                          <span className={`shrink-0 w-[72px] text-center px-2 py-0.5 rounded-md text-[11px] font-medium ${badgeColor}`}>{badgeLabel}</span>
 
-                            {/* TIMBRATURE */}
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0">
-                              {day.coppie.length > 0 ? day.coppie.map((c, i) => (
-                                <div key={i} className="flex items-center gap-3">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-emerald-500 font-semibold text-xs">↑</span>
-                                    <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 tabular-nums">{c.entrata || "—"}</span>
-                                    {canManagePresence && c.entrata_id && (
-                                      <button onClick={() => startEditPresence(c.entrata_id, "ENTRATA", day.giorno, c.entrata)}
-                                        className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
-                                        <Pencil size={11} />
-                                      </button>
-                                    )}
-                                    {canManagePresence && (c.entrata_manuale || c.entrata_automatica) && c.entrata_id && (
-                                      <button onClick={() => deletePresence(c.entrata_id)}
-                                        className="text-zinc-300 hover:text-red-500 transition-colors">
-                                        <X size={11} />
-                                      </button>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-red-400 font-semibold text-xs">↓</span>
-                                    <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 tabular-nums">{c.uscita || "—"}</span>
-                                    {c.uscita && c.uscita_giorno_dopo && <span className="text-indigo-500 text-[10px] font-medium ml-0.5">+1</span>}
-                                    {canManagePresence && c.uscita_id && (
-                                      <button onClick={() => startEditPresence(c.uscita_id, "USCITA", day.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
-                                        className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
-                                        <Pencil size={11} />
-                                      </button>
-                                    )}
-                                    {canManagePresence && (c.uscita_manuale || c.uscita_automatica) && c.uscita_id && (
-                                      <button onClick={() => deletePresence(c.uscita_id)}
-                                        className="text-zinc-300 hover:text-red-500 transition-colors">
-                                        <X size={11} />
-                                      </button>
-                                    )}
-                                  </div>
+                          {/* TIMBRATURE */}
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0">
+                            {day.coppie.length > 0 ? day.coppie.map((c, i) => (
+                              <div key={i} className="flex items-center gap-3">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-emerald-500 font-semibold text-xs">↑</span>
+                                  <span className={`text-sm font-semibold tabular-nums ${entrataColor(c)}`}>{c.entrata || "—"}</span>
+                                  {canManagePresence && c.entrata_id && (
+                                    <button onClick={() => startEditPresence(c.entrata_id, "ENTRATA", day.giorno, c.entrata)}
+                                      className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
+                                      <Pencil size={11} />
+                                    </button>
+                                  )}
+                                  {canManagePresence && (c.entrata_manuale || c.entrata_automatica) && c.entrata_id && (
+                                    <button onClick={() => deletePresence(c.entrata_id)}
+                                      className="text-zinc-300 hover:text-red-500 transition-colors">
+                                      <X size={11} />
+                                    </button>
+                                  )}
                                 </div>
-                              )) : (
-                                <span className="text-xs text-zinc-400">—</span>
-                              )}
-                            </div>
-
-                            {/* ORE + ADD */}
-                            <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                              {day.ore_totali > 0 && (
-                                <span className="text-xs text-zinc-400 tabular-nums">{formatOre(day.ore_totali)}</span>
-                              )}
-                              {canManagePresence && (
-                                <button onClick={() => startAddPresence(day.giorno)} title="Aggiungi timbratura"
-                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                  <Plus size={12} />
-                                </button>
-                              )}
-                            </div>
-
+                                <div className="flex items-center gap-1">
+                                  <span className="text-red-400 font-semibold text-xs">↓</span>
+                                  <span className={`text-sm font-semibold tabular-nums ${uscitaColor(c)}`}>{c.uscita || "—"}</span>
+                                  {c.uscita && c.uscita_giorno_dopo && <span className="text-indigo-500 text-[10px] font-medium ml-0.5">+1</span>}
+                                  {canManagePresence && c.uscita_id && (
+                                    <button onClick={() => startEditPresence(c.uscita_id, "USCITA", day.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
+                                      className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
+                                      <Pencil size={11} />
+                                    </button>
+                                  )}
+                                  {canManagePresence && (c.uscita_manuale || c.uscita_automatica) && c.uscita_id && (
+                                    <button onClick={() => deletePresence(c.uscita_id)}
+                                      className="text-zinc-300 hover:text-red-500 transition-colors">
+                                      <X size={11} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )) : (
+                              <span className="text-xs text-zinc-400">—</span>
+                            )}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
+
+                          {/* ORE + ADD */}
+                          <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                            {day.ore_totali > 0 && (
+                              <span className="text-xs text-zinc-400 tabular-nums">{formatOre(day.ore_totali)}</span>
+                            )}
+                            {canManagePresence && (
+                              <button onClick={() => startAddPresence(day.giorno)} title="Aggiungi timbratura"
+                                className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                <Plus size={12} />
+                              </button>
+                            )}
+                          </div>
+
+                        </div>
+                      )
+                    })}
+                  </div>
 
                 </div>
               ))
