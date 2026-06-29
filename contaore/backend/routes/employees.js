@@ -100,7 +100,7 @@ async function autoInsertBreakTimbrature(supabase, dipendenteId, companyId, tagU
   }
 }
 
-function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, snapToShift = false) {
+function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, toleranceDeficitMins = 15) {
 
   const sessions = buildSessions(reads)
 
@@ -140,26 +140,29 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
         oreLavorate = Number(Math.max(0, oreLavorate - breakDeductMins / 60).toFixed(2))
       }
 
+      var ore_effettive = oreLavorate
       if (ore_previste > 0) {
         const extraMins = (oreLavorate - ore_previste) * 60
-        ore_straordinario = extraMins >= toleranceMins
-          ? Number((extraMins / 60).toFixed(2))
-          : 0
+        if (extraMins > 0) {
+          ore_straordinario = extraMins > toleranceMins
+            ? Number((extraMins / 60).toFixed(2))
+            : 0
+          ore_effettive = extraMins > toleranceMins ? oreLavorate : ore_previste
+        } else {
+          ore_straordinario = 0
+          const deficitMins = -extraMins
+          ore_effettive = deficitMins <= toleranceDeficitMins ? ore_previste : oreLavorate
+        }
       } else {
         ore_straordinario = Number(oreLavorate.toFixed(2))
-      }
-
-      var ore_effettive = oreLavorate
-      if (snapToShift && ore_previste > 0) {
-        const diffMins = Math.abs(oreLavorate - ore_previste) * 60
-        if (diffMins < toleranceMins) ore_effettive = ore_previste
       }
 
       // stato hierarchy
       if (ore_straordinario > 0) {
         stato = 'straordinario'
       } else if (ore_previste > 0 && oreLavorate > 0 && oreLavorate < ore_previste) {
-        stato = 'parziale'
+        const deficitMins = (ore_previste - oreLavorate) * 60
+        if (deficitMins > toleranceDeficitMins) stato = 'parziale'
       }
 
       // ritardo: first ENTRATA vs ingresso_1 of earliest shift
@@ -491,11 +494,11 @@ export default async function employeeRoutes(fastify) {
         // tolleranza straordinari configurabile per azienda
         const { data: companySettings } = await supabase
           .from('company')
-          .select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno')
+          .select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno, tolleranza_difetto_minuti')
           .eq('id', companyId)
           .single()
-        const toleranceMins = companySettings?.tolleranza_straordinario_minuti ?? 10
-        const snapToShift   = companySettings?.arrotonda_ore_al_turno ?? false
+        const toleranceMins        = companySettings?.tolleranza_straordinario_minuti ?? 10
+        const toleranceDeficitMins = companySettings?.tolleranza_difetto_minuti ?? 15
 
         const days   = groupByDay(
           reads,
@@ -506,7 +509,7 @@ export default async function employeeRoutes(fastify) {
           giustificazioni || [],
           pausaAziendale || null,
           toleranceMins,
-          snapToShift
+          toleranceDeficitMins
         )
 
         const months = groupByMonth(days)
@@ -1044,6 +1047,7 @@ export default async function employeeRoutes(fastify) {
       return reply.send({
         success: true,
         tolleranza_straordinario_minuti: data?.tolleranza_straordinario_minuti ?? 10,
+        tolleranza_difetto_minuti:       data?.tolleranza_difetto_minuti ?? 15,
         arrotonda_ore_al_turno:          data?.arrotonda_ore_al_turno ?? false,
         auto_cleanup_enabled:            data?.auto_cleanup_enabled ?? false,
         auto_cleanup_retention_months:   data?.auto_cleanup_retention_months ?? 12
@@ -1057,12 +1061,14 @@ export default async function employeeRoutes(fastify) {
   /* PUT /api/company/settings — aggiorna impostazioni aziendali */
   fastify.put('/api/company/settings', { preHandler: authenticate }, async (req, reply) => {
     try {
-      const raw  = parseInt(req.body?.tolleranza_straordinario_minuti)
-      const val  = isNaN(raw) ? 10 : Math.max(0, Math.min(60, raw))
-      const snap = !!req.body?.arrotonda_ore_al_turno
+      const raw     = parseInt(req.body?.tolleranza_straordinario_minuti)
+      const val     = isNaN(raw) ? 10 : Math.max(0, Math.min(120, raw))
+      const rawDif  = parseInt(req.body?.tolleranza_difetto_minuti)
+      const valDif  = isNaN(rawDif) ? 15 : Math.max(0, Math.min(120, rawDif))
+      const snap    = !!req.body?.arrotonda_ore_al_turno
       const { error } = await supabase
         .from('company')
-        .update({ tolleranza_straordinario_minuti: val, arrotonda_ore_al_turno: snap })
+        .update({ tolleranza_straordinario_minuti: val, tolleranza_difetto_minuti: valDif, arrotonda_ore_al_turno: snap })
         .eq('id', req.user.company_id)
       if (error) return reply.send({ success: false, error: error.message })
 

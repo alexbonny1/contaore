@@ -359,6 +359,11 @@ export async function runMigrations() {
       );`
     }).catch(() => ({}))
 
+    // Tolleranza in difetto per calcolo ore mensili (migration 005)
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS tolleranza_difetto_minuti integer DEFAULT 15;`
+    }).catch(() => ({}))
+
     // Colonna per invalidazione sessioni al cambio password
     await supabase.rpc('exec', {
       sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS password_changed_at timestamptz DEFAULT NULL;`

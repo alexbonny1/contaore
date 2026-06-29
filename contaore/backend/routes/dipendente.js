@@ -9,7 +9,7 @@ import {
   buildSessions, buildCoppie, computeBreakDeductionMins, isInFerie
 } from '../utils/timeHelpers.js'
 
-function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, snapToShift = false) {
+function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, toleranceDeficitMins = 15) {
 
   const sessions = buildSessions(reads)
 
@@ -49,26 +49,29 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
         oreLavorate = Number(Math.max(0, oreLavorate - breakDeductMins / 60).toFixed(2))
       }
 
+      var ore_effettive = oreLavorate
       if (ore_previste > 0) {
         const extraMins = (oreLavorate - ore_previste) * 60
-        ore_straordinario = extraMins >= toleranceMins
-          ? Number((extraMins / 60).toFixed(2))
-          : 0
+        if (extraMins > 0) {
+          ore_straordinario = extraMins > toleranceMins
+            ? Number((extraMins / 60).toFixed(2))
+            : 0
+          ore_effettive = extraMins > toleranceMins ? oreLavorate : ore_previste
+        } else {
+          ore_straordinario = 0
+          const deficitMins = -extraMins
+          ore_effettive = deficitMins <= toleranceDeficitMins ? ore_previste : oreLavorate
+        }
       } else {
         ore_straordinario = Number(oreLavorate.toFixed(2))
-      }
-
-      var ore_effettive = oreLavorate
-      if (snapToShift && ore_previste > 0) {
-        const diffMins = Math.abs(oreLavorate - ore_previste) * 60
-        if (diffMins < toleranceMins) ore_effettive = ore_previste
       }
 
       // stato hierarchy
       if (ore_straordinario > 0) {
         stato = 'straordinario'
       } else if (ore_previste > 0 && oreLavorate > 0 && oreLavorate < ore_previste) {
-        stato = 'parziale'
+        const deficitMins = (ore_previste - oreLavorate) * 60
+        if (deficitMins > toleranceDeficitMins) stato = 'parziale'
       }
 
       // ritardo: first ENTRATA vs ingresso_1 of earliest shift
@@ -216,11 +219,11 @@ export default async function dipendenteRoutes(fastify) {
         // tolleranza straordinari configurabile
         const { data: companySettings } = await supabase
           .from('company')
-          .select('tolleranza_straordinario_minuti, arrotonda_ore_al_turno')
+          .select('tolleranza_straordinario_minuti, tolleranza_difetto_minuti')
           .eq('id', company_id)
           .single()
-        const toleranceMins = companySettings?.tolleranza_straordinario_minuti ?? 10
-        const snapToShift   = companySettings?.arrotonda_ore_al_turno ?? false
+        const toleranceMins        = companySettings?.tolleranza_straordinario_minuti ?? 10
+        const toleranceDeficitMins = companySettings?.tolleranza_difetto_minuti ?? 15
 
         const days = groupByDay(
           reads || [],
@@ -231,7 +234,7 @@ export default async function dipendenteRoutes(fastify) {
           giustificazioni || [],
           pausaAziendale || null,
           toleranceMins,
-          snapToShift
+          toleranceDeficitMins
         )
 
         const now       = new Date()
