@@ -8,7 +8,9 @@ import {
   sendRiepilogoGiornaliero,
   sendRiepilogoSettimanale,
   sendNotificaBadgeNonRiconosciuto,
-  sendNotificaTimbraturaMancante
+  sendNotificaTimbraturaMancante,
+  sendPromemoriaEntrata,
+  sendPromemoriaUscita
 } from './email.js'
 import { GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours } from '../utils/timeHelpers.js'
 
@@ -521,6 +523,77 @@ async function autoCleanupPresenze() {
   }
 }
 
+// ─── periodic: promemoria timbratura al dipendente ───────────────────────────
+
+export async function checkPromemoriaTimbratura() {
+  const now       = new Date()
+  const nowMins   = now.getHours() * 60 + now.getMinutes()
+  const todayName = GIORNI[now.getDay()]
+  const today     = todayStr()
+
+  // Dipendenti con turni attivi e almeno un promemoria configurato
+  const { data: emps } = await supabase
+    .from('dipendenti')
+    .select('id, nome, email, badge_uid, promemoria_entrata_minuti, promemoria_uscita_minuti')
+    .eq('turni_attivi', true)
+    .not('email', 'is', null)
+    .or('promemoria_entrata_minuti.not.is.null,promemoria_uscita_minuti.not.is.null')
+
+  if (!emps?.length) return
+
+  const empIds = emps.map(e => e.id)
+  const badgeUids = emps.map(e => e.badge_uid).filter(Boolean)
+
+  const [{ data: turniOggi }, { data: presOggi }] = await Promise.all([
+    supabase.from('turni').select('dipendente_id, ingresso_1, uscita_1, uscita_2')
+      .in('dipendente_id', empIds).eq('giorno_settimana', todayName),
+    supabase.from('presenza').select('tag_uid, tipo')
+      .in('tag_uid', badgeUids).gte('created_at', today + 'T00:00:00.000Z')
+  ])
+
+  const entered  = new Set((presOggi || []).filter(p => p.tipo === 'ENTRATA').map(p => p.tag_uid))
+  const exited   = new Set((presOggi || []).filter(p => p.tipo === 'USCITA').map(p => p.tag_uid))
+
+  for (const emp of emps) {
+    if (!emp.email || !emp.badge_uid) continue
+    const empShifts = (turniOggi || []).filter(s => s.dipendente_id === emp.id)
+    if (!empShifts.length) continue
+
+    for (const shift of empShifts) {
+      // ENTRATA
+      if (emp.promemoria_entrata_minuti !== null && shift.ingresso_1) {
+        const triggerMins = timeToMinutes(shift.ingresso_1) + emp.promemoria_entrata_minuti
+        if (nowMins >= triggerMins && !entered.has(emp.badge_uid)) {
+          const key = `promemoria_entrata:${emp.id}:${today}`
+          if (canSend(key)) {
+            await sendPromemoriaEntrata({
+              emailDipendente: emp.email,
+              nomeDipendente:  emp.nome,
+              oraTurno:        shift.ingresso_1.slice(0, 5)
+            }).catch(e => console.error('sendPromemoriaEntrata:', e))
+          }
+        }
+      }
+
+      // USCITA (usa uscita_2 se presente, altrimenti uscita_1)
+      const oraUscita = shift.uscita_2 || shift.uscita_1
+      if (emp.promemoria_uscita_minuti !== null && oraUscita) {
+        const triggerMins = timeToMinutes(oraUscita) + emp.promemoria_uscita_minuti
+        if (nowMins >= triggerMins && !exited.has(emp.badge_uid)) {
+          const key = `promemoria_uscita:${emp.id}:${today}`
+          if (canSend(key)) {
+            await sendPromemoriaUscita({
+              emailDipendente: emp.email,
+              nomeDipendente:  emp.nome,
+              oraTurno:        oraUscita.slice(0, 5)
+            }).catch(e => console.error('sendPromemoriaUscita:', e))
+          }
+        }
+      }
+    }
+  }
+}
+
 // ─── scheduler ───────────────────────────────────────────────────────────────
 
 export function startScheduler() {
@@ -529,10 +602,11 @@ export function startScheduler() {
     checkAlertSuperadmin().catch(e => console.error('checkAlertSuperadmin:', e))
   }, 60 * 1000)
 
-  // Every 5 min: assenze + lettori offline (notifiche aziendali)
+  // Every 5 min: assenze + lettori offline + promemoria timbratura dipendente
   setInterval(() => {
     checkAssenti().catch(e => console.error('checkAssenti:', e))
     checkLettoriOffline().catch(e => console.error('checkLettoriOffline:', e))
+    checkPromemoriaTimbratura().catch(e => console.error('checkPromemoriaTimbratura:', e))
   }, 5 * 60 * 1000)
 
   // Every 30 min: timbrature mancanti + straordinari + riepiloghi

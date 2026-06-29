@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SlidersHorizontal, BarChart2, Bell, Shield, Trash2, User, Sun, Moon, LogOut } from "lucide-react";
+import { SlidersHorizontal, BarChart2, Bell, Shield, Trash2, User, Sun, Moon, LogOut, Users } from "lucide-react";
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
 
 // ─── Schermata principale impostazioni (stile Apple, categorie) ────────────────
@@ -66,6 +66,14 @@ export default function Settings() {
           iconColor="text-green-500"
           title="Sicurezza"
           subtitle="Password e autenticazione a due fattori"
+        />
+        <SettingRow
+          to="/impostazioni/admin"
+          icon={Users}
+          iconBg="bg-violet-50 dark:bg-violet-900/20"
+          iconColor="text-violet-500"
+          title="Account amministratori"
+          subtitle="Accessi secondari con permessi limitati"
         />
         <SettingRow
           to="/impostazioni/dati"

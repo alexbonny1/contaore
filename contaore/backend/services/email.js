@@ -551,3 +551,29 @@ export async function sendTwoFactorEmail(email, code) {
     return false
   }
 }
+
+// ─── Promemoria entrata mancante ──────────────────────────────────────────────
+
+export async function sendPromemoriaEntrata({ emailDipendente, nomeDipendente, oraTurno }) {
+  const html = emailWrap('Timbry', '⏰ Hai dimenticato di timbrare l\'entrata?', '#f59e0b', `
+    <p style="font-size:15px;color:#1a1a1a;margin:0 0 8px;">Ciao <strong>${nomeDipendente}</strong>!</p>
+    <p style="font-size:14px;color:#444;margin:0 0 16px;line-height:1.6;">
+      Il tuo turno era previsto alle <strong>${oraTurno}</strong> ma non risulta ancora nessuna timbratura di entrata.
+    </p>
+    <p style="font-size:13px;color:#888;">Se sei già in sede, timbra il prima possibile.</p>
+  `)
+  return send(emailDipendente, `⏰ Promemoria entrata — ${oraTurno}`, html)
+}
+
+// ─── Promemoria uscita mancante ───────────────────────────────────────────────
+
+export async function sendPromemoriaUscita({ emailDipendente, nomeDipendente, oraTurno }) {
+  const html = emailWrap('Timbry', '⏰ Hai dimenticato di timbrare l\'uscita?', '#f59e0b', `
+    <p style="font-size:15px;color:#1a1a1a;margin:0 0 8px;">Ciao <strong>${nomeDipendente}</strong>!</p>
+    <p style="font-size:14px;color:#444;margin:0 0 16px;line-height:1.6;">
+      Il tuo turno prevedeva l'uscita alle <strong>${oraTurno}</strong> ma non risulta ancora nessuna timbratura di uscita.
+    </p>
+    <p style="font-size:13px;color:#888;">Se hai già finito il tuo turno, timbra l'uscita dal portale o dal lettore NFC.</p>
+  `)
+  return send(emailDipendente, `⏰ Promemoria uscita — ${oraTurno}`, html)
+}

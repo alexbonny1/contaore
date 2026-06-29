@@ -333,6 +333,7 @@ export default function EmployeeDetails() {
   const [turniAttivi, setTurniAttivi] = useState(false);
 
   const [historyMonths, setHistoryMonths] = useState([]);
+  const [selectedMese, setSelectedMese]   = useState(null);
   const [expandedDay, setExpandedDay] = useState(null);
   const [showGrafici, setShowGrafici] = useState(false);
 
@@ -344,11 +345,14 @@ export default function EmployeeDetails() {
 
   const [portaleAttivo, setPortaleAttivo]       = useState(true); // default true = nascosto finché non carica
 
-  const [showEditProfile, setShowEditProfile]   = useState(false);
-  const [profileNome, setProfileNome]           = useState("");
-  const [profileCognome, setProfileCognome]     = useState("");
-  const [profileEmail, setProfileEmail]         = useState("");
-  const [profileSaving, setProfileSaving]       = useState(false);
+  const [showEditProfile, setShowEditProfile]         = useState(false);
+  const [profileNome, setProfileNome]                 = useState("");
+  const [profileCognome, setProfileCognome]           = useState("");
+  const [profileEmail, setProfileEmail]               = useState("");
+  const [profileImportoOrario, setProfileImportoOrario] = useState("");
+  const [profilePromemoriaEntrata, setProfilePromemoriaEntrata] = useState(null);
+  const [profilePromemoriaUscita, setProfilePromemoriaUscita]   = useState(null);
+  const [profileSaving, setProfileSaving]             = useState(false);
 
   const [showAddPresence, setShowAddPresence]   = useState(false);
   const [addTipo, setAddTipo]                   = useState("ENTRATA");
@@ -371,6 +375,9 @@ export default function EmployeeDetails() {
     setProfileNome(employee?.nome || "");
     setProfileCognome(employee?.cognome || "");
     setProfileEmail(employee?.email || "");
+    setProfileImportoOrario(employee?.importo_orario != null ? String(employee.importo_orario) : "");
+    setProfilePromemoriaEntrata(employee?.promemoria_entrata_minuti ?? null);
+    setProfilePromemoriaUscita(employee?.promemoria_uscita_minuti ?? null);
     setShowEditProfile(true);
   }
 
@@ -385,7 +392,10 @@ export default function EmployeeDetails() {
         body: JSON.stringify({
           nome: profileNome.trim(),
           cognome: profileCognome.trim(),
-          email: profileEmail.trim() || null
+          email: profileEmail.trim() || null,
+          importo_orario: profileImportoOrario !== "" ? parseFloat(profileImportoOrario) : null,
+          promemoria_entrata_minuti: profilePromemoriaEntrata,
+          promemoria_uscita_minuti:  profilePromemoriaUscita
         })
       });
       const data = await res.json();
@@ -550,7 +560,12 @@ export default function EmployeeDetails() {
         setEmployee(empData.employee);
         setTurni(empData.employee.shifts || []);
         setTurniAttivi(!!empData.employee.turni_attivi);
-        setHistoryMonths(empData.employee.history_months || []);
+        const months = empData.employee.history_months || [];
+        setHistoryMonths(months);
+        setSelectedMese(prev => {
+          if (prev && months.find(m => m.mese === prev)) return prev;
+          return months[0]?.mese || null;
+        });
       }
 
     } catch (err) {
@@ -776,9 +791,24 @@ export default function EmployeeDetails() {
 
             <div className="flex items-start gap-3 min-w-0">
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                  {employee.nome} {employee.cognome}
-                </h1>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                    {employee.nome} {employee.cognome}
+                  </h1>
+                  {employee.importo_orario != null && (() => {
+                    const meseData = historyMonths.find(m => m.mese === selectedMese);
+                    const oreEffettive = meseData
+                      ? meseData.giorni.reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali ?? 0), 0)
+                      : 0;
+                    const stipendio = oreEffettive * employee.importo_orario;
+                    if (stipendio <= 0) return null;
+                    return (
+                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-xl">
+                        € {stipendio.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <p className="text-sm text-zinc-500 mt-1 truncate">
                   {employee.email || "Nessuna email"}
                 </p>
@@ -889,15 +919,36 @@ export default function EmployeeDetails() {
             )}
           </div>
 
+          {/* TAB BAR MESI */}
+          {historyMonths.length > 0 && (
+            <div className="flex overflow-x-auto gap-2 px-5 sm:px-6 py-3 border-b border-zinc-100 dark:border-zinc-800 scrollbar-none">
+              {historyMonths.map(m => (
+                <button
+                  key={m.mese}
+                  onClick={() => setSelectedMese(m.mese)}
+                  className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    selectedMese === m.mese
+                      ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  }`}
+                >
+                  {m.mese}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
 
             {historyMonths.length === 0 ? (
               <p className="text-sm text-zinc-400 text-center py-12">Nessuna presenza registrata</p>
-            ) : (
-              historyMonths.map((month) => (
+            ) : (() => {
+              const month = historyMonths.find(m => m.mese === selectedMese);
+              if (!month) return null;
+              return (
                 <div key={month.mese}>
 
-                  {/* MESE HEADER — sempre visibile, non cliccabile */}
+                  {/* MESE HEADER — riepilogo */}
                   <div className="w-full flex items-center justify-between px-5 sm:px-6 py-3.5 bg-zinc-50 dark:bg-zinc-900/40">
                     <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize">{month.mese}</span>
                     <div className="flex items-center gap-3">
@@ -1017,8 +1068,8 @@ export default function EmployeeDetails() {
                   </div>
 
                 </div>
-              ))
-            )}
+              );
+            })()}
 
           </div>
 
@@ -1074,6 +1125,52 @@ export default function EmployeeDetails() {
                   placeholder="email@esempio.it"
                   className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
               </div>
+              <div>
+                <p className="text-xs text-zinc-400 mb-1">Tariffa oraria (€)</p>
+                <input type="number" min="0" step="0.01" value={profileImportoOrario}
+                  onChange={(e) => setProfileImportoOrario(e.target.value)}
+                  placeholder="es. 12.50"
+                  className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+              </div>
+              {turniAttivi && (
+                <div className="pt-1">
+                  <p className="text-xs text-zinc-500 font-medium mb-2">Promemoria timbratura (email al dipendente)</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-1">Entrata — minuti dopo</p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={profilePromemoriaEntrata !== null}
+                          onChange={e => setProfilePromemoriaEntrata(e.target.checked ? 15 : null)}
+                          className="rounded"
+                        />
+                        {profilePromemoriaEntrata !== null && (
+                          <input type="number" min="1" max="120" value={profilePromemoriaEntrata}
+                            onChange={e => setProfilePromemoriaEntrata(parseInt(e.target.value) || 15)}
+                            className="w-full h-9 px-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-1">Uscita — minuti dopo</p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={profilePromemoriaUscita !== null}
+                          onChange={e => setProfilePromemoriaUscita(e.target.checked ? 15 : null)}
+                          className="rounded"
+                        />
+                        {profilePromemoriaUscita !== null && (
+                          <input type="number" min="1" max="120" value={profilePromemoriaUscita}
+                            onChange={e => setProfilePromemoriaUscita(parseInt(e.target.value) || 15)}
+                            className="w-full h-9 px-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">
