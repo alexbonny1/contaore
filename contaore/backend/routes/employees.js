@@ -1135,7 +1135,7 @@ export default async function employeeRoutes(fastify) {
       if (req.user.role === 'dipendente') return reply.status(403).send({ success: false })
       const { id }    = req.params
       const companyId = req.user.company_id
-      const { nome, cognome, email } = req.body || {}
+      const { nome, cognome, email, promemoria_entrata_minuti, promemoria_uscita_minuti, importo_orario } = req.body || {}
 
       const { data: emp } = await supabase
         .from('dipendenti')
@@ -1149,8 +1149,23 @@ export default async function employeeRoutes(fastify) {
       const newEmail   = (email   ?? emp.email) || null
       const nameChanged = newNome !== (emp.nome || '') || newCognome !== (emp.cognome || '')
 
+      const dipUpdate = { nome: newNome, cognome: newCognome, email: newEmail }
+
+      if (promemoria_entrata_minuti !== undefined) {
+        const v = promemoria_entrata_minuti === null ? null : parseInt(promemoria_entrata_minuti)
+        if (v === null || (!isNaN(v) && v >= 0 && v <= 120)) dipUpdate.promemoria_entrata_minuti = v
+      }
+      if (promemoria_uscita_minuti !== undefined) {
+        const v = promemoria_uscita_minuti === null ? null : parseInt(promemoria_uscita_minuti)
+        if (v === null || (!isNaN(v) && v >= 0 && v <= 120)) dipUpdate.promemoria_uscita_minuti = v
+      }
+      if (importo_orario !== undefined) {
+        const v = importo_orario === null ? null : parseFloat(importo_orario)
+        if (v === null || (!isNaN(v) && v > 0)) dipUpdate.importo_orario = v
+      }
+
       await supabase.from('dipendenti')
-        .update({ nome: newNome, cognome: newCognome, email: newEmail })
+        .update(dipUpdate)
         .eq('id', id).eq('company_id', companyId)
 
       let credenziali_inviate = false
@@ -1303,6 +1318,115 @@ export default async function employeeRoutes(fastify) {
     } catch (err) {
       request.log.error(err)
       return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+    }
+  })
+
+  // ─── ACCOUNT AMMINISTRATORI ───────────────────────────────────────────────
+
+  /* GET /api/admin-accounts — lista admin dell'azienda (solo owner) */
+  fastify.get('/api/admin-accounts', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      if (req.user.role !== 'owner' && req.user.role !== 'superadmin') {
+        return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
+      }
+      const companyId = req.user.company_id
+      const { data } = await supabase
+        .from('user_account')
+        .select('id, username, email, nome, cognome, permissions, created_at')
+        .eq('company_id', companyId)
+        .eq('role', 'admin')
+        .order('created_at', { ascending: false })
+      return reply.send({ success: true, admins: data || [] })
+    } catch (err) {
+      request.log.error(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* POST /api/admin-accounts — crea account admin (solo owner) */
+  fastify.post('/api/admin-accounts', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      if (req.user.role !== 'owner' && req.user.role !== 'superadmin') {
+        return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
+      }
+      const companyId = req.user.company_id
+      const { nome, cognome, username, email, permissions = {} } = req.body || {}
+
+      if (!username?.trim()) return reply.status(400).send({ success: false, error: 'USERNAME_REQUIRED' })
+
+      const { data: existing } = await supabase
+        .from('user_account').select('id').eq('username', username.trim()).maybeSingle()
+      if (existing) return reply.send({ success: false, error: 'USERNAME_TAKEN' })
+
+      const plainPwd  = generatePassword(10)
+      const hashedPwd = await bcrypt.hash(plainPwd, 10)
+
+      const { data: created, error: insertErr } = await supabase.from('user_account').insert({
+        company_id:  companyId,
+        username:    username.trim(),
+        email:       email?.trim() || null,
+        nome:        nome?.trim()  || null,
+        cognome:     cognome?.trim() || null,
+        password:    hashedPwd,
+        role:        'admin',
+        permissions: permissions
+      }).select('id, username, email, nome, cognome, permissions').single()
+
+      if (insertErr) return reply.status(500).send({ success: false, error: insertErr.message })
+
+      return reply.send({ success: true, admin: created, password: plainPwd })
+    } catch (err) {
+      req.log.error(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* PUT /api/admin-accounts/:id — aggiorna permessi admin (solo owner) */
+  fastify.put('/api/admin-accounts/:id', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      if (req.user.role !== 'owner' && req.user.role !== 'superadmin') {
+        return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
+      }
+      const companyId = req.user.company_id
+      const { id }    = req.params
+      const { permissions, nome, cognome, email } = req.body || {}
+
+      const update = {}
+      if (permissions !== undefined) update.permissions = permissions
+      if (nome       !== undefined) update.nome       = nome?.trim()    || null
+      if (cognome    !== undefined) update.cognome    = cognome?.trim()  || null
+      if (email      !== undefined) update.email      = email?.trim()    || null
+
+      const { error } = await supabase.from('user_account')
+        .update(update)
+        .eq('id', id).eq('company_id', companyId).eq('role', 'admin')
+      if (error) return reply.status(500).send({ success: false, error: error.message })
+
+      return reply.send({ success: true })
+    } catch (err) {
+      req.log.error(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* DELETE /api/admin-accounts/:id — elimina account admin (solo owner) */
+  fastify.delete('/api/admin-accounts/:id', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      if (req.user.role !== 'owner' && req.user.role !== 'superadmin') {
+        return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
+      }
+      const companyId = req.user.company_id
+      const { id }    = req.params
+
+      const { error } = await supabase.from('user_account')
+        .delete()
+        .eq('id', id).eq('company_id', companyId).eq('role', 'admin')
+      if (error) return reply.status(500).send({ success: false, error: error.message })
+
+      return reply.send({ success: true })
+    } catch (err) {
+      req.log.error(err)
+      return reply.status(500).send({ success: false })
     }
   })
 }

@@ -47,7 +47,7 @@ export async function authenticateSuperadmin(request, reply) {
   }
 }
 
-// ─── solo owner o superadmin (gestione azienda) ───────────────────────────────
+// ─── owner, admin o superadmin (gestione azienda) ────────────────────────────
 export async function authenticateOwner(request, reply) {
   try {
     const authHeader = request.headers.authorization
@@ -56,7 +56,7 @@ export async function authenticateOwner(request, reply) {
     }
     const token   = authHeader.replace('Bearer ', '')
     const decoded = jwt.verify(token, JWT_SECRET)
-    if (!['owner', 'superadmin'].includes(decoded.role)) {
+    if (!['owner', 'superadmin', 'admin'].includes(decoded.role)) {
       return reply.status(403).send({ error: 'FORBIDDEN' })
     }
     if (!await validateSession(token)) {
@@ -66,6 +66,15 @@ export async function authenticateOwner(request, reply) {
   } catch (err) {
     request.log.error(err)
     return reply.status(401).send({ error: 'INVALID_TOKEN' })
+  }
+}
+
+// ─── controllo permesso granulare (solo per role === 'admin') ─────────────────
+export function requirePermission(perm) {
+  return async function (request, reply) {
+    if (['owner', 'superadmin'].includes(request.user?.role)) return
+    const perms = request.user?.permissions || {}
+    if (!perms[perm]) return reply.status(403).send({ error: 'FORBIDDEN' })
   }
 }
 

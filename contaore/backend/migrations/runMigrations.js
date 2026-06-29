@@ -388,6 +388,24 @@ export async function runMigrations() {
       sql: `CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);`
     }).catch(() => ({}))
 
+    // Promemoria timbratura per dipendente (migration 006)
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dipendenti ADD COLUMN IF NOT EXISTS promemoria_entrata_minuti integer DEFAULT NULL;`
+    }).catch(() => ({}))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dipendenti ADD COLUMN IF NOT EXISTS promemoria_uscita_minuti integer DEFAULT NULL;`
+    }).catch(() => ({}))
+
+    // Permessi admin granulari (migration 007)
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS permissions jsonb DEFAULT '{}';`
+    }).catch(() => ({}))
+
+    // Tariffa oraria dipendente per calcolo stipendio (migration 008)
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS dipendenti ADD COLUMN IF NOT EXISTS importo_orario numeric(10,2) DEFAULT NULL;`
+    }).catch(() => ({}))
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)
