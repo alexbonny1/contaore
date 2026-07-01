@@ -1,6 +1,6 @@
 import bcrypt    from 'bcrypt'
 import { supabase }         from '../services/supabase.js'
-import { authenticate }     from '../middleware/auth.js'
+import { authenticate, requirePermission, requireAnyPermission } from '../middleware/auth.js'
 import { sendCredenziali }  from '../services/email.js'
 import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
 import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
@@ -9,7 +9,7 @@ export default async function tagRoutes(fastify) {
 
   fastify.get(
     '/api/tags',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requireAnyPermission(['can_manage_employees', 'can_approve_requests'])] },
     async (request, reply) => {
       try {
         const companyId = request.user.company_id
@@ -48,7 +48,7 @@ export default async function tagRoutes(fastify) {
 
   fastify.post(
     '/api/tags/register',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
       try {
         const {
@@ -186,7 +186,7 @@ export default async function tagRoutes(fastify) {
 
   fastify.put(
     '/api/tags/:id',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
       try {
         const { id }    = request.params
@@ -238,7 +238,7 @@ export default async function tagRoutes(fastify) {
 
   fastify.patch(
     '/api/tags/:id',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
       try {
         const { id }               = request.params
@@ -317,7 +317,7 @@ export default async function tagRoutes(fastify) {
 
   fastify.delete(
     '/api/tags/:id',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
       try {
         const { id }    = request.params

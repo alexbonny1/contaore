@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SlidersHorizontal, BarChart2, Bell, Shield, Trash2, User, Sun, Moon, LogOut, Users, Mail } from "lucide-react";
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
+import { hasPermission } from "../api";
 
 // ─── Schermata principale impostazioni (stile Apple, categorie) ────────────────
 
@@ -10,6 +11,7 @@ export default function Settings() {
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const canManageAdmins = user.role === "owner" || user.role === "superadmin";
+  const canManageEmployees = hasPermission("can_manage_employees");
 
   useEffect(() => {
     if (!user.role || user.role === "dipendente") navigate("/dashboard");
@@ -46,14 +48,16 @@ export default function Settings() {
             subtitle="Accessi secondari con permessi limitati"
           />
         )}
-        <SettingRow
-          to="/impostazioni/presenze"
-          icon={SlidersHorizontal}
-          iconBg="bg-zinc-100 dark:bg-zinc-800"
-          iconColor="text-zinc-600 dark:text-zinc-300"
-          title="Presenze e turni"
-          subtitle="Tolleranza e calcolo straordinari"
-        />
+        {canManageEmployees && (
+          <SettingRow
+            to="/impostazioni/presenze"
+            icon={SlidersHorizontal}
+            iconBg="bg-zinc-100 dark:bg-zinc-800"
+            iconColor="text-zinc-600 dark:text-zinc-300"
+            title="Presenze e turni"
+            subtitle="Tolleranza e calcolo straordinari"
+          />
+        )}
         <SettingRow
           to="/impostazioni/grafici"
           icon={BarChart2}
@@ -62,14 +66,16 @@ export default function Settings() {
           title="Grafici dipendente"
           subtitle="Personalizza il pannello riepilogo"
         />
-        <SettingRow
-          to="/impostazioni/notifiche"
-          icon={Bell}
-          iconBg="bg-indigo-50 dark:bg-indigo-900/20"
-          iconColor="text-indigo-500"
-          title="Notifiche"
-          subtitle="Email e avvisi automatici"
-        />
+        {canManageEmployees && (
+          <SettingRow
+            to="/impostazioni/notifiche"
+            icon={Bell}
+            iconBg="bg-indigo-50 dark:bg-indigo-900/20"
+            iconColor="text-indigo-500"
+            title="Notifiche"
+            subtitle="Email e avvisi automatici"
+          />
+        )}
         <SettingRow
           to="/impostazioni/sicurezza"
           icon={Shield}
@@ -78,22 +84,26 @@ export default function Settings() {
           title="Sicurezza"
           subtitle="Password e autenticazione a due fattori"
         />
-        <SettingRow
-          to="/impostazioni/dati"
-          icon={Trash2}
-          iconBg="bg-red-50 dark:bg-red-900/20"
-          iconColor="text-red-500"
-          title="Gestione dati"
-          subtitle="Elimina e pulizia automatica dello storico"
-        />
-        <SettingRow
-          to="/impostazioni/riepilogo-ore"
-          icon={Mail}
-          iconBg="bg-teal-50 dark:bg-teal-900/20"
-          iconColor="text-teal-500"
-          title="Invio riepilogo ore"
-          subtitle="Invia automaticamente PDF o Excel via email"
-        />
+        {canManageEmployees && (
+          <SettingRow
+            to="/impostazioni/dati"
+            icon={Trash2}
+            iconBg="bg-red-50 dark:bg-red-900/20"
+            iconColor="text-red-500"
+            title="Gestione dati"
+            subtitle="Elimina e pulizia automatica dello storico"
+          />
+        )}
+        {canManageEmployees && (
+          <SettingRow
+            to="/impostazioni/riepilogo-ore"
+            icon={Mail}
+            iconBg="bg-teal-50 dark:bg-teal-900/20"
+            iconColor="text-teal-500"
+            title="Invio riepilogo ore"
+            subtitle="Invia automaticamente PDF o Excel via email"
+          />
+        )}
       </SettingsGroup>
 
       <SettingsGroup>

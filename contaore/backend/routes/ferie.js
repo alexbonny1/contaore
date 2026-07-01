@@ -1,5 +1,5 @@
 import { supabase }          from '../services/supabase.js'
-import { authenticateOwner }  from '../middleware/auth.js'
+import { authenticateOwner, requirePermission }  from '../middleware/auth.js'
 import { sendEsitoFerie }     from '../services/email.js'
 import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
 
@@ -12,7 +12,7 @@ export default async function ferieRoutes(fastify) {
   */
   fastify.get(
     '/api/ferie',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const company_id = request.user.company_id
@@ -51,7 +51,7 @@ export default async function ferieRoutes(fastify) {
   */
   fastify.put(
     '/api/ferie/:id/approva',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }         = request.params
@@ -125,7 +125,7 @@ export default async function ferieRoutes(fastify) {
   */
   fastify.put(
     '/api/ferie/:id/rifiuta',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }       = request.params
@@ -202,7 +202,7 @@ export default async function ferieRoutes(fastify) {
   */
   fastify.get(
     '/api/giustificazioni',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const company_id = request.user.company_id
@@ -240,7 +240,7 @@ export default async function ferieRoutes(fastify) {
   */
   fastify.put(
     '/api/giustificazioni/:id/approva',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }       = request.params
@@ -291,7 +291,7 @@ export default async function ferieRoutes(fastify) {
   */
   fastify.put(
     '/api/giustificazioni/:id/rifiuta',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }       = request.params
@@ -348,7 +348,7 @@ export default async function ferieRoutes(fastify) {
   */
   fastify.get(
     '/api/requests/dashboard',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const company_id = request.user.company_id
@@ -442,7 +442,7 @@ export default async function ferieRoutes(fastify) {
   */
   fastify.delete(
     '/api/ferie/:id/admin',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }     = request.params

@@ -4,7 +4,7 @@ import {
   Clock, CheckCircle, XCircle, ChevronDown, ChevronUp,
   Calendar, AlertCircle, FileText, Trash2, Pencil
 } from 'lucide-react'
-import { API_URL } from '../api'
+import { API_URL, hasPermission } from '../api'
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
 import PauseManager from '../components/PauseManager'
 import { track } from '../main'
@@ -160,6 +160,17 @@ export default function Requests({ initialView = 'richieste' }) {
     { label: 'Permessi',     value: counts.permessi_in_attesa ?? 0,        color: 'text-green-500'  },
     { label: 'Modifica turni', value: counts.turni_in_attesa ?? 0,        color: 'text-indigo-500' },
   ]
+
+  if (!hasPermission('can_approve_requests')) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-8 text-center">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Accesso non consentito</h3>
+          <p className="text-sm text-zinc-500">Non hai i permessi per gestire le richieste.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">

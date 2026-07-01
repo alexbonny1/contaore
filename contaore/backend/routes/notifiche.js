@@ -1,5 +1,5 @@
 import { supabase }         from '../services/supabase.js'
-import { authenticateOwner } from '../middleware/auth.js'
+import { authenticateOwner, requirePermission } from '../middleware/auth.js'
 import { generatePdfBuffer, generateExcelBuffer } from './export.js'
 import { sendRiepilogoOreAllegato } from '../services/email.js'
 
@@ -24,7 +24,7 @@ const DEFAULTS = {
 export default async function notificheRoutes(fastify) {
 
   /* GET /api/notifications/settings */
-  fastify.get('/api/notifications/settings', { preHandler: authenticateOwner }, async (req, reply) => {
+  fastify.get('/api/notifications/settings', { preHandler: [authenticateOwner, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       const companyId = req.user.company_id
       const { data } = await supabase
@@ -52,7 +52,7 @@ export default async function notificheRoutes(fastify) {
   })
 
   /* PUT /api/notifications/settings/:tipo */
-  fastify.put('/api/notifications/settings/:tipo', { preHandler: authenticateOwner }, async (req, reply) => {
+  fastify.put('/api/notifications/settings/:tipo', { preHandler: [authenticateOwner, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       const companyId = req.user.company_id
       const { tipo }  = req.params
@@ -98,7 +98,7 @@ export default async function notificheRoutes(fastify) {
   })
 
   /* GET /api/notifications/riepilogo-ore/pending — riepiloghi in attesa di approvazione */
-  fastify.get('/api/notifications/riepilogo-ore/pending', { preHandler: authenticateOwner }, async (req, reply) => {
+  fastify.get('/api/notifications/riepilogo-ore/pending', { preHandler: [authenticateOwner, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       const companyId = req.user.company_id
       const { data } = await supabase
@@ -115,7 +115,7 @@ export default async function notificheRoutes(fastify) {
   })
 
   /* POST /api/notifications/riepilogo-ore/:id/approve — genera il file e lo invia via email */
-  fastify.post('/api/notifications/riepilogo-ore/:id/approve', { preHandler: authenticateOwner }, async (req, reply) => {
+  fastify.post('/api/notifications/riepilogo-ore/:id/approve', { preHandler: [authenticateOwner, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       const companyId = req.user.company_id
       const { id }    = req.params
@@ -163,7 +163,7 @@ export default async function notificheRoutes(fastify) {
   })
 
   /* POST /api/notifications/riepilogo-ore/:id/reject */
-  fastify.post('/api/notifications/riepilogo-ore/:id/reject', { preHandler: authenticateOwner }, async (req, reply) => {
+  fastify.post('/api/notifications/riepilogo-ore/:id/reject', { preHandler: [authenticateOwner, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       const companyId = req.user.company_id
       const { id }    = req.params

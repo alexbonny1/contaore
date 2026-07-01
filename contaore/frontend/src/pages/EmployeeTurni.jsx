@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Briefcase, ChevronLeft } from "lucide-react";
-import { API_URL } from "../api";
+import { API_URL, hasPermission } from "../api";
 import { Toast } from "../components/SettingsUI";
 
 const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 
 export default function EmployeeTurni() {
   const { id } = useParams();
+  const canManage = hasPermission("can_manage_employees");
 
   const [employee, setEmployee]   = useState(null);
   const [loading, setLoading]     = useState(true);
@@ -141,6 +142,10 @@ export default function EmployeeTurni() {
       {loading ? (
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-8 text-center">
           <p className="text-sm text-zinc-400">Caricamento...</p>
+        </div>
+      ) : !canManage ? (
+        <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-8 text-center">
+          <p className="text-sm text-zinc-400">Non hai i permessi per gestire i turni.</p>
         </div>
       ) : (
         <>

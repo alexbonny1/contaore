@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Download, X, CheckSquare, Square, FileText, Table2, UserPlus, Trash2
 } from "lucide-react";
-import { API_URL, apiFetch } from "../api";
+import { API_URL, apiFetch, hasPermission, hasAnyPermission } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 /*
@@ -568,6 +568,9 @@ export default function Employees() {
   const [deleteLoading, setDeleteLoading]           = useState(false);
   const [toast, setToast]                           = useState(null);
   const token = localStorage.getItem("token");
+  const canManageEmployees = hasPermission("can_manage_employees");
+  const canViewPresenze    = hasPermission("can_view_presenze");
+  const canSelect          = hasAnyPermission(["can_manage_employees", "can_view_presenze"]);
 
   function showToast(msg, type = 'success') {
     setToast({ message: msg, type });
@@ -715,24 +718,28 @@ export default function Employees() {
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
         <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
-          <button
-            onClick={() => { setSelectionMode(prev => !prev); setSelectedEmpIds([]); }}
-            className={`flex items-center gap-2 h-12 sm:h-14 px-5 sm:px-6 rounded-2xl sm:rounded-3xl border text-sm sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all ${
-              selectionMode
-                ? "bg-zinc-100 dark:bg-zinc-800 border-indigo-400 dark:border-indigo-500 text-zinc-900 dark:text-zinc-100"
-                : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100"
-            }`}
-          >
-            <CheckSquare size={20} className="sm:w-[22px] sm:h-[22px]" />
-            <span>Seleziona</span>
-          </button>
-          <button
-            onClick={() => navigate("/badges")}
-            className="flex items-center gap-2 h-12 sm:h-14 px-5 sm:px-6 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-sm sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
-          >
-            <UserPlus size={20} className="sm:w-[22px] sm:h-[22px]" />
-            <span>Aggiungi</span>
-          </button>
+          {canSelect && (
+            <button
+              onClick={() => { setSelectionMode(prev => !prev); setSelectedEmpIds([]); }}
+              className={`flex items-center gap-2 h-12 sm:h-14 px-5 sm:px-6 rounded-2xl sm:rounded-3xl border text-sm sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all ${
+                selectionMode
+                  ? "bg-zinc-100 dark:bg-zinc-800 border-indigo-400 dark:border-indigo-500 text-zinc-900 dark:text-zinc-100"
+                  : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100"
+              }`}
+            >
+              <CheckSquare size={20} className="sm:w-[22px] sm:h-[22px]" />
+              <span>Seleziona</span>
+            </button>
+          )}
+          {canManageEmployees && (
+            <button
+              onClick={() => navigate("/badges")}
+              className="flex items-center gap-2 h-12 sm:h-14 px-5 sm:px-6 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-sm sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
+            >
+              <UserPlus size={20} className="sm:w-[22px] sm:h-[22px]" />
+              <span>Aggiungi</span>
+            </button>
+          )}
         </div>
 
         {selectionMode && (
@@ -749,27 +756,33 @@ export default function Employees() {
               <span className="hidden sm:inline text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 {selectedEmployeeIds.length} selezionat{selectedEmployeeIds.length === 1 ? "o" : "i"}
               </span>
-              <button
-                onClick={() => setShowExport(true)}
-                disabled={selectedEmployeeIds.length === 0}
-                className="flex items-center gap-1.5 h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
-              >
-                <Download size={15} /> Esporta
-              </button>
-              <button
-                onClick={() => setShowAssignShift(true)}
-                disabled={selectedEmployeeIds.length === 0}
-                className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
-              >
-                Assegna turno
-              </button>
-              <button
-                onClick={() => setDeleteConfirm(true)}
-                disabled={selectedEmployeeIds.length === 0}
-                className="flex items-center gap-1.5 h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-red-500 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 hover:bg-red-600 transition-all"
-              >
-                <Trash2 size={15} /> Elimina
-              </button>
+              {canViewPresenze && (
+                <button
+                  onClick={() => setShowExport(true)}
+                  disabled={selectedEmployeeIds.length === 0}
+                  className="flex items-center gap-1.5 h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
+                >
+                  <Download size={15} /> Esporta
+                </button>
+              )}
+              {canManageEmployees && (
+                <button
+                  onClick={() => setShowAssignShift(true)}
+                  disabled={selectedEmployeeIds.length === 0}
+                  className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-xs sm:text-sm font-semibold disabled:opacity-40 transition-all"
+                >
+                  Assegna turno
+                </button>
+              )}
+              {canManageEmployees && (
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  disabled={selectedEmployeeIds.length === 0}
+                  className="flex items-center gap-1.5 h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-red-500 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 hover:bg-red-600 transition-all"
+                >
+                  <Trash2 size={15} /> Elimina
+                </button>
+              )}
               <button onClick={exitSelectionMode} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                 <X size={16} className="text-zinc-500 dark:text-zinc-400" />
               </button>
@@ -788,7 +801,14 @@ export default function Employees() {
           </div>
         )}
 
-        {!loading && apiError && (
+        {!loading && apiError && apiErrorDetail === 'FORBIDDEN' && (
+          <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-8 sm:p-10 text-center">
+            <h3 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Accesso non consentito</h3>
+            <p className="text-sm sm:text-base text-zinc-500">Non hai i permessi per visualizzare i dipendenti.</p>
+          </div>
+        )}
+
+        {!loading && apiError && apiErrorDetail !== 'FORBIDDEN' && (
           <div className="rounded-2xl sm:rounded-3xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-8 sm:p-10 text-center">
             <h3 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Errore nel caricamento</h3>
             <p className="text-sm sm:text-base text-zinc-500 mb-1">Impossibile caricare i dipendenti.</p>
