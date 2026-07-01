@@ -10,8 +10,11 @@ import {
   sendNotificaBadgeNonRiconosciuto,
   sendNotificaTimbraturaMancante,
   sendPromemoriaEntrata,
-  sendPromemoriaUscita
+  sendPromemoriaUscita,
+  sendRiepilogoOrePronto,
+  sendRiepilogoOreAllegato
 } from './email.js'
+import { generatePdfBuffer, generateExcelBuffer } from '../routes/export.js'
 import { GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours } from '../utils/timeHelpers.js'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -493,23 +496,32 @@ export async function checkAlertSuperadmin() {
 // ─── pulizia automatica storico presenze ───────────────────────────────────────
 
 async function autoCleanupPresenze() {
-  // Per ogni company con pulizia automatica attiva, elimina le presenze
-  // più vecchie di retention_months.
+  // Per ogni company con pulizia automatica attiva, nel giorno del mese configurato
+  // elimina tutti i mesi solari più vecchi del periodo di retention scelto.
   let companies
   try {
     const { data, error } = await supabase
       .from('company')
-      .select('id, auto_cleanup_enabled, auto_cleanup_retention_months')
+      .select('id, auto_cleanup_enabled, auto_cleanup_retention_months, auto_cleanup_giorno, auto_cleanup_last_run')
       .eq('auto_cleanup_enabled', true)
     if (error) { return } // colonne non ancora presenti → nessuna pulizia
     companies = data || []
   } catch (_) { return }
 
+  const now       = new Date()
+  const today     = now.getDate()
+  const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
   for (const c of companies) {
     try {
+      const giorno = Math.max(1, Math.min(28, parseInt(c.auto_cleanup_giorno) || 15))
+      if (today !== giorno) continue
+      if (c.auto_cleanup_last_run === currentYM) continue
+
       const months = Math.max(1, parseInt(c.auto_cleanup_retention_months) || 12)
-      const cutoff = new Date()
-      cutoff.setMonth(cutoff.getMonth() - months)
+      // inizio del mese solare "months" mesi fa: mantiene solo i mesi completi richiesti
+      const cutoff = new Date(now.getFullYear(), now.getMonth() - months, 1)
+
       const { data: old } = await supabase
         .from('presenza')
         .select('id')
@@ -519,7 +531,91 @@ async function autoCleanupPresenze() {
       for (let i = 0; i < ids.length; i += 500) {
         await supabase.from('presenza').delete().in('id', ids.slice(i, i + 500))
       }
+
+      await supabase.from('company').update({ auto_cleanup_last_run: currentYM }).eq('id', c.id)
     } catch (e) { console.error('autoCleanupPresenze company:', e) }
+  }
+}
+
+// ─── invio automatico riepilogo ore mensile ───────────────────────────────────
+
+async function checkInvioRiepilogoOre() {
+  let settings
+  try {
+    const { data, error } = await supabase
+      .from('notifiche_settings')
+      .select('*, company:company(nome)')
+      .eq('tipo', 'riepilogo_ore_mensile')
+      .eq('attiva', true)
+    if (error) return
+    settings = data || []
+  } catch (_) { return }
+
+  const now       = new Date()
+  const today     = now.getDate()
+  const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  for (const s of settings) {
+    try {
+      if (!s.email_destinatario) continue
+
+      const parametri = s.parametri || {}
+      const giorno    = Math.max(1, Math.min(28, parseInt(parametri.giorno_invio) || 5))
+      if (today !== giorno) continue
+
+      const last      = s.last_triggered_at ? new Date(s.last_triggered_at) : null
+      const lastYM    = last ? `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}` : null
+      if (lastYM === currentYM) continue
+
+      const companyId   = s.company_id
+      const companyNome = s.company?.nome || ''
+      const formato      = parametri.formato   === 'excel'       ? 'excel'       : 'pdf'
+      const modalita      = parametri.modalita === 'approvazione' ? 'approvazione' : 'automatico'
+
+      // mese solare precedente — stesso formato stringa usato dagli export
+      const periodo = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        .toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+
+      let employeeIds = s.target_ids
+      if (!Array.isArray(employeeIds) || !employeeIds.length) {
+        const { data: allEmp } = await supabase.from('dipendenti').select('id').eq('company_id', companyId)
+        employeeIds = (allEmp || []).map(e => e.id)
+      }
+
+      if (employeeIds.length) {
+        if (modalita === 'automatico') {
+          const buffer = formato === 'excel'
+            ? await generateExcelBuffer(employeeIds, periodo, companyId)
+            : await generatePdfBuffer(employeeIds, periodo, companyId)
+          if (buffer) {
+            const ext = formato === 'excel' ? 'xlsx' : 'pdf'
+            await sendRiepilogoOreAllegato({
+              email: s.email_destinatario, companyNome, periodo, formato, buffer,
+              filename: `ContaOre_${periodo.replace(/\s/g, '_')}.${ext}`
+            }).catch(e => console.error('sendRiepilogoOreAllegato:', e))
+          }
+          await supabase.from('riepilogo_ore_invii').insert({
+            company_id: companyId, periodo, dipendente_ids: employeeIds, formato,
+            destinatario_email: s.email_destinatario, stato: 'inviato', inviato_il: now.toISOString()
+          })
+        } else {
+          await supabase.from('riepilogo_ore_invii').insert({
+            company_id: companyId, periodo, dipendente_ids: employeeIds, formato,
+            destinatario_email: s.email_destinatario, stato: 'in_attesa'
+          })
+
+          const { data: owner } = await supabase
+            .from('user_account').select('email').eq('company_id', companyId).eq('role', 'owner').maybeSingle()
+          if (owner?.email) {
+            await sendRiepilogoOrePronto({
+              emailOwner: owner.email, companyNome, periodo, destinatarioEmail: s.email_destinatario
+            }).catch(e => console.error('sendRiepilogoOrePronto:', e))
+          }
+        }
+      }
+
+      await supabase.from('notifiche_settings').update({ last_triggered_at: now.toISOString() }).eq('id', s.id)
+    } catch (e) { console.error('checkInvioRiepilogoOre setting:', e) }
   }
 }
 
@@ -617,9 +713,10 @@ export function startScheduler() {
     checkRiepilogoSettimanale().catch(e => console.error('checkRiepilogoSettimanale:', e))
   }, 30 * 60 * 1000)
 
-  // Every 24h: pulizia automatica storico presenze
+  // Every 24h: pulizia automatica storico presenze + invio riepilogo ore mensile
   setInterval(() => {
     autoCleanupPresenze().catch(e => console.error('autoCleanupPresenze:', e))
+    checkInvioRiepilogoOre().catch(e => console.error('checkInvioRiepilogoOre:', e))
   }, 24 * 60 * 60 * 1000)
 
 }

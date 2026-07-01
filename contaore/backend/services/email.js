@@ -565,6 +565,48 @@ export async function sendPromemoriaEntrata({ emailDipendente, nomeDipendente, o
   return send(emailDipendente, `⏰ Promemoria entrata — ${oraTurno}`, html)
 }
 
+// ─── Riepilogo ore pronto per la revisione (in attesa di approvazione) ────────
+
+export async function sendRiepilogoOrePronto({ emailOwner, companyNome, periodo, destinatarioEmail }) {
+  const html = emailWrap(companyNome, '📄 Riepilogo ore pronto per la revisione', '#2563eb', `
+    <p style="font-size:14px;color:#444;margin:0 0 12px;line-height:1.6;">
+      Il riepilogo ore di <strong>${periodo}</strong> è stato generato ed è in attesa della tua approvazione
+      prima dell'invio a <strong>${destinatarioEmail}</strong>.
+    </p>
+    <p style="font-size:13px;color:#888;">
+      Puoi scaricarlo dalla pagina Dipendenti per controllarlo, poi approvarne l'invio dalle Impostazioni → Invio riepilogo ore.
+    </p>
+  `)
+  return send(emailOwner, `Riepilogo ore da approvare — ${periodo}`, html)
+}
+
+// ─── Riepilogo ore in allegato (invio automatico o dopo approvazione) ─────────
+
+export async function sendRiepilogoOreAllegato({ email, companyNome, periodo, formato, buffer, filename }) {
+  try {
+    const contentType = formato === 'excel'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'application/pdf'
+    const html = emailWrap(companyNome, '📊 Riepilogo ore', '#2563eb', `
+      <p style="font-size:14px;color:#444;margin:0 0 12px;line-height:1.6;">
+        In allegato il riepilogo ore di <strong>${periodo}</strong> per <strong>${companyNome}</strong>.
+      </p>
+    `)
+    const { error } = await safeSend({
+      from:    FROM,
+      to:      email,
+      subject: `Riepilogo ore — ${periodo} — ${companyNome}`,
+      html,
+      attachments: [{ filename, content: buffer.toString('base64'), contentType }]
+    })
+    if (error) { console.error('Resend error (riepilogo allegato):', error); return false }
+    return true
+  } catch (err) {
+    console.error('sendRiepilogoOreAllegato error:', err)
+    return false
+  }
+}
+
 // ─── Promemoria uscita mancante ───────────────────────────────────────────────
 
 export async function sendPromemoriaUscita({ emailDipendente, nomeDipendente, oraTurno }) {

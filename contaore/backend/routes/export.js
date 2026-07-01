@@ -315,16 +315,13 @@ async function loadEmployeeFullData(id, companyId) {
   return { employee, reads: reads || [], shifts: shifts || [], ferieApprovate: ferieApprovate || [], giustificazioni: giustificazioni || [], pausaAziendale: pausaAziendale || null }
 }
 
-export default async function exportRoutes(fastify) {
+/*
+────────────────────────────────────
+GENERAZIONE BUFFER (riusabile da route HTTP e da job schedulati)
+────────────────────────────────────
+*/
 
-  // ── PDF ──────────────────────────────────────────────────────────────
-
-  fastify.post('/api/export/pdf', { preHandler: authenticate }, async (request, reply) => {
-
-    const { employee_ids, month } = request.body
-    const companyId = request.user.company_id
-
-    if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
+export async function generatePdfBuffer(employee_ids, month, companyId) {
 
     const { data: companySettings } = await supabase.from('company').select('tolleranza_straordinario_minuti, tolleranza_difetto_minuti').eq('id', companyId).single()
     const toleranceMins        = companySettings?.tolleranza_straordinario_minuti ?? 10
@@ -332,7 +329,7 @@ export default async function exportRoutes(fastify) {
 
     const results = await Promise.all(employee_ids.map(id => loadEmployeeFullData(id, companyId)))
     const employeesData = results.filter(Boolean)
-    if (!employeesData.length) return reply.status(404).send({ success: false, error: 'NO_DATA' })
+    if (!employeesData.length) return null
 
     const pdfBuffer = await new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 40, size: 'A4' })
@@ -520,21 +517,10 @@ export default async function exportRoutes(fastify) {
       doc.end()
     })
 
-    return reply
-      .header('Content-Type', 'application/pdf')
-      .header('Content-Disposition', `attachment; filename="ContaOre_${month || 'storico'}.pdf"`)
-      .send(pdfBuffer)
+    return pdfBuffer
+}
 
-  })
-
-  // ── EXCEL ────────────────────────────────────────────────────────────
-
-  fastify.post('/api/export/excel', { preHandler: authenticate }, async (request, reply) => {
-
-    const { employee_ids, month } = request.body
-    const companyId = request.user.company_id
-
-    if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
+export async function generateExcelBuffer(employee_ids, month, companyId) {
 
     const { data: companySettingsXls } = await supabase.from('company').select('tolleranza_straordinario_minuti, tolleranza_difetto_minuti').eq('id', companyId).single()
     const toleranceMins        = companySettingsXls?.tolleranza_straordinario_minuti ?? 10
@@ -542,7 +528,7 @@ export default async function exportRoutes(fastify) {
 
     const resultsXls = await Promise.all(employee_ids.map(id => loadEmployeeFullData(id, companyId)))
     const employeesData = resultsXls.filter(Boolean)
-    if (!employeesData.length) return reply.status(404).send({ success: false, error: 'NO_DATA' })
+    if (!employeesData.length) return null
 
     const wb = XLSX.utils.book_new()
     const periodoLabel = month && month !== 'tutti' ? month : 'Tutto'
@@ -622,6 +608,50 @@ export default async function exportRoutes(fastify) {
     }
 
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+
+    return buffer
+}
+
+/*
+────────────────────────────────────
+ROUTE HTTP (thin wrapper attorno ai generatori riusabili)
+────────────────────────────────────
+*/
+
+export default async function exportRoutes(fastify) {
+
+  // ── PDF ──────────────────────────────────────────────────────────────
+
+  fastify.post('/api/export/pdf', { preHandler: authenticate }, async (request, reply) => {
+
+    const { employee_ids, month } = request.body
+    const companyId = request.user.company_id
+
+    if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
+
+    const pdfBuffer = await generatePdfBuffer(employee_ids, month, companyId)
+    if (!pdfBuffer) return reply.status(404).send({ success: false, error: 'NO_DATA' })
+
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="ContaOre_${month || 'storico'}.pdf"`)
+      .send(pdfBuffer)
+
+  })
+
+  // ── EXCEL ────────────────────────────────────────────────────────────
+
+  fastify.post('/api/export/excel', { preHandler: authenticate }, async (request, reply) => {
+
+    const { employee_ids, month } = request.body
+    const companyId = request.user.company_id
+
+    if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
+
+    const buffer = await generateExcelBuffer(employee_ids, month, companyId)
+    if (!buffer) return reply.status(404).send({ success: false, error: 'NO_DATA' })
+
+    const periodoLabel = month && month !== 'tutti' ? month : 'Tutto'
 
     return reply
       .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

@@ -59,6 +59,7 @@ const SettingsGrafici     = lazy(() => import("./pages/SettingsGrafici"));
 const SettingsSicurezza   = lazy(() => import("./pages/SettingsSicurezza"));
 const SettingsDati        = lazy(() => import("./pages/SettingsDati"));
 const SettingsAdmin       = lazy(() => import("./pages/SettingsAdmin"));
+const SettingsRiepilogoOre = lazy(() => import("./pages/SettingsRiepilogoOre"));
 const Billing             = lazy(() => import("./pages/Billing"));
 
 import ProtectedRoute from "./ProtectedRoute";
@@ -116,6 +117,7 @@ function AppWithInactivity2FA() {
           <Route path="/impostazioni/sicurezza"    element={<SettingsSicurezza />} />
           <Route path="/impostazioni/admin"        element={<SettingsAdmin />} />
           <Route path="/impostazioni/dati"         element={<SettingsDati />} />
+          <Route path="/impostazioni/riepilogo-ore" element={<SettingsRiepilogoOre />} />
           <Route path="/impostazioni/abbonamento"  element={<Billing />} />
         </Route>
 

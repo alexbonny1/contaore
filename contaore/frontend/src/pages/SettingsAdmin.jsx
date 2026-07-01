@@ -35,7 +35,6 @@ export default function SettingsAdmin() {
   const [toast, setToast]     = useState(null);
 
   const [showCreate, setShowCreate] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail]       = useState("");
   const [newNome, setNewNome]         = useState("");
   const [newCognome, setNewCognome]   = useState("");
@@ -67,19 +66,19 @@ export default function SettingsAdmin() {
   }, []);
 
   async function createAdmin() {
-    if (!newUsername.trim()) { showToast("Username obbligatorio", "error"); return; }
+    if (!newNome.trim() || !newCognome.trim() || !newEmail.trim()) { showToast("Nome, cognome ed email sono obbligatori", "error"); return; }
     setCreating(true);
     try {
       const res  = await fetch(API_URL + "/api/admin-accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
-        body: JSON.stringify({ username: newUsername.trim(), email: newEmail.trim() || null, nome: newNome.trim() || null, cognome: newCognome.trim() || null, permissions: newPerms })
+        body: JSON.stringify({ email: newEmail.trim(), nome: newNome.trim(), cognome: newCognome.trim(), permissions: newPerms })
       });
       const data = await res.json();
-      if (!data.success) { showToast(data.error === "USERNAME_TAKEN" ? "Username già in uso" : data.error || "Errore", "error"); return; }
-      showToast(`Admin creato. Password: ${data.password}`);
+      if (!data.success) { showToast(data.error || "Errore", "error"); return; }
+      showToast(`Admin creato: @${data.admin.username} — Password: ${data.password}`);
       setShowCreate(false);
-      setNewUsername(""); setNewEmail(""); setNewNome(""); setNewCognome("");
+      setNewEmail(""); setNewNome(""); setNewCognome("");
       setNewPerms({ can_view_presenze: true, can_edit_presenze: false, can_approve_requests: false, can_manage_employees: false });
       load();
     } catch (_) { showToast("Errore server", "error"); }
@@ -216,29 +215,23 @@ export default function SettingsAdmin() {
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
           <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Nuovo admin</h3>
-            <p className="text-xs text-zinc-400 mb-5">Verrà generata automaticamente una password temporanea</p>
+            <p className="text-xs text-zinc-400 mb-5">Username e password temporanea verranno generati automaticamente e inviati via email</p>
 
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs text-zinc-400 mb-1">Nome</p>
+                  <p className="text-xs text-zinc-400 mb-1">Nome *</p>
                   <input type="text" value={newNome} onChange={e => setNewNome(e.target.value)}
                     className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-400 mb-1">Cognome</p>
+                  <p className="text-xs text-zinc-400 mb-1">Cognome *</p>
                   <input type="text" value={newCognome} onChange={e => setNewCognome(e.target.value)}
                     className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
                 </div>
               </div>
               <div>
-                <p className="text-xs text-zinc-400 mb-1">Username *</p>
-                <input type="text" value={newUsername} onChange={e => setNewUsername(e.target.value)}
-                  placeholder="mario.rossi"
-                  className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-              </div>
-              <div>
-                <p className="text-xs text-zinc-400 mb-1">Email</p>
+                <p className="text-xs text-zinc-400 mb-1">Email *</p>
                 <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
                   placeholder="email@esempio.it"
                   className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />

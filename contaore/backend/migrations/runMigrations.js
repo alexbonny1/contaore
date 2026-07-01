@@ -406,6 +406,28 @@ export async function runMigrations() {
       sql: `ALTER TABLE IF EXISTS dipendenti ADD COLUMN IF NOT EXISTS importo_orario numeric(10,2) DEFAULT NULL;`
     }).catch(() => ({}))
 
+    // Pulizia automatica su giorno preciso del mese + coda invio riepilogo ore (migration 009)
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_giorno integer DEFAULT 15;`
+    }).catch(() => ({}))
+    await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_last_run varchar(7);`
+    }).catch(() => ({}))
+    await supabase.rpc('exec', {
+      sql: `CREATE TABLE IF NOT EXISTS riepilogo_ore_invii (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
+        periodo varchar(100) NOT NULL,
+        dipendente_ids jsonb,
+        formato varchar(10) NOT NULL,
+        destinatario_email varchar(255) NOT NULL,
+        stato varchar(20) DEFAULT 'in_attesa',
+        approvato_da uuid REFERENCES user_account(id) ON DELETE SET NULL,
+        inviato_il timestamptz,
+        created_at timestamptz DEFAULT now()
+      );`
+    }).catch(() => ({}))
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)
