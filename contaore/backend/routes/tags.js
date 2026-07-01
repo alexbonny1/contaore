@@ -3,6 +3,7 @@ import { supabase }         from '../services/supabase.js'
 import { authenticate }     from '../middleware/auth.js'
 import { sendCredenziali }  from '../services/email.js'
 import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
+import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
 
 export default async function tagRoutes(fastify) {
 
@@ -23,7 +24,12 @@ export default async function tagRoutes(fastify) {
           return reply.send({ success: false })
         }
 
-        const tags = (data || []).map(tag => ({
+        const allowedIds = await getAllowedDipendenteIds(request.user)
+        const visibleData = allowedIds
+          ? (data || []).filter(tag => !tag.dipendenti || isDipendenteAllowed(allowedIds, tag.dipendenti.id))
+          : (data || [])
+
+        const tags = visibleData.map(tag => ({
           ...tag,
           nome:         tag.dipendenti ? `${tag.dipendenti.nome} ${tag.dipendenti.cognome}` : tag.uid,
           nome_raw:     tag.dipendenti?.nome     || '',

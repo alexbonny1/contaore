@@ -1,6 +1,7 @@
 import { supabase }          from '../services/supabase.js'
 import { authenticateOwner }  from '../middleware/auth.js'
 import { sendEsitoFerie }     from '../services/email.js'
+import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
 
 export default async function ferieRoutes(fastify) {
 
@@ -24,6 +25,9 @@ export default async function ferieRoutes(fastify) {
           .order('created_at', { ascending: false })
 
         if (stato) query = query.eq('stato', stato)
+
+        const allowedIds = await getAllowedDipendenteIds(request.user)
+        if (allowedIds) query = query.in('dipendente_id', allowedIds)
 
         const { data, error } = await query
 
@@ -63,6 +67,11 @@ export default async function ferieRoutes(fastify) {
 
         if (fetchError || !richiesta) {
           return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        const allowedIdsFerieApprova = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsFerieApprova, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
         }
 
         if (richiesta.stato !== 'in_attesa') {
@@ -134,6 +143,11 @@ export default async function ferieRoutes(fastify) {
           return reply.status(404).send({ error: 'NOT_FOUND' })
         }
 
+        const allowedIdsFerieRifiuta = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsFerieRifiuta, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
+        }
+
         if (richiesta.stato !== 'in_attesa') {
           return reply.status(400).send({
             error:   'ALREADY_PROCESSED',
@@ -202,6 +216,9 @@ export default async function ferieRoutes(fastify) {
 
         if (stato) query = query.eq('stato', stato)
 
+        const allowedIds = await getAllowedDipendenteIds(request.user)
+        if (allowedIds) query = query.in('dipendente_id', allowedIds)
+
         const { data, error } = await query
 
         if (error) {
@@ -232,12 +249,18 @@ export default async function ferieRoutes(fastify) {
 
         const { data: existing } = await supabase
           .from('giustificazioni')
-          .select('id, stato')
+          .select('id, stato, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (!existing) return reply.status(404).send({ error: 'NOT_FOUND' })
+
+        const allowedIdsGiustApprova = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsGiustApprova, existing.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
+        }
+
         if (existing.stato !== 'in_attesa') {
           return reply.status(400).send({ error: 'ALREADY_PROCESSED' })
         }
@@ -277,12 +300,18 @@ export default async function ferieRoutes(fastify) {
 
         const { data: existing } = await supabase
           .from('giustificazioni')
-          .select('id, stato')
+          .select('id, stato, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (!existing) return reply.status(404).send({ error: 'NOT_FOUND' })
+
+        const allowedIdsGiustRifiuta = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsGiustRifiuta, existing.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
+        }
+
         if (existing.stato !== 'in_attesa') {
           return reply.status(400).send({ error: 'ALREADY_PROCESSED' })
         }
@@ -324,6 +353,7 @@ export default async function ferieRoutes(fastify) {
       try {
         const company_id = request.user.company_id
         const { stato }  = request.query
+        const allowedIds = await getAllowedDipendenteIds(request.user)
 
         // Recupera le richieste di ferie
         let queryFerie = supabase
@@ -332,6 +362,7 @@ export default async function ferieRoutes(fastify) {
           .eq('company_id', company_id)
           .order('created_at', { ascending: false })
         if (stato) queryFerie = queryFerie.eq('stato', stato)
+        if (allowedIds) queryFerie = queryFerie.in('dipendente_id', allowedIds)
         const { data: ferie } = await queryFerie
 
         // Recupera le giustificazioni
@@ -341,6 +372,7 @@ export default async function ferieRoutes(fastify) {
           .eq('company_id', company_id)
           .order('created_at', { ascending: false })
         if (stato) queryGiust = queryGiust.eq('stato', stato)
+        if (allowedIds) queryGiust = queryGiust.in('dipendente_id', allowedIds)
         const { data: giustificazioni } = await queryGiust
 
         // Recupera le richieste di timbratura mancata
@@ -350,6 +382,7 @@ export default async function ferieRoutes(fastify) {
           .eq('company_id', company_id)
           .order('created_at', { ascending: false })
         if (stato) queryTimb = queryTimb.eq('stato', stato)
+        if (allowedIds) queryTimb = queryTimb.in('dipendente_id', allowedIds)
         const { data: richieste_timbratura } = await queryTimb
 
         // Recupera le richieste di permessi (uscita/entrata)
@@ -359,6 +392,7 @@ export default async function ferieRoutes(fastify) {
           .eq('company_id', company_id)
           .order('created_at', { ascending: false })
         if (stato) queryPermessi = queryPermessi.eq('stato', stato)
+        if (allowedIds) queryPermessi = queryPermessi.in('dipendente_id', allowedIds)
         const { data: richieste_permessi } = await queryPermessi
 
         // Recupera le richieste di modifica turni
@@ -368,6 +402,7 @@ export default async function ferieRoutes(fastify) {
           .eq('company_id', company_id)
           .order('created_at', { ascending: false })
         if (stato) queryModTurni = queryModTurni.eq('stato', stato)
+        if (allowedIds) queryModTurni = queryModTurni.in('dipendente_id', allowedIds)
         const { data: richieste_turni } = await queryModTurni
 
         return reply.send({
@@ -415,12 +450,17 @@ export default async function ferieRoutes(fastify) {
 
         const { data: richiesta } = await supabase
           .from('richieste_ferie')
-          .select('id')
+          .select('id, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (!richiesta) return reply.status(404).send({ error: 'NOT_FOUND' })
+
+        const allowedIdsDelete = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsDelete, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
+        }
 
         await supabase.from('richieste_ferie').delete().eq('id', id)
 

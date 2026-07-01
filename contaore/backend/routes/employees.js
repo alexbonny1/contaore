@@ -3,6 +3,7 @@ import { supabase } from '../services/supabase.js'
 import { authenticate, authenticateWithInactivity } from '../middleware/auth.js'
 import { sendCredenziali } from '../services/email.js'
 import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
+import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
 import {
   GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours,
   getLocalDateStr, getLocalTimeMinutes, getLocalDayOfWeek, getDayName,
@@ -313,7 +314,7 @@ export default async function employeeRoutes(fastify) {
 
         const companyId = request.user.company_id
 
-        const { data: employees, error: employeesError } = await supabase
+        const { data: employeesRaw, error: employeesError } = await supabase
           .from('dipendenti')
           .select('*')
           .eq('company_id', companyId)
@@ -322,6 +323,9 @@ export default async function employeeRoutes(fastify) {
         if (employeesError) {
           return reply.send({ success: false, error: 'DB_DIPENDENTI', detail: employeesError.message })
         }
+
+        const allowedIds = await getAllowedDipendenteIds(request.user)
+        const employees  = allowedIds ? (employeesRaw || []).filter(e => allowedIds.includes(e.id)) : (employeesRaw || [])
 
         const { data: readsRaw, error: readsError } = await supabase
           .from('presenza')
@@ -443,6 +447,11 @@ export default async function employeeRoutes(fastify) {
         if (employeeError || !employee) {
           request.log.error(employeeError)
           return reply.send({ success: false })
+        }
+
+        const allowedIds = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIds, employee.id)) {
+          return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
         }
 
         const { data: reads, error: readsError } = await supabase
@@ -1103,8 +1112,13 @@ export default async function employeeRoutes(fastify) {
       const { employee_ids = [], month, before } = req.body || {}
       if (!month && !before) return reply.send({ success: false, error: 'NO_CRITERIA' })
 
+      // admin con accesso limitato: restringe (o sostituisce, se "tutti") alla lista consentita
+      const allowedIds = await getAllowedDipendenteIds(req.user)
+      let targetIds = Array.isArray(employee_ids) ? employee_ids : []
+      if (allowedIds) targetIds = targetIds.length ? targetIds.filter(id => allowedIds.includes(id)) : allowedIds
+
       let q = supabase.from('dipendenti').select('id, badge_uid').eq('company_id', companyId)
-      if (Array.isArray(employee_ids) && employee_ids.length) q = q.in('id', employee_ids)
+      if (targetIds.length || allowedIds) q = q.in('id', targetIds)
       const { data: emps } = await q
       const badgeUids = (emps || []).map(e => e.badge_uid).filter(Boolean)
       if (!badgeUids.length) return reply.send({ success: true, deleted: 0 })
@@ -1148,6 +1162,9 @@ export default async function employeeRoutes(fastify) {
         .eq('id', id).eq('company_id', companyId)
         .single()
       if (!emp) return reply.send({ success: false, error: 'NOT_FOUND' })
+
+      const allowedIds = await getAllowedDipendenteIds(req.user)
+      if (!isDipendenteAllowed(allowedIds, emp.id)) return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
 
       const newNome    = (nome    ?? emp.nome) || ''
       const newCognome = (cognome ?? emp.cognome) || ''
@@ -1263,6 +1280,9 @@ export default async function employeeRoutes(fastify) {
         .from('dipendenti').select('id').eq('id', id).eq('company_id', companyId).single()
       if (!emp) return reply.send({ success: false, error: 'NOT_FOUND' })
 
+      const allowedIds = await getAllowedDipendenteIds(req.user)
+      if (!isDipendenteAllowed(allowedIds, emp.id)) return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
+
       const { data: account } = await supabase
         .from('user_account').select('id').eq('dipendente_id', id).maybeSingle()
       if (!account) return reply.send({ success: false, error: 'NO_ACCOUNT' })
@@ -1289,11 +1309,16 @@ export default async function employeeRoutes(fastify) {
         return reply.status(400).send({ success: false, error: 'IDS_REQUIRED' })
       }
 
+      const allowedIds = await getAllowedDipendenteIds(request.user)
+      const scopedIds  = allowedIds ? ids.filter(id => allowedIds.includes(id)) : ids
+
+      if (!scopedIds.length) return reply.send({ success: true })
+
       // Fetch all employees at once to verify company ownership
       const { data: emps } = await supabase
         .from('dipendenti')
         .select('id, badge_uid')
-        .in('id', ids)
+        .in('id', scopedIds)
         .eq('company_id', companyId)
 
       if (!emps || emps.length === 0) {
@@ -1337,7 +1362,7 @@ export default async function employeeRoutes(fastify) {
       const companyId = req.user.company_id
       const { data } = await supabase
         .from('user_account')
-        .select('id, username, email, nome, cognome, permissions, created_at')
+        .select('id, username, email, nome, cognome, permissions, assigned_dipendente_ids, created_at')
         .eq('company_id', companyId)
         .eq('role', 'admin')
         .order('created_at', { ascending: false })
@@ -1355,7 +1380,7 @@ export default async function employeeRoutes(fastify) {
         return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
       }
       const companyId = req.user.company_id
-      const { nome, cognome, email, permissions = {} } = req.body || {}
+      const { nome, cognome, email, permissions = {}, employee_ids } = req.body || {}
 
       if (!nome?.trim() || !cognome?.trim() || !email?.trim()) {
         return reply.status(400).send({ success: false, error: 'MISSING_FIELDS' })
@@ -1367,6 +1392,9 @@ export default async function employeeRoutes(fastify) {
       const plainPwd  = generatePassword(10)
       const hashedPwd = await bcrypt.hash(plainPwd, 10)
 
+      // employee_ids assente/vuoto = accesso a tutti i dipendenti; array = accesso limitato
+      const assignedDipendenteIds = Array.isArray(employee_ids) && employee_ids.length ? employee_ids : null
+
       const { data: created, error: insertErr } = await supabase.from('user_account').insert({
         company_id:  companyId,
         username,
@@ -1375,18 +1403,21 @@ export default async function employeeRoutes(fastify) {
         cognome:     cognome.trim(),
         password:    hashedPwd,
         role:        'admin',
-        permissions: permissions
-      }).select('id, username, email, nome, cognome, permissions').single()
+        permissions: permissions,
+        assigned_dipendente_ids: assignedDipendenteIds
+      }).select('id, username, email, nome, cognome, permissions, assigned_dipendente_ids').single()
 
       if (insertErr) return reply.status(500).send({ success: false, error: insertErr.message })
 
       const { data: company } = await supabase.from('company').select('nome').eq('id', companyId).single()
+      const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
       sendCredenziali({
         email:       created.email,
         nome:        created.nome,
         username:    created.username,
         password:    plainPwd,
-        companyNome: company?.nome || ''
+        companyNome: company?.nome || '',
+        loginUrl
       }).catch(e => req.log.error(e))
 
       return reply.send({ success: true, admin: created, password: plainPwd })
@@ -1404,13 +1435,16 @@ export default async function employeeRoutes(fastify) {
       }
       const companyId = req.user.company_id
       const { id }    = req.params
-      const { permissions, nome, cognome, email } = req.body || {}
+      const { permissions, nome, cognome, email, employee_ids } = req.body || {}
 
       const update = {}
       if (permissions !== undefined) update.permissions = permissions
       if (nome       !== undefined) update.nome       = nome?.trim()    || null
       if (cognome    !== undefined) update.cognome    = cognome?.trim()  || null
       if (email      !== undefined) update.email      = email?.trim()    || null
+      if (employee_ids !== undefined) {
+        update.assigned_dipendente_ids = Array.isArray(employee_ids) && employee_ids.length ? employee_ids : null
+      }
 
       const { error } = await supabase.from('user_account')
         .update(update)
