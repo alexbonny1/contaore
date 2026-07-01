@@ -407,13 +407,25 @@ export async function runMigrations() {
     }).catch(() => ({}))
 
     // Pulizia automatica su giorno preciso del mese + coda invio riepilogo ore (migration 009)
-    await supabase.rpc('exec', {
+    const { error: cleanupGiornoError } = await supabase.rpc('exec', {
       sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_giorno integer DEFAULT 15;`
-    }).catch(() => ({}))
-    await supabase.rpc('exec', {
+    }).catch(e => ({ error: e }))
+    if (cleanupGiornoError) {
+      console.warn('[Migrations] ⚠️  Could not add auto_cleanup_giorno column:', cleanupGiornoError.message)
+    } else {
+      console.log('[Migrations] ✅ auto_cleanup_giorno column added')
+    }
+
+    const { error: cleanupLastRunError } = await supabase.rpc('exec', {
       sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_last_run varchar(7);`
-    }).catch(() => ({}))
-    await supabase.rpc('exec', {
+    }).catch(e => ({ error: e }))
+    if (cleanupLastRunError) {
+      console.warn('[Migrations] ⚠️  Could not add auto_cleanup_last_run column:', cleanupLastRunError.message)
+    } else {
+      console.log('[Migrations] ✅ auto_cleanup_last_run column added')
+    }
+
+    const { error: riepilogoOreInviiError } = await supabase.rpc('exec', {
       sql: `CREATE TABLE IF NOT EXISTS riepilogo_ore_invii (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
@@ -426,7 +438,12 @@ export async function runMigrations() {
         inviato_il timestamptz,
         created_at timestamptz DEFAULT now()
       );`
-    }).catch(() => ({}))
+    }).catch(e => ({ error: e }))
+    if (riepilogoOreInviiError) {
+      console.warn('[Migrations] ⚠️  Could not create riepilogo_ore_invii table:', riepilogoOreInviiError.message)
+    } else {
+      console.log('[Migrations] ✅ riepilogo_ore_invii table created')
+    }
 
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
