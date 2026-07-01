@@ -1050,7 +1050,8 @@ export default async function employeeRoutes(fastify) {
         tolleranza_difetto_minuti:       data?.tolleranza_difetto_minuti ?? 15,
         arrotonda_ore_al_turno:          data?.arrotonda_ore_al_turno ?? false,
         auto_cleanup_enabled:            data?.auto_cleanup_enabled ?? false,
-        auto_cleanup_retention_months:   data?.auto_cleanup_retention_months ?? 12
+        auto_cleanup_retention_months:   data?.auto_cleanup_retention_months ?? 12,
+        auto_cleanup_giorno:             data?.auto_cleanup_giorno ?? 15
       })
     } catch (err) {
       request.log.error(err)
@@ -1073,12 +1074,16 @@ export default async function employeeRoutes(fastify) {
       if (error) return reply.send({ success: false, error: error.message })
 
       // pulizia automatica — best-effort (colonne potrebbero non esistere ancora)
-      if (req.body?.auto_cleanup_enabled !== undefined || req.body?.auto_cleanup_retention_months !== undefined) {
+      if (req.body?.auto_cleanup_enabled !== undefined || req.body?.auto_cleanup_retention_months !== undefined || req.body?.auto_cleanup_giorno !== undefined) {
         const cleanup = {}
         if (req.body.auto_cleanup_enabled !== undefined) cleanup.auto_cleanup_enabled = !!req.body.auto_cleanup_enabled
         if (req.body.auto_cleanup_retention_months !== undefined) {
           const m = parseInt(req.body.auto_cleanup_retention_months)
           cleanup.auto_cleanup_retention_months = isNaN(m) ? 12 : Math.max(1, Math.min(120, m))
+        }
+        if (req.body.auto_cleanup_giorno !== undefined) {
+          const g = parseInt(req.body.auto_cleanup_giorno)
+          cleanup.auto_cleanup_giorno = isNaN(g) ? 15 : Math.max(1, Math.min(28, g))
         }
         const { error: cErr } = await supabase.from('company').update(cleanup).eq('id', req.user.company_id)
       }
@@ -1350,29 +1355,39 @@ export default async function employeeRoutes(fastify) {
         return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
       }
       const companyId = req.user.company_id
-      const { nome, cognome, username, email, permissions = {} } = req.body || {}
+      const { nome, cognome, email, permissions = {} } = req.body || {}
 
-      if (!username?.trim()) return reply.status(400).send({ success: false, error: 'USERNAME_REQUIRED' })
+      if (!nome?.trim() || !cognome?.trim() || !email?.trim()) {
+        return reply.status(400).send({ success: false, error: 'MISSING_FIELDS' })
+      }
 
-      const { data: existing } = await supabase
-        .from('user_account').select('id').eq('username', username.trim()).maybeSingle()
-      if (existing) return reply.send({ success: false, error: 'USERNAME_TAKEN' })
+      // Username generato automaticamente da nome.cognome (stessa logica di dipendenti e titolare)
+      const username = await findAvailableUsername(buildUsername(nome.trim(), cognome.trim()))
 
       const plainPwd  = generatePassword(10)
       const hashedPwd = await bcrypt.hash(plainPwd, 10)
 
       const { data: created, error: insertErr } = await supabase.from('user_account').insert({
         company_id:  companyId,
-        username:    username.trim(),
-        email:       email?.trim() || null,
-        nome:        nome?.trim()  || null,
-        cognome:     cognome?.trim() || null,
+        username,
+        email:       email.trim(),
+        nome:        nome.trim(),
+        cognome:     cognome.trim(),
         password:    hashedPwd,
         role:        'admin',
         permissions: permissions
       }).select('id, username, email, nome, cognome, permissions').single()
 
       if (insertErr) return reply.status(500).send({ success: false, error: insertErr.message })
+
+      const { data: company } = await supabase.from('company').select('nome').eq('id', companyId).single()
+      sendCredenziali({
+        email:       created.email,
+        nome:        created.nome,
+        username:    created.username,
+        password:    plainPwd,
+        companyNome: company?.nome || ''
+      }).catch(e => req.log.error(e))
 
       return reply.send({ success: true, admin: created, password: plainPwd })
     } catch (err) {

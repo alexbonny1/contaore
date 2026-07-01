@@ -1,10 +1,12 @@
 import { supabase }         from '../services/supabase.js'
 import { authenticateOwner } from '../middleware/auth.js'
+import { generatePdfBuffer, generateExcelBuffer } from './export.js'
+import { sendRiepilogoOreAllegato } from '../services/email.js'
 
 const TIPI_VALIDI = [
   'assente', 'ritardo', 'straordinario_mensile',
   'lettore_offline', 'riepilogo_giornaliero', 'riepilogo_settimanale',
-  'badge_non_riconosciuto', 'timbratura_mancante'
+  'badge_non_riconosciuto', 'timbratura_mancante', 'riepilogo_ore_mensile'
 ]
 
 const DEFAULTS = {
@@ -15,7 +17,8 @@ const DEFAULTS = {
   riepilogo_giornaliero:  { ora_invio: '18:00' },
   riepilogo_settimanale:  { ora_invio: '08:00' },
   badge_non_riconosciuto: {},
-  timbratura_mancante:    { ore_soglia: 10 }
+  timbratura_mancante:    { ore_soglia: 10 },
+  riepilogo_ore_mensile:  { giorno_invio: 5, formato: 'pdf', modalita: 'automatico' }
 }
 
 export default async function notificheRoutes(fastify) {
@@ -91,6 +94,88 @@ export default async function notificheRoutes(fastify) {
     } catch (err) {
       request.log.error(err)
       return reply.send({ success: false })
+    }
+  })
+
+  /* GET /api/notifications/riepilogo-ore/pending — riepiloghi in attesa di approvazione */
+  fastify.get('/api/notifications/riepilogo-ore/pending', { preHandler: authenticateOwner }, async (req, reply) => {
+    try {
+      const companyId = req.user.company_id
+      const { data } = await supabase
+        .from('riepilogo_ore_invii')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('stato', 'in_attesa')
+        .order('created_at', { ascending: false })
+      return reply.send({ success: true, pending: data || [] })
+    } catch (err) {
+      req.log.error(err)
+      return reply.send({ success: false })
+    }
+  })
+
+  /* POST /api/notifications/riepilogo-ore/:id/approve — genera il file e lo invia via email */
+  fastify.post('/api/notifications/riepilogo-ore/:id/approve', { preHandler: authenticateOwner }, async (req, reply) => {
+    try {
+      const companyId = req.user.company_id
+      const { id }    = req.params
+
+      const { data: invio } = await supabase
+        .from('riepilogo_ore_invii')
+        .select('*')
+        .eq('id', id).eq('company_id', companyId).eq('stato', 'in_attesa')
+        .maybeSingle()
+      if (!invio) return reply.send({ success: false, error: 'NOT_FOUND' })
+
+      let employeeIds = invio.dipendente_ids
+      if (!Array.isArray(employeeIds) || !employeeIds.length) {
+        const { data: allEmp } = await supabase.from('dipendenti').select('id').eq('company_id', companyId)
+        employeeIds = (allEmp || []).map(e => e.id)
+      }
+      if (!employeeIds.length) return reply.send({ success: false, error: 'NO_EMPLOYEES' })
+
+      const buffer = invio.formato === 'excel'
+        ? await generateExcelBuffer(employeeIds, invio.periodo, companyId)
+        : await generatePdfBuffer(employeeIds, invio.periodo, companyId)
+      if (!buffer) return reply.send({ success: false, error: 'NO_DATA' })
+
+      const { data: company } = await supabase.from('company').select('nome').eq('id', companyId).single()
+      const ext  = invio.formato === 'excel' ? 'xlsx' : 'pdf'
+      const sent = await sendRiepilogoOreAllegato({
+        email:       invio.destinatario_email,
+        companyNome: company?.nome || '',
+        periodo:     invio.periodo,
+        formato:     invio.formato,
+        buffer,
+        filename:    `ContaOre_${invio.periodo.replace(/\s/g, '_')}.${ext}`
+      })
+      if (!sent) return reply.send({ success: false, error: 'EMAIL_FAILED' })
+
+      await supabase.from('riepilogo_ore_invii')
+        .update({ stato: 'inviato', inviato_il: new Date().toISOString(), approvato_da: req.user.id })
+        .eq('id', id)
+
+      return reply.send({ success: true })
+    } catch (err) {
+      req.log.error(err)
+      return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* POST /api/notifications/riepilogo-ore/:id/reject */
+  fastify.post('/api/notifications/riepilogo-ore/:id/reject', { preHandler: authenticateOwner }, async (req, reply) => {
+    try {
+      const companyId = req.user.company_id
+      const { id }    = req.params
+      const { error } = await supabase
+        .from('riepilogo_ore_invii')
+        .update({ stato: 'rifiutato' })
+        .eq('id', id).eq('company_id', companyId).eq('stato', 'in_attesa')
+      if (error) return reply.send({ success: false, error: error.message })
+      return reply.send({ success: true })
+    } catch (err) {
+      req.log.error(err)
+      return reply.status(500).send({ success: false })
     }
   })
 }

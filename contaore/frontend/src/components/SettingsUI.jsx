@@ -77,3 +77,46 @@ export function SettingsGroup({ children }) {
     </div>
   );
 }
+
+/* Selezione dipendenti: toggle "tutti" + chip multi-select (riusato in Gestione dati e Invio riepilogo ore) */
+export function EmployeeSelector({ employees, tutti, onTuttiChange, selected, onToggle }) {
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center justify-between">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Tutti i dipendenti</span>
+        <Toggle value={tutti} onChange={onTuttiChange} />
+      </label>
+      {!tutti && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {employees.map(emp => {
+            const sel = selected.has(emp.id);
+            return (
+              <button key={emp.id} type="button" onClick={() => onToggle(emp.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                  sel ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent"
+                      : "bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
+                }`}>
+                {emp.nome} {emp.cognome}
+              </button>
+            );
+          })}
+          {employees.length === 0 && <p className="text-xs text-zinc-400">Nessun dipendente</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Selettore giorno del mese (1-28, per evitare mesi corti) — riusato per pulizia automatica e invio riepilogo */
+export function DaySelector({ value, onChange }) {
+  const giorni = Array.from({ length: 28 }, (_, i) => i + 1);
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(Number(e.target.value))}
+      className="h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+    >
+      {giorni.map(g => <option key={g} value={g}>Giorno {g}</option>)}
+    </select>
+  );
+}

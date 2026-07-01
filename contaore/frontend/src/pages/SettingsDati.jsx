@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../api";
-import { Toast, Toggle, SettingsHeader } from "../components/SettingsUI";
+import { Toast, Toggle, SettingsHeader, EmployeeSelector, DaySelector } from "../components/SettingsUI";
 
 const MESI = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 
@@ -62,6 +62,7 @@ export default function SettingsDati() {
 
   const [autoEnabled, setAutoEnabled]   = useState(false);
   const [retention, setRetention]       = useState(12);
+  const [giorno, setGiorno]             = useState(15);
   const [savingAuto, setSavingAuto]     = useState(false);
 
   const [toast, setToast] = useState(null);
@@ -73,7 +74,11 @@ export default function SettingsDati() {
       .then(r => r.json()).then(d => { if (d.success) setEmployees(d.employees || []); }).catch(() => {});
     fetch(`${API_URL}/api/company/settings`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => {
-        if (d.success) { setAutoEnabled(!!d.auto_cleanup_enabled); setRetention(d.auto_cleanup_retention_months ?? 12); }
+        if (d.success) {
+          setAutoEnabled(!!d.auto_cleanup_enabled);
+          setRetention(d.auto_cleanup_retention_months ?? 12);
+          setGiorno(d.auto_cleanup_giorno ?? 15);
+        }
       }).catch(() => {});
   }, []);
 
@@ -107,13 +112,13 @@ export default function SettingsDati() {
     finally { setDeleting(false); }
   }
 
-  async function salvaAuto(nextEnabled, nextRetention) {
+  async function salvaAuto(nextEnabled, nextRetention, nextGiorno) {
     setSavingAuto(true);
     try {
       const res = await fetch(`${API_URL}/api/company/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ auto_cleanup_enabled: nextEnabled, auto_cleanup_retention_months: nextRetention })
+        body: JSON.stringify({ auto_cleanup_enabled: nextEnabled, auto_cleanup_retention_months: nextRetention, auto_cleanup_giorno: nextGiorno })
       });
       const data = await res.json();
       if (!data.success) { showToast("Errore salvataggio", "error"); return; }
@@ -135,29 +140,7 @@ export default function SettingsDati() {
         </div>
 
         {/* dipendenti */}
-        <div className="space-y-2">
-          <label className="flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Tutti i dipendenti</span>
-            <Toggle value={tutti} onChange={setTutti} />
-          </label>
-          {!tutti && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {employees.map(emp => {
-                const sel = selected.has(emp.id);
-                return (
-                  <button key={emp.id} type="button" onClick={() => toggleEmp(emp.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                      sel ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent"
-                          : "bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
-                    }`}>
-                    {emp.nome} {emp.cognome}
-                  </button>
-                );
-              })}
-              {employees.length === 0 && <p className="text-xs text-zinc-400">Nessun dipendente</p>}
-            </div>
-          )}
-        </div>
+        <EmployeeSelector employees={employees} tutti={tutti} onTuttiChange={setTutti} selected={selected} onToggle={toggleEmp} />
 
         {/* ambito */}
         <div className="space-y-3">
@@ -199,19 +182,19 @@ export default function SettingsDati() {
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Pulizia automatica</h2>
             <p className="text-xs text-zinc-500">Elimina periodicamente le timbrature più vecchie</p>
           </div>
-          <Toggle value={autoEnabled} onChange={(v) => { setAutoEnabled(v); salvaAuto(v, retention); }} />
+          <Toggle value={autoEnabled} onChange={(v) => { setAutoEnabled(v); salvaAuto(v, retention, giorno); }} />
         </div>
 
         {autoEnabled && (
           <div className="space-y-3">
             <div>
               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Per quanto tempo conservare lo storico?</p>
-              <p className="text-xs text-zinc-400">Le timbrature più vecchie del periodo scelto vengono eliminate in automatico ogni giorno.</p>
+              <p className="text-xs text-zinc-400">Ogni mese, nel giorno scelto, vengono eliminati i mesi solari più vecchi del periodo selezionato.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {RETENTION_OPTS.map(o => (
                 <button key={o.v} type="button" disabled={savingAuto}
-                  onClick={() => { setRetention(o.v); salvaAuto(true, o.v); }}
+                  onClick={() => { setRetention(o.v); salvaAuto(true, o.v, giorno); }}
                   className={`h-9 px-4 rounded-xl text-xs font-medium transition-colors ${
                     retention === o.v ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                   }`}>
@@ -219,8 +202,12 @@ export default function SettingsDati() {
                 </button>
               ))}
             </div>
+            <div>
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">In che giorno del mese eseguirla?</p>
+              <DaySelector value={giorno} onChange={(v) => { setGiorno(v); salvaAuto(true, retention, v); }} />
+            </div>
             <p className="text-xs text-zinc-500 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
-              Ad esempio con <strong>6 mesi</strong>, oggi verrebbero conservate solo le timbrature da dicembre 2025 in poi.
+              Ad esempio con <strong>1 mese</strong> e giorno <strong>15</strong>: il 15 luglio viene eliminato tutto giugno, il 15 agosto tutto luglio, e così via.
             </p>
           </div>
         )}
