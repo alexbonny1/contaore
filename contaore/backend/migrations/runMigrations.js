@@ -455,6 +455,17 @@ export async function runMigrations() {
       console.log('[Migrations] ✅ assigned_dipendente_ids column added')
     }
 
+    // Forza il reload della cache schema di PostgREST — le modifiche DDL fatte tramite
+    // rpc('exec', ...) a volte non vengono rilevate automaticamente da PostgREST.
+    const { error: reloadError } = await supabase.rpc('exec', {
+      sql: `NOTIFY pgrst, 'reload schema';`
+    }).catch(e => ({ error: e }))
+    if (reloadError) {
+      console.warn('[Migrations] ⚠️  Could not notify PostgREST schema reload:', reloadError.message)
+    } else {
+      console.log('[Migrations] ✅ PostgREST schema reload notified')
+    }
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)
