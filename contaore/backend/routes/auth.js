@@ -108,6 +108,7 @@ export default async function authRoutes(fastify) {
           role:                user.role,
           company_id:          user.company_id,
           dipendente_id:       user.dipendente_id || null,
+          permissions:         user.permissions || {},
           portale_dipendenti
         }
       })
@@ -221,6 +222,7 @@ export default async function authRoutes(fastify) {
           role:                user.role,
           company_id:          user.company_id,
           dipendente_id:       user.dipendente_id || null,
+          permissions:         user.permissions || {},
           portale_dipendenti
         }
       })
@@ -803,6 +805,7 @@ export default async function authRoutes(fastify) {
           role:                  user.role,
           dipendente_id:         user.dipendente_id || null,
           portale_dipendenti,
+          permissions:           user.permissions || {},
           two_factor_enabled:    user.two_factor_enabled || false,
           last_activity_timestamp: lastActivityTimestamp
         },
@@ -818,7 +821,8 @@ export default async function authRoutes(fastify) {
           username:            user.username,
           email:               user.email,
           role:                user.role,
-          company_id:          user.company_id
+          company_id:          user.company_id,
+          permissions:         user.permissions || {}
         }
       })
     } catch (err) {
