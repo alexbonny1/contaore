@@ -8,9 +8,10 @@ import { SettingRow, SettingsGroup } from "../components/SettingsUI";
 export default function Settings() {
   const navigate = useNavigate();
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const canManageAdmins = user.role === "owner" || user.role === "superadmin";
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (!user.role || user.role === "dipendente") navigate("/dashboard");
   }, []);
 
@@ -35,14 +36,16 @@ export default function Settings() {
           title="Profilo"
           subtitle="Nome, cognome e indirizzo email"
         />
-        <SettingRow
-          to="/impostazioni/admin"
-          icon={Users}
-          iconBg="bg-violet-50 dark:bg-violet-900/20"
-          iconColor="text-violet-500"
-          title="Account amministratori"
-          subtitle="Accessi secondari con permessi limitati"
-        />
+        {canManageAdmins && (
+          <SettingRow
+            to="/impostazioni/admin"
+            icon={Users}
+            iconBg="bg-violet-50 dark:bg-violet-900/20"
+            iconColor="text-violet-500"
+            title="Account amministratori"
+            subtitle="Accessi secondari con permessi limitati"
+          />
+        )}
         <SettingRow
           to="/impostazioni/presenze"
           icon={SlidersHorizontal}

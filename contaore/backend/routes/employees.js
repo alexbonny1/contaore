@@ -1404,7 +1404,8 @@ export default async function employeeRoutes(fastify) {
         password:    hashedPwd,
         role:        'admin',
         permissions: permissions,
-        assigned_dipendente_ids: assignedDipendenteIds
+        assigned_dipendente_ids: assignedDipendenteIds,
+        two_factor_enabled: false
       }).select('id, username, email, nome, cognome, permissions, assigned_dipendente_ids').single()
 
       if (insertErr) return reply.status(500).send({ success: false, error: insertErr.message })

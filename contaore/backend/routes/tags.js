@@ -287,7 +287,8 @@ export default async function tagRoutes(fastify) {
                 username,
                 email,
                 password:      hashedPwd,
-                role:          'dipendente'
+                role:          'dipendente',
+                two_factor_enabled: false
               })
 
               if (!accErr) {
