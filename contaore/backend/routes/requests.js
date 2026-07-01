@@ -7,6 +7,7 @@
 import { supabase }              from '../services/supabase.js'
 import { authenticateDipendente } from '../middleware/auth.js'
 import { authenticateOwner }      from '../middleware/auth.js'
+import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
 
 export default async function requestsRoutes(fastify) {
 
@@ -270,6 +271,9 @@ export default async function requestsRoutes(fastify) {
 
         if (stato) query = query.eq('stato', stato)
 
+        const allowedIds = await getAllowedDipendenteIds(request.user)
+        if (allowedIds) query = query.in('dipendente_id', allowedIds)
+
         const { data, error } = await query
 
         if (error) {
@@ -308,6 +312,11 @@ export default async function requestsRoutes(fastify) {
 
         if (fetchError || !richiesta) {
           return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        const allowedIdsApprova = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsApprova, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
         }
 
         if (richiesta.stato !== 'in_attesa') {
@@ -392,13 +401,18 @@ export default async function requestsRoutes(fastify) {
 
         const { data: richiesta, error: fetchError } = await supabase
           .from('richieste_timbratura')
-          .select('id, stato')
+          .select('id, stato, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (fetchError || !richiesta) {
           return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        const allowedIdsRifiuta = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsRifiuta, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
         }
 
         if (richiesta.stato !== 'in_attesa') {
@@ -447,12 +461,17 @@ export default async function requestsRoutes(fastify) {
 
         const { data: richiesta } = await supabase
           .from('richieste_timbratura')
-          .select('id')
+          .select('id, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (!richiesta) return reply.status(404).send({ error: 'NOT_FOUND' })
+
+        const allowedIdsDelete = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsDelete, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
+        }
 
         await supabase.from('richieste_timbratura').delete().eq('id', id)
 
@@ -479,13 +498,18 @@ export default async function requestsRoutes(fastify) {
 
         const { data: richiesta } = await supabase
           .from('richieste_permessi')
-          .select('id, stato')
+          .select('id, stato, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (!richiesta) {
           return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        const allowedIdsPermApprova = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsPermApprova, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
         }
 
         if (richiesta.stato !== 'in_attesa') {
@@ -534,13 +558,18 @@ export default async function requestsRoutes(fastify) {
 
         const { data: richiesta } = await supabase
           .from('richieste_permessi')
-          .select('id, stato')
+          .select('id, stato, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (!richiesta) {
           return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        const allowedIdsPermRifiuta = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsPermRifiuta, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
         }
 
         if (richiesta.stato !== 'in_attesa') {
@@ -589,13 +618,18 @@ export default async function requestsRoutes(fastify) {
 
         const { data: richiesta } = await supabase
           .from('richieste_turni')
-          .select('id, stato')
+          .select('id, stato, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (!richiesta) {
           return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        const allowedIdsTurniApprova = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsTurniApprova, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
         }
 
         if (richiesta.stato !== 'in_attesa') {
@@ -644,13 +678,18 @@ export default async function requestsRoutes(fastify) {
 
         const { data: richiesta } = await supabase
           .from('richieste_turni')
-          .select('id, stato')
+          .select('id, stato, dipendente_id')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
 
         if (!richiesta) {
           return reply.status(404).send({ error: 'NOT_FOUND' })
+        }
+
+        const allowedIdsTurniRifiuta = await getAllowedDipendenteIds(request.user)
+        if (!isDipendenteAllowed(allowedIdsTurniRifiuta, richiesta.dipendente_id)) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
         }
 
         if (richiesta.stato !== 'in_attesa') {

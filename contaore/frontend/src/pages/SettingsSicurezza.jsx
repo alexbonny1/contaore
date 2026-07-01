@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { ShieldOff } from "lucide-react";
 import TwoFactorSettings from "../components/TwoFactorSettings";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import { SettingsHeader } from "../components/SettingsUI";
 
 export default function SettingsSicurezza() {
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const can2fa = user.role === "owner" || user.role === "superadmin";
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4">
@@ -30,7 +33,14 @@ export default function SettingsSicurezza() {
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Autenticazione a due fattori</h2>
           <p className="text-xs text-zinc-500">Aggiungi un livello di sicurezza all'accesso</p>
         </div>
-        <TwoFactorSettings />
+        {can2fa ? (
+          <TwoFactorSettings />
+        ) : (
+          <div className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl">
+            <ShieldOff size={18} className="text-zinc-400 shrink-0" />
+            <p className="text-sm text-zinc-500">Non disponibile per gli account amministratore secondari</p>
+          </div>
+        )}
       </div>
 
       {showChangePassword && (

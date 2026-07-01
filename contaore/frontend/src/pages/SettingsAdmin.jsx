@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Plus, Trash2, Shield, Eye, Pencil, CheckCircle2, X } from "lucide-react";
 import { API_URL } from "../api";
+import { EmployeeSelector } from "../components/SettingsUI";
 
 const PERMISSIONS = [
   { key: "can_view_presenze",    label: "Visualizza presenze",   desc: "Può vedere lo storico presenze dei dipendenti" },
@@ -31,6 +32,7 @@ function PermBadge({ label }) {
 export default function SettingsAdmin() {
   const navigate  = useNavigate();
   const [admins, setAdmins]   = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast]     = useState(null);
 
@@ -39,10 +41,14 @@ export default function SettingsAdmin() {
   const [newNome, setNewNome]         = useState("");
   const [newCognome, setNewCognome]   = useState("");
   const [newPerms, setNewPerms]       = useState({ can_view_presenze: true, can_edit_presenze: false, can_approve_requests: false, can_manage_employees: false });
+  const [newTutti, setNewTutti]       = useState(true);
+  const [newSelected, setNewSelected] = useState(new Set());
   const [creating, setCreating]       = useState(false);
 
   const [editId, setEditId]     = useState(null);
   const [editPerms, setEditPerms] = useState({});
+  const [editTutti, setEditTutti] = useState(true);
+  const [editSelected, setEditSelected] = useState(new Set());
   const [editSaving, setEditSaving] = useState(false);
 
   function showToast(msg, type = "success") { setToast({ message: msg, type }); }
@@ -63,6 +69,8 @@ export default function SettingsAdmin() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.role !== "owner" && user.role !== "superadmin") { navigate("/impostazioni"); return; }
     load();
+    fetch(API_URL + "/api/employees", { headers: { Authorization: "Bearer " + token() } })
+      .then(r => r.json()).then(d => { if (d.success) setEmployees(d.employees || []); }).catch(() => {});
   }, []);
 
   async function createAdmin() {
@@ -72,7 +80,10 @@ export default function SettingsAdmin() {
       const res  = await fetch(API_URL + "/api/admin-accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
-        body: JSON.stringify({ email: newEmail.trim(), nome: newNome.trim(), cognome: newCognome.trim(), permissions: newPerms })
+        body: JSON.stringify({
+          email: newEmail.trim(), nome: newNome.trim(), cognome: newCognome.trim(), permissions: newPerms,
+          employee_ids: newTutti ? null : [...newSelected]
+        })
       });
       const data = await res.json();
       if (!data.success) { showToast(data.error || "Errore", "error"); return; }
@@ -80,6 +91,7 @@ export default function SettingsAdmin() {
       setShowCreate(false);
       setNewEmail(""); setNewNome(""); setNewCognome("");
       setNewPerms({ can_view_presenze: true, can_edit_presenze: false, can_approve_requests: false, can_manage_employees: false });
+      setNewTutti(true); setNewSelected(new Set());
       load();
     } catch (_) { showToast("Errore server", "error"); }
     setCreating(false);
@@ -88,6 +100,9 @@ export default function SettingsAdmin() {
   function startEdit(admin) {
     setEditId(admin.id);
     setEditPerms(admin.permissions || {});
+    const ids = admin.assigned_dipendente_ids;
+    if (Array.isArray(ids) && ids.length) { setEditTutti(false); setEditSelected(new Set(ids)); }
+    else { setEditTutti(true); setEditSelected(new Set()); }
   }
 
   async function saveEdit() {
@@ -96,7 +111,7 @@ export default function SettingsAdmin() {
       const res  = await fetch(API_URL + "/api/admin-accounts/" + editId, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
-        body: JSON.stringify({ permissions: editPerms })
+        body: JSON.stringify({ permissions: editPerms, employee_ids: editTutti ? null : [...editSelected] })
       });
       const data = await res.json();
       if (!data.success) { showToast("Errore salvataggio", "error"); return; }
@@ -157,6 +172,11 @@ export default function SettingsAdmin() {
                   {admin.nome || admin.cognome ? `${admin.nome || ""} ${admin.cognome || ""}`.trim() : admin.username}
                 </p>
                 <p className="text-xs text-zinc-400 mt-0.5">@{admin.username}{admin.email ? ` · ${admin.email}` : ""}</p>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Accesso: {Array.isArray(admin.assigned_dipendente_ids) && admin.assigned_dipendente_ids.length
+                    ? `${admin.assigned_dipendente_ids.length} dipendent${admin.assigned_dipendente_ids.length === 1 ? "e" : "i"}`
+                    : "tutti i dipendenti"}
+                </p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {PERMISSIONS.filter(p => admin.permissions?.[p.key]).map(p => (
                     <PermBadge key={p.key} label={p.label} />
@@ -178,7 +198,13 @@ export default function SettingsAdmin() {
 
             {/* EDIT PERMESSI INLINE */}
             {editId === admin.id && (
-              <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-900/40 rounded-2xl space-y-3">
+              <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-900/40 rounded-2xl space-y-4">
+                <div>
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Accesso ai dipendenti</p>
+                  <EmployeeSelector employees={employees} tutti={editTutti} onTuttiChange={setEditTutti}
+                    selected={editSelected}
+                    onToggle={id => setEditSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; })} />
+                </div>
                 <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Permessi</p>
                 {PERMISSIONS.map(p => (
                   <label key={p.key} className="flex items-start gap-3 cursor-pointer">
@@ -235,6 +261,13 @@ export default function SettingsAdmin() {
                 <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
                   placeholder="email@esempio.it"
                   className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+              </div>
+
+              <div className="pt-1">
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Accesso ai dipendenti</p>
+                <EmployeeSelector employees={employees} tutti={newTutti} onTuttiChange={setNewTutti}
+                  selected={newSelected}
+                  onToggle={id => setNewSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; })} />
               </div>
 
               <div className="pt-1">

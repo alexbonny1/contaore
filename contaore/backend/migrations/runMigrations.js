@@ -445,6 +445,16 @@ export async function runMigrations() {
       console.log('[Migrations] ✅ riepilogo_ore_invii table created')
     }
 
+    // Restrizione accesso admin a un sottoinsieme di dipendenti (migration 010)
+    const { error: assignedDipError } = await supabase.rpc('exec', {
+      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS assigned_dipendente_ids jsonb;`
+    }).catch(e => ({ error: e }))
+    if (assignedDipError) {
+      console.warn('[Migrations] ⚠️  Could not add assigned_dipendente_ids column:', assignedDipError.message)
+    } else {
+      console.log('[Migrations] ✅ assigned_dipendente_ids column added')
+    }
+
     console.log('[Migrations] ✅ Complete')
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)

@@ -1,5 +1,6 @@
 import { supabase } from '../services/supabase.js'
 import { authenticate } from '../middleware/auth.js'
+import { getAllowedDipendenteIds } from '../utils/adminAccess.js'
 import PDFDocument from 'pdfkit'
 import XLSX from 'xlsx'
 import {
@@ -629,7 +630,11 @@ export default async function exportRoutes(fastify) {
 
     if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
 
-    const pdfBuffer = await generatePdfBuffer(employee_ids, month, companyId)
+    const allowedIds = await getAllowedDipendenteIds(request.user)
+    const scopedIds  = allowedIds ? employee_ids.filter(id => allowedIds.includes(id)) : employee_ids
+    if (!scopedIds.length) return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
+
+    const pdfBuffer = await generatePdfBuffer(scopedIds, month, companyId)
     if (!pdfBuffer) return reply.status(404).send({ success: false, error: 'NO_DATA' })
 
     return reply
@@ -648,7 +653,11 @@ export default async function exportRoutes(fastify) {
 
     if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
 
-    const buffer = await generateExcelBuffer(employee_ids, month, companyId)
+    const allowedIds = await getAllowedDipendenteIds(request.user)
+    const scopedIds  = allowedIds ? employee_ids.filter(id => allowedIds.includes(id)) : employee_ids
+    if (!scopedIds.length) return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
+
+    const buffer = await generateExcelBuffer(scopedIds, month, companyId)
     if (!buffer) return reply.status(404).send({ success: false, error: 'NO_DATA' })
 
     const periodoLabel = month && month !== 'tutti' ? month : 'Tutto'

@@ -1,5 +1,6 @@
 import { supabase }         from '../services/supabase.js'
 import { authenticateOwner } from '../middleware/auth.js'
+import { getAllowedDipendenteIds } from '../utils/adminAccess.js'
 
 export default async function pauseRoutes(fastify) {
 
@@ -58,7 +59,11 @@ export default async function pauseRoutes(fastify) {
           return reply.status(400).send({ error: 'DATE_INVALID', message: 'La data di inizio deve essere prima della data di fine' })
         }
 
-        const isDipendenti = Array.isArray(dipendente_ids) && dipendente_ids.length > 0
+        const allowedIds = await getAllowedDipendenteIds(request.user)
+        const scopedDipendenteIds = Array.isArray(dipendente_ids) && allowedIds
+          ? dipendente_ids.filter(id => allowedIds.includes(id))
+          : dipendente_ids
+        const isDipendenti = Array.isArray(scopedDipendenteIds) && scopedDipendenteIds.length > 0
 
         // ── FERIE PER DIPENDENTI SPECIFICI ────────────────────────────────────
         if (isDipendenti) {
@@ -67,14 +72,14 @@ export default async function pauseRoutes(fastify) {
             .from('richieste_ferie')
             .select('dipendente_id')
             .eq('company_id', company_id)
-            .in('dipendente_id', dipendente_ids)
+            .in('dipendente_id', scopedDipendenteIds)
             .neq('stato', 'rifiutata')
             .lte('data_inizio', data_fine)
             .gte('data_fine', data_inizio)
 
           const overlapSet = new Set((existingOverlaps || []).map(r => r.dipendente_id))
-          const overlaps   = dipendente_ids.filter(id => overlapSet.has(id))
-          const toInsert   = dipendente_ids.filter(id => !overlapSet.has(id))
+          const overlaps   = scopedDipendenteIds.filter(id => overlapSet.has(id))
+          const toInsert   = scopedDipendenteIds.filter(id => !overlapSet.has(id))
 
           let created = []
           if (toInsert.length > 0) {
@@ -103,6 +108,11 @@ export default async function pauseRoutes(fastify) {
             skipped: overlaps.length,
             overlaps
           })
+        }
+
+        // dipendente_ids richiesti ma tutti fuori dall'accesso consentito: non ricadere sulla pausa aziendale (tutti)
+        if (Array.isArray(dipendente_ids) && dipendente_ids.length > 0) {
+          return reply.status(403).send({ error: 'FORBIDDEN' })
         }
 
         // ── PAUSA AZIENDALE (tutti i dipendenti) ──────────────────────────────
