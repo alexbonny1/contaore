@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.js'
-import { authenticate } from '../middleware/auth.js'
+import { authenticate, requirePermission } from '../middleware/auth.js'
 import { getAllowedDipendenteIds } from '../utils/adminAccess.js'
 import PDFDocument from 'pdfkit'
 import XLSX from 'xlsx'
@@ -623,7 +623,7 @@ export default async function exportRoutes(fastify) {
 
   // ── PDF ──────────────────────────────────────────────────────────────
 
-  fastify.post('/api/export/pdf', { preHandler: authenticate }, async (request, reply) => {
+  fastify.post('/api/export/pdf', { preHandler: [authenticate, requirePermission('can_view_presenze')] }, async (request, reply) => {
 
     const { employee_ids, month } = request.body
     const companyId = request.user.company_id
@@ -646,7 +646,7 @@ export default async function exportRoutes(fastify) {
 
   // ── EXCEL ────────────────────────────────────────────────────────────
 
-  fastify.post('/api/export/excel', { preHandler: authenticate }, async (request, reply) => {
+  fastify.post('/api/export/excel', { preHandler: [authenticate, requirePermission('can_view_presenze')] }, async (request, reply) => {
 
     const { employee_ids, month } = request.body
     const companyId = request.user.company_id

@@ -31,7 +31,7 @@ import {
   Pencil
 } from "lucide-react";
 
-import { API_URL } from "../api";
+import { API_URL, hasPermission } from "../api";
 
 function Toast({ message, type, onClose }) {
   useEffect(() => {
@@ -325,6 +325,9 @@ export default function EmployeeDetails() {
 
   const { id } = useParams();
   const navigate = useNavigate();
+  const canManageEmployees = hasPermission("can_manage_employees");
+  const canEditPresenze    = hasPermission("can_edit_presenze");
+  const canViewPresenze    = hasPermission("can_view_presenze");
 
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -742,7 +745,7 @@ export default function EmployeeDetails() {
   }
 
   // Portal active but employee has no email → they can't use the portal anyway
-  const canManagePresence = !portaleAttivo || !employee?.email;
+  const canManagePresence = (!portaleAttivo || !employee?.email) && canEditPresenze;
 
   if (!employee) {
     return (
@@ -813,13 +816,15 @@ export default function EmployeeDetails() {
                   {employee.email || "Nessuna email"}
                 </p>
               </div>
-              <button
-                onClick={openEditProfile}
-                title="Modifica nome ed email"
-                className="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 shrink-0"
-              >
-                <Pencil size={15} />
-              </button>
+              {canManageEmployees && (
+                <button
+                  onClick={openEditProfile}
+                  title="Modifica nome ed email"
+                  className="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 shrink-0"
+                >
+                  <Pencil size={15} />
+                </button>
+              )}
             </div>
 
             <div className={`px-4 py-2 rounded-2xl text-sm font-semibold w-fit ${headerStato.cls}`}>
@@ -844,34 +849,39 @@ export default function EmployeeDetails() {
             </p>
           </div>
 
-          <Link
-            to={`/employees/${id}/turni`}
-            className="text-left rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Calendar size={15} className="text-zinc-400" />
-                <p className="text-xs text-zinc-500">Turno di oggi</p>
-              </div>
-              <ChevronRight size={15} className="text-zinc-300 dark:text-zinc-600" />
-            </div>
-            {!turniAttivi ? (
-              <p className="text-base font-semibold text-zinc-400">Turni non attivi</p>
-            ) : inFerieOggi ? (
-              <p className="text-base font-semibold text-blue-500">In ferie</p>
-            ) : turnoOggi.length > 0 ? (
-              <div className="space-y-0.5">
-                {turnoOggi.map(t => (
-                  <p key={t.id} className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {t.ingresso_1} - {t.uscita_1}{t.ingresso_2 && t.uscita_2 ? ` · ${t.ingresso_2} - ${t.uscita_2}` : ""}
-                  </p>
-                ))}
-              </div>
-            ) : (
-              <p className="text-base font-semibold text-zinc-500">Riposo</p>
-            )}
-            <p className="text-xs text-zinc-400 mt-1">tocca per modificare i turni</p>
-          </Link>
+          {(() => {
+            const TurnoCard = canManageEmployees ? Link : "div";
+            return (
+              <TurnoCard
+                {...(canManageEmployees ? { to: `/employees/${id}/turni` } : {})}
+                className="text-left rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={15} className="text-zinc-400" />
+                    <p className="text-xs text-zinc-500">Turno di oggi</p>
+                  </div>
+                  {canManageEmployees && <ChevronRight size={15} className="text-zinc-300 dark:text-zinc-600" />}
+                </div>
+                {!turniAttivi ? (
+                  <p className="text-base font-semibold text-zinc-400">Turni non attivi</p>
+                ) : inFerieOggi ? (
+                  <p className="text-base font-semibold text-blue-500">In ferie</p>
+                ) : turnoOggi.length > 0 ? (
+                  <div className="space-y-0.5">
+                    {turnoOggi.map(t => (
+                      <p key={t.id} className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {t.ingresso_1} - {t.uscita_1}{t.ingresso_2 && t.uscita_2 ? ` · ${t.ingresso_2} - ${t.uscita_2}` : ""}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-base font-semibold text-zinc-500">Riposo</p>
+                )}
+                {canManageEmployees && <p className="text-xs text-zinc-400 mt-1">tocca per modificare i turni</p>}
+              </TurnoCard>
+            );
+          })()}
 
           {turniAttivi && (
 
@@ -904,6 +914,7 @@ export default function EmployeeDetails() {
         </div>
 
         {/* STORICO PRESENZE */}
+        {canViewPresenze && (
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] overflow-hidden mb-5">
 
           <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
@@ -1073,9 +1084,11 @@ export default function EmployeeDetails() {
 
           </div>
 
-        </div>{/* end storico card */}
+        </div>
+        )}
 
         {/* GRAFICI (comprimibile) */}
+        {canViewPresenze && (
         <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] overflow-hidden mb-5">
           <button
             onClick={() => setShowGrafici(v => !v)}
@@ -1093,6 +1106,7 @@ export default function EmployeeDetails() {
             </div>
           )}
         </div>
+        )}
 
       {/* MODALE MODIFICA ANAGRAFICA */}
 

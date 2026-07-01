@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, FileText, Radio, Settings } from "lucide-react";
+import { hasPermission } from "../api";
 
 /**
  * Barra di navigazione inferiore con indicatore "a goccia" elastico:
@@ -12,11 +13,11 @@ export default function BottomNav({ portaleAttivo = true, pendingCount = 0 }) {
 
   const navItems = [
     { title: "Dashboard", icon: LayoutDashboard, path: "/dashboard", match: p => p === "/dashboard" },
-    { title: portaleAttivo ? "Permessi" : "Ferie", icon: FileText, path: "/requests", notifica: pendingCount,
+    hasPermission("can_approve_requests") && { title: portaleAttivo ? "Permessi" : "Ferie", icon: FileText, path: "/requests", notifica: pendingCount,
       match: p => p.startsWith("/requests") || p.startsWith("/pause") },
     { title: "Lettori",   icon: Radio,    path: "/readers", match: p => p.startsWith("/readers") },
     { title: "Account",   icon: Settings, path: "/impostazioni", match: p => p.startsWith("/impostazioni") },
-  ];
+  ].filter(Boolean);
 
   const activeIndex = navItems.findIndex(it => it.match(path));
 
@@ -42,7 +43,7 @@ export default function BottomNav({ portaleAttivo = true, pendingCount = 0 }) {
             <div
               className="absolute top-0 h-full rounded-3xl bg-zinc-900 dark:bg-zinc-100"
               style={{
-                width: "25%",
+                width: `${100 / navItems.length}%`,
                 transform: `translateX(${activeIndex < 0 ? 0 : activeIndex * 100}%)`,
                 opacity: activeIndex < 0 ? 0 : 1,
                 transition: "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease",

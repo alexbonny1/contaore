@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt'
 import { supabase } from '../services/supabase.js'
-import { authenticate, authenticateWithInactivity } from '../middleware/auth.js'
+import { authenticate, authenticateWithInactivity, requirePermission, requireAnyPermission } from '../middleware/auth.js'
+
+const ANY_PERM = ['can_view_presenze', 'can_edit_presenze', 'can_approve_requests', 'can_manage_employees']
 import { sendCredenziali } from '../services/email.js'
 import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
 import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
@@ -307,7 +309,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.get(
     '/api/employees',
-    { preHandler: authenticateWithInactivity },
+    { preHandler: [authenticateWithInactivity, requireAnyPermission(ANY_PERM)] },
     async (request, reply) => {
 
       try {
@@ -429,7 +431,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.get(
     '/api/employees/:id',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requireAnyPermission(ANY_PERM)] },
     async (request, reply) => {
 
       try {
@@ -560,7 +562,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.post(
     '/api/employees/:id/shift',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
 
       try {
@@ -607,7 +609,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.put(
     '/api/shifts/:id',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
 
       try {
@@ -648,7 +650,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.delete(
     '/api/shifts/:id',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
 
       try {
@@ -679,7 +681,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.post(
     '/api/employees/:id/toggle-turni',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
 
       try {
@@ -721,7 +723,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.put(
     '/api/employees/:id/change-badge',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
 
       try {
@@ -781,7 +783,7 @@ export default async function employeeRoutes(fastify) {
 
   fastify.post(
     '/api/employees/:id/delete-month',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_manage_employees')] },
     async (request, reply) => {
 
       try {
@@ -838,7 +840,7 @@ export default async function employeeRoutes(fastify) {
   // ─── ADD MANUAL PRESENCE ────────────────────────────────────────────────────
   fastify.post(
     '/api/employees/:id/presence',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_edit_presenze')] },
     async (request, reply) => {
       try {
         const { id }            = request.params
@@ -918,7 +920,7 @@ export default async function employeeRoutes(fastify) {
   // ─── DELETE SINGLE PRESENCE ──────────────────────────────────────────────────
   fastify.delete(
     '/api/presenze/:id',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_edit_presenze')] },
     async (request, reply) => {
       try {
         const { id }    = request.params
@@ -974,7 +976,7 @@ export default async function employeeRoutes(fastify) {
   // ─── EDIT SINGLE PRESENCE (direct, owner only, no-email employees) ──────────
   fastify.put(
     '/api/presenze/:id',
-    { preHandler: authenticate },
+    { preHandler: [authenticate, requirePermission('can_edit_presenze')] },
     async (request, reply) => {
       try {
         const { id }    = request.params
@@ -1046,7 +1048,7 @@ export default async function employeeRoutes(fastify) {
   )
 
   /* GET /api/company/settings — impostazioni aziendali */
-  fastify.get('/api/company/settings', { preHandler: authenticate }, async (req, reply) => {
+  fastify.get('/api/company/settings', { preHandler: [authenticate, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       const { data } = await supabase
         .from('company')
@@ -1069,7 +1071,7 @@ export default async function employeeRoutes(fastify) {
   })
 
   /* PUT /api/company/settings — aggiorna impostazioni aziendali */
-  fastify.put('/api/company/settings', { preHandler: authenticate }, async (req, reply) => {
+  fastify.put('/api/company/settings', { preHandler: [authenticate, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       const raw     = parseInt(req.body?.tolleranza_straordinario_minuti)
       const val     = isNaN(raw) ? 10 : Math.max(0, Math.min(120, raw))
@@ -1105,7 +1107,7 @@ export default async function employeeRoutes(fastify) {
   })
 
   /* POST /api/admin/cleanup-presences — elimina storico per dipendenti + mese/periodo (owner) */
-  fastify.post('/api/admin/cleanup-presences', { preHandler: authenticate }, async (req, reply) => {
+  fastify.post('/api/admin/cleanup-presences', { preHandler: [authenticate, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       if (req.user.role === 'dipendente') return reply.status(403).send({ success: false })
       const companyId = req.user.company_id
@@ -1149,7 +1151,7 @@ export default async function employeeRoutes(fastify) {
   })
 
   /* PATCH /api/employees/:id/profile — aggiorna anagrafica + (ri)genera credenziali portale */
-  fastify.patch('/api/employees/:id/profile', { preHandler: authenticate }, async (req, reply) => {
+  fastify.patch('/api/employees/:id/profile', { preHandler: [authenticate, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       if (req.user.role === 'dipendente') return reply.status(403).send({ success: false })
       const { id }    = req.params
@@ -1270,7 +1272,7 @@ export default async function employeeRoutes(fastify) {
   })
 
   /* DELETE /api/employees/:id/2fa — disabilita 2FA per dipendente (owner only) */
-  fastify.delete('/api/employees/:id/2fa', { preHandler: authenticate }, async (req, reply) => {
+  fastify.delete('/api/employees/:id/2fa', { preHandler: [authenticate, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {
       if (req.user.role === 'dipendente') return reply.status(403).send({ success: false })
       const { id } = req.params
@@ -1300,7 +1302,7 @@ export default async function employeeRoutes(fastify) {
   })
 
   // ─── ELIMINA DIPENDENTI (batch) ───────────────────────────────────────────
-  fastify.delete('/api/employees/batch', { preHandler: authenticate }, async (request, reply) => {
+  fastify.delete('/api/employees/batch', { preHandler: [authenticate, requirePermission('can_manage_employees')] }, async (request, reply) => {
     try {
       const companyId = request.user.company_id
       const { ids } = request.body

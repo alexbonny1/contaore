@@ -1,5 +1,5 @@
 import { supabase }         from '../services/supabase.js'
-import { authenticateOwner } from '../middleware/auth.js'
+import { authenticateOwner, requirePermission } from '../middleware/auth.js'
 import { getAllowedDipendenteIds } from '../utils/adminAccess.js'
 
 export default async function pauseRoutes(fastify) {
@@ -10,7 +10,7 @@ export default async function pauseRoutes(fastify) {
   */
   fastify.get(
     '/api/pausa-aziendale',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const company_id = request.user.company_id
@@ -45,7 +45,7 @@ export default async function pauseRoutes(fastify) {
   */
   fastify.post(
     '/api/pausa-aziendale',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const company_id = request.user.company_id
@@ -164,7 +164,7 @@ export default async function pauseRoutes(fastify) {
   */
   fastify.put(
     '/api/pausa-aziendale/:id/annulla',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }     = request.params

@@ -78,6 +78,15 @@ export function requirePermission(perm) {
   }
 }
 
+// ─── basta almeno uno dei permessi indicati (solo per role === 'admin') ───────
+export function requireAnyPermission(permsList) {
+  return async function (request, reply) {
+    if (['owner', 'superadmin'].includes(request.user?.role)) return
+    const perms = request.user?.permissions || {}
+    if (!permsList.some(p => perms[p])) return reply.status(403).send({ error: 'FORBIDDEN' })
+  }
+}
+
 // ─── solo dipendente (portale self-service) ───────────────────────────────────
 export async function authenticateDipendente(request, reply) {
   try {

@@ -4,7 +4,7 @@ import { track } from "../main";
 import {
   CreditCard, CheckCircle2, XCircle, Mail, Pencil, X, ArrowLeft
 } from "lucide-react";
-import { API_URL } from "../api";
+import { API_URL, hasPermission } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 function Toast({ message, type, onClose }) {
@@ -224,6 +224,17 @@ export default function Badges() {
       loadBadges();
     } catch (err) { showToast("Errore server", "error"); }
     finally { setUpdatingUid(false); }
+  }
+
+  if (!hasPermission("can_manage_employees")) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-8 text-center">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Accesso non consentito</h3>
+          <p className="text-sm text-zinc-500">Non hai i permessi per gestire i dipendenti.</p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -6,7 +6,7 @@
 
 import { supabase }              from '../services/supabase.js'
 import { authenticateDipendente } from '../middleware/auth.js'
-import { authenticateOwner }      from '../middleware/auth.js'
+import { authenticateOwner, requirePermission }      from '../middleware/auth.js'
 import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
 
 export default async function requestsRoutes(fastify) {
@@ -257,7 +257,7 @@ export default async function requestsRoutes(fastify) {
   */
   fastify.get(
     '/api/requests/missing-scans/admin',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const company_id = request.user.company_id
@@ -297,7 +297,7 @@ export default async function requestsRoutes(fastify) {
   */
   fastify.put(
     '/api/requests/missing-scans/:id/approva',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }       = request.params
@@ -393,7 +393,7 @@ export default async function requestsRoutes(fastify) {
   */
   fastify.put(
     '/api/requests/missing-scans/:id/rifiuta',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }       = request.params
@@ -453,7 +453,7 @@ export default async function requestsRoutes(fastify) {
   */
   fastify.delete(
     '/api/requests/missing-scans/:id/admin',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }     = request.params
@@ -490,7 +490,7 @@ export default async function requestsRoutes(fastify) {
   */
   fastify.put(
     '/api/requests/permessi/:id/approva',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }     = request.params
@@ -550,7 +550,7 @@ export default async function requestsRoutes(fastify) {
   */
   fastify.put(
     '/api/requests/permessi/:id/rifiuta',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }     = request.params
@@ -610,7 +610,7 @@ export default async function requestsRoutes(fastify) {
   */
   fastify.put(
     '/api/requests/modifica-turni/:id/approva',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }     = request.params
@@ -670,7 +670,7 @@ export default async function requestsRoutes(fastify) {
   */
   fastify.put(
     '/api/requests/modifica-turni/:id/rifiuta',
-    { preHandler: authenticateOwner },
+    { preHandler: [authenticateOwner, requirePermission('can_approve_requests')] },
     async (request, reply) => {
       try {
         const { id }     = request.params
