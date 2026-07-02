@@ -57,46 +57,6 @@ export async function sendTwoFactorWhatsApp(phoneNumber, code) {
 }
 
 /**
- * Invia codice 2FA via SMS con fallback a WhatsApp se fallisce
- */
-export async function sendTwoFactorViaSMS(phoneNumber, code) {
-  try {
-    // Prova SMS
-    const smsResult = await sendTwoFactorSMS(phoneNumber, code);
-    return smsResult;
-  } catch (smsError) {
-    console.warn('[2FA] SMS fallito, provo WhatsApp...');
-    try {
-      const whatsappResult = await sendTwoFactorWhatsApp(phoneNumber, code);
-      return whatsappResult;
-    } catch (whatsappError) {
-      console.error('[2FA] SMS e WhatsApp entrambi falliti');
-      throw new Error('Impossibile inviare codice via SMS o WhatsApp');
-    }
-  }
-}
-
-/**
- * Invia codice 2FA via WhatsApp con fallback a SMS se fallisce
- */
-export async function sendTwoFactorViaWhatsApp(phoneNumber, code) {
-  try {
-    // Prova WhatsApp
-    const whatsappResult = await sendTwoFactorWhatsApp(phoneNumber, code);
-    return whatsappResult;
-  } catch (whatsappError) {
-    console.warn('[2FA] WhatsApp fallito, provo SMS...');
-    try {
-      const smsResult = await sendTwoFactorSMS(phoneNumber, code);
-      return smsResult;
-    } catch (smsError) {
-      console.error('[2FA] WhatsApp e SMS entrambi falliti');
-      throw new Error('Impossibile inviare codice via WhatsApp o SMS');
-    }
-  }
-}
-
-/**
  * Invia codice 2FA con fallback a email
  * @param {string} phoneNumber - Numero telefonico dell'utente
  * @param {string} email - Email dell'utente (per fallback)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Plus, Trash2, Shield, Eye, Pencil, CheckCircle2, X } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Shield, Pencil, CheckCircle2, X } from "lucide-react";
 import { API_URL } from "../api";
 import { EmployeeSelector } from "../components/SettingsUI";
 

@@ -51,7 +51,6 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
 
 export default function Badges() {
 
-  const [dark, setDark]                     = useState(false);
   const [badges, setBadges]                 = useState([]);
   const [uid, setUid]                       = useState("");
   const [employeeName, setEmployeeName]     = useState("");
@@ -70,17 +69,6 @@ export default function Badges() {
   function showToast(message, type = "success") {
     setToast({ message, type });
   }
-
-  // ─── tema dark ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
-  }, []);
-
-  useEffect(() => {
-    if (dark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
-    else { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
-  }, [dark]);
 
   const { pulling, refreshing, distance } = usePullToRefresh(loadBadges)
 
