@@ -337,13 +337,8 @@ export default function EmployeeDetails() {
 
   const [historyMonths, setHistoryMonths] = useState([]);
   const [selectedMese, setSelectedMese]   = useState(null);
-  const [expandedDay, setExpandedDay] = useState(null);
   const [showGrafici, setShowGrafici] = useState(false);
 
-  const [waitingBadgeScan, setWaitingBadgeScan] = useState(false);
-  const [changingBadge, setChangingBadge] = useState(false);
-  const [manualUid, setManualUid] = useState("");
-  const [showManualUid, setShowManualUid] = useState(false);
   const [toast, setToast] = useState(null);
 
   const [portaleAttivo, setPortaleAttivo]       = useState(true); // default true = nascosto finché non carica
@@ -491,54 +486,7 @@ export default function EmployeeDetails() {
     }
   }
 
-  const [editingShiftId, setEditingShiftId] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [turnoNome, setTurnoNome] = useState("");
-  const [giorno, setGiorno] = useState("Lunedì");
-  const [giorniSelezionati, setGiorniSelezionati] = useState([]); // multi-giorno
-  const [ingresso1, setIngresso1] = useState("");
-  const [uscita1, setUscita1] = useState("");
-  const [ingresso2, setIngresso2] = useState("");
-  const [uscita2, setUscita2] = useState("");
-
-  const giorni = [
-    "Lunedì","Martedì","Mercoledì",
-    "Giovedì","Venerdì","Sabato","Domenica"
-  ];
-
-  function toggleGiorno(g) {
-    setGiorniSelezionati(prev =>
-      prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
-    );
-  }
-
   useEffect(() => { loadData(); }, []);
-
-  useEffect(() => {
-
-    if (!waitingBadgeScan) return;
-
-    const startedAt = new Date().toISOString();
-
-    const interval = setInterval(async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          API_URL + "/api/latest-read?after=" + encodeURIComponent(startedAt),
-          { headers: { Authorization: "Bearer " + token } }
-        );
-        const data = await response.json();
-        if (data.success && data.uid) {
-          clearInterval(interval);
-          setWaitingBadgeScan(false);
-          await changeBadge(data.uid);
-        }
-      } catch (err) { }
-    }, 1000);
-
-    return () => clearInterval(interval);
-
-  }, [waitingBadgeScan]);
 
   async function loadData() {
 
@@ -576,164 +524,6 @@ export default function EmployeeDetails() {
       setLoading(false);
     }
 
-  }
-
-  async function changeBadge(newUid) {
-
-    try {
-
-      setChangingBadge(true);
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        API_URL + "/api/employees/" + id + "/change-badge",
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token
-          },
-          body: JSON.stringify({ new_uid: newUid })
-        }
-      );
-      const data = await response.json();
-
-      if (!data.success) {
-        showToast(data.error === "UID_ALREADY_USED" ? "Badge già assegnato ad un altro dipendente" : data.error || "Errore cambio badge", "error");
-        return;
-      }
-
-      setShowManualUid(false);
-      setManualUid("");
-      showToast("Badge aggiornato");
-      loadData();
-
-    } catch (err) {
-      showToast("Errore server", "error");
-    } finally {
-      setChangingBadge(false);
-    }
-
-  }
-
-  async function salvaTurno(e) {
-
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-
-      const token = localStorage.getItem("token");
-
-      // In modalità modifica: singolo giorno come prima
-      if (editingShiftId) {
-        const url = API_URL + "/api/shifts/" + editingShiftId;
-        const response = await fetch(url, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-          body: JSON.stringify({
-            turno_nome:       turnoNome,
-            giorno_settimana: giorno,
-            ingresso_1:       ingresso1 || null,
-            uscita_1:         uscita1   || null,
-            ingresso_2:       ingresso2 || null,
-            uscita_2:         uscita2   || null
-          })
-        });
-        const data = await response.json();
-        if (!data.success) { showToast("Errore salvataggio turno", "error"); return; }
-      } else {
-        // In modalità creazione: uno per ogni giorno selezionato
-        const giorniDaCreare = giorniSelezionati.length > 0 ? giorniSelezionati : [giorno];
-        for (const g of giorniDaCreare) {
-          const url = API_URL + "/api/employees/" + id + "/shift";
-          const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-            body: JSON.stringify({
-              turno_nome:       turnoNome,
-              giorno_settimana: g,
-              ingresso_1:       ingresso1 || null,
-              uscita_1:         uscita1   || null,
-              ingresso_2:       ingresso2 || null,
-              uscita_2:         uscita2   || null
-            })
-          });
-          const data = await response.json();
-          if (!data.success) { showToast("Errore salvataggio turno per " + g, "error"); return; }
-        }
-      }
-
-      resetForm();
-      loadData();
-
-    } catch (err) {
-      showToast("Errore server", "error");
-    } finally {
-      setSaving(false);
-    }
-
-  }
-
-  async function eliminaTurno(shiftId) {
-
-    if (!confirm("Eliminare turno?")) return;
-
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        API_URL + "/api/shifts/" + shiftId,
-        { method: "DELETE", headers: { Authorization: "Bearer " + token } }
-      );
-      const data = await response.json();
-      if (!data.success) { showToast("Errore eliminazione", "error"); return; }
-      loadData();
-    } catch (err) {
-      showToast("Errore server", "error");
-    }
-
-  }
-
-  async function toggleTurni() {
-
-    try {
-      const value = !turniAttivi;
-      setTurniAttivi(value);
-      const token = localStorage.getItem("token");
-      await fetch(
-        API_URL + "/api/employees/" + id + "/toggle-turni",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token
-          },
-          body: JSON.stringify({ turni_attivi: value })
-        }
-      );
-      loadData();
-    } catch (err) { }
-
-  }
-
-  function startEditShift(shift) {
-    setEditingShiftId(shift.id);
-    setTurnoNome(shift.turno_nome || "");
-    setGiorno(shift.giorno_settimana);
-    setIngresso1(shift.ingresso_1 || "");
-    setUscita1(shift.uscita_1 || "");
-    setIngresso2(shift.ingresso_2 || "");
-    setUscita2(shift.uscita_2 || "");
-  }
-
-  function resetForm() {
-    setEditingShiftId(null);
-    setTurnoNome("");
-    setGiorno("Lunedì");
-    setGiorniSelezionati([]);
-    setIngresso1("");
-    setUscita1("");
-    setIngresso2("");
-    setUscita2("");
   }
 
   if (loading) {

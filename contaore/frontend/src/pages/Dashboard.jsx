@@ -6,7 +6,6 @@ import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
-  const [loading, setLoading]     = useState(true);
   const [ownerUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
   });
@@ -22,13 +21,11 @@ export default function Dashboard() {
 
   async function loadDashboard() {
     try {
-      setLoading(true);
       const token = localStorage.getItem("token");
       const res   = await fetch(API_URL + "/api/employees", { headers: { Authorization: "Bearer " + token } });
       const data  = await res.json();
       if (data.success) setEmployees(data.employees || []);
     } catch (err) { }
-    finally { setLoading(false); }
   }
 
   const presenti = employees.filter(emp => emp.attivo);

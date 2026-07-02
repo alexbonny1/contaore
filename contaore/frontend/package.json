@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@sentry/react": "^10.61.0",
-    "@supabase/supabase-js": "^2.105.4",
     "@tailwindcss/vite": "^4.3.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",

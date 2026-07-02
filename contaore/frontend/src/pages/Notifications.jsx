@@ -307,38 +307,19 @@ function NotifCard({ config, setting, employees, readers, onSave, saving }) {
 // ─── main page ────────────────────────────────────────────────────────────────
 
 export default function Notifications() {
-  const [dark, setDark]         = useState(false);
   const [settings, setSettings] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [toast, setToast]       = useState(null);
-  const [pendingCount, setPendingCount] = useState(0);
   const [employees, setEmployees] = useState([]);
   const [readers, setReaders]     = useState([]);
   const token = localStorage.getItem("token");
-
-  const user          = JSON.parse(localStorage.getItem("user") || "{}");
-  const [portaleAttivo, setPortaleAttivo] = useState(user.portale_dipendenti !== false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
-  }, []);
-
-  useEffect(() => {
-    if (dark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
-    else { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
-  }, [dark]);
 
   const { pulling, refreshing, distance } = usePullToRefresh(loadSettings)
 
   useEffect(() => {
     loadSettings();
     loadTargetLists();
-    fetch(`${API_URL}/api/requests/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => { if (d.success) setPendingCount(d.counts?.totali_in_attesa ?? 0); }).catch(() => {});
-    fetch(`${API_URL}/api/company/info`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => { if (d.success) setPortaleAttivo(!!d.portale_dipendenti); }).catch(() => {});
   }, []);
 
   async function loadSettings() {

@@ -7,54 +7,7 @@ import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 export default function Readers() {
 
-  const [dark, setDark]             = useState(false);
   const [readers, setReaders]       = useState([]);
-
-  /*
-    THEME
-  */
-
-  useEffect(() => {
-
-    const saved =
-      localStorage.getItem("theme");
-
-    if (saved === "dark") {
-
-      setDark(true);
-
-      document.documentElement
-        .classList.add("dark");
-
-    }
-
-  }, []);
-
-  useEffect(() => {
-
-    if (dark) {
-
-      document.documentElement
-        .classList.add("dark");
-
-      localStorage.setItem(
-        "theme",
-        "dark"
-      );
-
-    } else {
-
-      document.documentElement
-        .classList.remove("dark");
-
-      localStorage.setItem(
-        "theme",
-        "light"
-      );
-
-    }
-
-  }, [dark]);
 
   /*
     LOAD READERS

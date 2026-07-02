@@ -3,11 +3,6 @@ import latestReads from '../state/LatestReads.js'
 import { onComponenteErrore } from '../services/notifiche.js'
 import { timeToMinutes } from '../utils/timeHelpers.js'
 
-function nowMinutes() {
-  const now = new Date()
-  return now.getHours() * 60 + now.getMinutes()
-}
-
 async function autoInsertBreakTimbrature(dipendenteId, companyId, tagUid, todayReads, shift, dateStr) {
   if (!shift?.uscita_1 || !shift?.ingresso_2) return
   const sorted = [...todayReads].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))

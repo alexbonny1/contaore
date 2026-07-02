@@ -23,150 +23,6 @@ function formatOre(h) {
 
 /*
 ────────────────────────────────────
-EXPORT PDF via HTML + window.print()
-────────────────────────────────────
-*/
-
-function buildPrintHTML(exportData, periodoLabel) {
-  const rows = exportData.map(({ emp, months }) => {
-    let totalOre = 0, totalAssenze = 0, totalStraord = 0;
-    months.forEach(m => {
-      totalOre     += m.ore_totali || 0;
-      totalAssenze += m.giorni_assenti || 0;
-      totalStraord += m.ore_straordinario || 0;
-    });
-
-    const monthsHTML = months.map(month => {
-      const giorniHTML = month.giorni.map(day => {
-        const dataStr = new Date(day.giorno + "T00:00:00").toLocaleDateString("it-IT", {
-          weekday: "short", day: "2-digit", month: "short"
-        });
-        if (day.assente) {
-          return `<tr class="assente">
-            <td>${dataStr}</td>
-            <td>—</td><td>—</td><td>—</td>
-            <td><span class="badge red">Assente</span></td>
-          </tr>`;
-        }
-        const coppie = day.coppie || [];
-        const entrate = coppie.map(c => c.entrata || "—").join("<br>");
-        const uscite  = coppie.map(c => c.uscita  || "—").join("<br>");
-        const statoHTML = day.stato === "straordinario"
-          ? `<span class="badge orange">+${formatOre(day.ore_straordinario)}</span>`
-          : `<span class="badge green">Presente</span>`;
-        return `<tr>
-          <td>${dataStr}</td>
-          <td>${entrate}</td>
-          <td>${uscite}</td>
-          <td>${formatOre(day.ore_totali)}</td>
-          <td>${statoHTML}</td>
-        </tr>`;
-      }).join("");
-
-      return `
-        <div class="month-section">
-          <div class="month-header">
-            <span class="month-name">${month.mese.charAt(0).toUpperCase() + month.mese.slice(1)}</span>
-            <span class="month-stats">
-              Ore: ${formatOre(month.ore_totali)} &nbsp;|&nbsp;
-              Previste: ${formatOre(month.ore_previste)} &nbsp;|&nbsp;
-              Straord: ${formatOre(month.ore_straordinario)} &nbsp;|&nbsp;
-              Assenze: ${month.giorni_assenti} gg
-            </span>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Data</th><th>Entrata</th><th>Uscita</th>
-                <th>Ore</th><th>Stato</th>
-              </tr>
-            </thead>
-            <tbody>${giorniHTML}</tbody>
-          </table>
-        </div>`;
-    }).join("");
-
-    return `
-      <div class="employee-page">
-        <div class="emp-header">
-          <div class="emp-name">${emp.nome} ${emp.cognome || ""}</div>
-          <div class="emp-meta">Periodo: ${periodoLabel} &nbsp;•&nbsp; Esportato il: ${new Date().toLocaleDateString("it-IT")}</div>
-        </div>
-        <div class="summary">
-          <div class="summary-item">
-            <div class="summary-label">Ore totali</div>
-            <div class="summary-value">${formatOre(totalOre)}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Giorni assenti</div>
-            <div class="summary-value red">${totalAssenze}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Straordinari</div>
-            <div class="summary-value orange">${formatOre(totalStraord)}</div>
-          </div>
-        </div>
-        ${monthsHTML}
-      </div>`;
-  }).join('<div class="page-break"></div>');
-
-  return `<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<title>Timbry — ${periodoLabel}</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; color: #111; background: white; }
-
-  .employee-page { padding: 20px 24px; }
-
-  .emp-header { background: #111827; color: white; padding: 16px 20px; border-radius: 8px; margin-bottom: 16px; }
-  .emp-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
-  .emp-meta { font-size: 10px; color: #9ca3af; }
-
-  .summary { display: flex; gap: 12px; margin-bottom: 20px; }
-  .summary-item { flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; }
-  .summary-label { font-size: 10px; color: #6b7280; margin-bottom: 4px; }
-  .summary-value { font-size: 18px; font-weight: 700; color: #111; }
-  .summary-value.red { color: #dc2626; }
-  .summary-value.orange { color: #d97706; }
-
-  .month-section { margin-bottom: 20px; }
-  .month-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #e5e7eb; }
-  .month-name { font-size: 13px; font-weight: 700; color: #111; }
-  .month-stats { font-size: 9px; color: #6b7280; }
-
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { background: #4f46e5; color: white; }
-  th { padding: 6px 10px; text-align: left; font-size: 10px; font-weight: 600; }
-  td { padding: 5px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; vertical-align: top; }
-  tr:nth-child(even) td { background: #f9fafb; }
-  tr.assente td { color: #9ca3af; }
-
-  .badge { display: inline-block; padding: 2px 7px; border-radius: 99px; font-size: 9px; font-weight: 600; }
-  .badge.green  { background: #dcfce7; color: #15803d; }
-  .badge.red    { background: #fee2e2; color: #dc2626; }
-  .badge.orange { background: #fef3c7; color: #d97706; }
-
-  .page-break { page-break-after: always; }
-
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page-break { page-break-after: always; }
-    .employee-page { padding: 16px 20px; }
-  }
-</style>
-</head>
-<body>
-${rows}
-<script>window.onload = () => { window.print(); }<\/script>
-</body>
-</html>`;
-}
-
-/*
-────────────────────────────────────
 MODALE EXPORT
 ────────────────────────────────────
 */
@@ -555,7 +411,6 @@ PAGINA DIPENDENTI
 export default function Employees() {
 
   const navigate = useNavigate();
-  const [dark, setDark] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(false);
@@ -613,16 +468,6 @@ export default function Employees() {
   function toggleSelectAll() {
     setSelectedEmpIds(prev => prev.length === employees.length ? [] : employees.map(e => e.id));
   }
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
-  }, []);
-
-  useEffect(() => {
-    if (dark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
-    else { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
-  }, [dark]);
 
   const { pulling, refreshing, distance } = usePullToRefresh(loadEmployees)
 

@@ -63,13 +63,11 @@ export default function DipendenteDashboard() {
 
   // sezioni aperte
   const [openMonth, setOpenMonth]       = useState(null);
-  const [openDay, setOpenDay]           = useState(null);
 
   // tab attiva: "presenze" | "ferie" | "richieste" | "profilo"
   const [tab, setTab]                   = useState("presenze");
 
   // form giustificazione
-  const [justDay, setJustDay]           = useState("");
   const [justMotivo, setJustMotivo]     = useState("");
   const [savingJust, setSavingJust]     = useState(false);
   const [showJustForm, setShowJustForm] = useState(null); // giorno selezionato
