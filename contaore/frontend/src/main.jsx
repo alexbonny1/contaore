@@ -163,6 +163,15 @@ function AppWithInactivity2FA() {
   };
 })();
 
+// Forza un ricaricamento pulito quando la pagina torna da bfcache (Safari, specialmente
+// in modalità standalone su iPhone, può ripristinare una pagina "congelata" e mostrare
+// schermo bianco dopo uno swipe indietro seguito da un download)
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
