@@ -155,6 +155,9 @@ function AppWithInactivity2FA() {
         if (data?.error === 'SESSION_EXPIRED') {
           localStorage.clear();
           window.location.href = '/?session_expired=1';
+        } else if (data?.error === 'PORTAL_DISABLED') {
+          localStorage.clear();
+          window.location.href = '/?portal_disabled=1';
         }
       } catch {}
     }
