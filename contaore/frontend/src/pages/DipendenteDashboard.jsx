@@ -531,23 +531,38 @@ export default function DipendenteDashboard() {
   function logout() { localStorage.clear(); navigate("/"); }
 
   async function downloadMonthPDF(mese) {
+    // Apre subito una finestra vuota (sincrono, dentro il click) così Safari non la
+    // blocca come popup. Il PDF verrà caricato lì una volta pronto, invece che al
+    // posto della pagina dell'app: su iPhone Safari apre spesso i PDF a schermo
+    // intero sostituendo la pagina corrente, e tornare indietro da lì mostrava una
+    // schermata bianca.
+    const pdfWindow = window.open("", "_blank");
     try {
       const res = await fetch(API_URL + "/api/export/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ employee_ids: [employee.id], month: mese })
       });
-      if (!res.ok) { showToast("Errore generazione PDF", "error"); return; }
+      if (!res.ok) {
+        if (pdfWindow) pdfWindow.close();
+        showToast("Errore generazione PDF", "error");
+        return;
+      }
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = `Timbry_${employee.cognome}_${employee.nome}_${mese.replace(/\s+/g, "_")}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (pdfWindow) {
+        pdfWindow.location.href = url;
+      } else {
+        const a    = document.createElement("a");
+        a.href     = url;
+        a.download = `Timbry_${employee.cognome}_${employee.nome}_${mese.replace(/\s+/g, "_")}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     } catch (err) {
+      if (pdfWindow) pdfWindow.close();
       showToast("Errore download PDF", "error");
     }
   }
