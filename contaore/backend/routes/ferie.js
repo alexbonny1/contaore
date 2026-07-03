@@ -1,6 +1,6 @@
 import { supabase }          from '../services/supabase.js'
 import { authenticateOwner, requirePermission }  from '../middleware/auth.js'
-import { sendEsitoFerie }     from '../services/email.js'
+import { sendEsitoFerie, sendEsitoGiustificazione } from '../services/email.js'
 import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
 
 export default async function ferieRoutes(fastify) {
@@ -249,7 +249,7 @@ export default async function ferieRoutes(fastify) {
 
         const { data: existing } = await supabase
           .from('giustificazioni')
-          .select('id, stato, dipendente_id')
+          .select('id, stato, dipendente_id, data, dipendenti(nome, email)')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
@@ -277,6 +277,16 @@ export default async function ferieRoutes(fastify) {
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
+        const emailDipGiustApprova = existing.dipendenti?.email
+        if (emailDipGiustApprova) {
+          await sendEsitoGiustificazione({
+            emailDipendente: emailDipGiustApprova,
+            nome:            existing.dipendenti.nome,
+            data:            existing.data,
+            approvata:       true
+          })
+        }
+
         return reply.send({ success: true, giustificazione: updated })
 
       } catch (err) {
@@ -300,7 +310,7 @@ export default async function ferieRoutes(fastify) {
 
         const { data: existing } = await supabase
           .from('giustificazioni')
-          .select('id, stato, dipendente_id')
+          .select('id, stato, dipendente_id, data, dipendenti(nome, email)')
           .eq('id', id)
           .eq('company_id', company_id)
           .single()
@@ -326,6 +336,16 @@ export default async function ferieRoutes(fastify) {
         if (error) {
           request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        const emailDipGiustRifiuta = existing.dipendenti?.email
+        if (emailDipGiustRifiuta) {
+          await sendEsitoGiustificazione({
+            emailDipendente: emailDipGiustRifiuta,
+            nome:            existing.dipendenti.nome,
+            data:            existing.data,
+            approvata:       false
+          })
         }
 
         return reply.send({ success: true, giustificazione: updated })
