@@ -7,6 +7,27 @@ import {
 import { API_URL, hasPermission } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
+function useNfcScan(waiting, onScanned) {
+  useEffect(() => {
+    if (!waiting) return;
+    const startedAt = new Date().toISOString();
+    const interval  = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res   = await fetch(API_URL + "/api/latest-read?after=" + encodeURIComponent(startedAt), {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.uid) {
+          onScanned(data.uid);
+          clearInterval(interval);
+        }
+      } catch (err) { }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [waiting]);
+}
+
 function Toast({ message, type, onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3500);
@@ -63,6 +84,7 @@ export default function Badges() {
   const [editingUidId, setEditingUidId]     = useState(null);
   const [newUid, setNewUid]                 = useState("");
   const [updatingUid, setUpdatingUid]       = useState(false);
+  const [waitingScanEdit, setWaitingScanEdit] = useState(false);
   const [informativaConsegnata, setInformativaConsegnata] = useState(false);
   const [formErrors, setFormErrors]         = useState({});
 
@@ -87,25 +109,8 @@ export default function Badges() {
   }
 
   // ─── polling NFC ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!waitingScan) return;
-    const startedAt = new Date().toISOString();
-    const interval  = setInterval(async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res   = await fetch(API_URL + "/api/latest-read?after=" + encodeURIComponent(startedAt), {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success && data.uid) {
-          setUid(data.uid);
-          setWaitingScan(false);
-          clearInterval(interval);
-        }
-      } catch (err) { }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [waitingScan]);
+  useNfcScan(waitingScan, (scannedUid) => { setUid(scannedUid); setWaitingScan(false); });
+  useNfcScan(waitingScanEdit, (scannedUid) => { setNewUid(scannedUid); setWaitingScanEdit(false); });
 
   // ─── registra badge ─────────────────────────────────────────────────────────
   async function createBadge(e) {
@@ -181,6 +186,12 @@ export default function Badges() {
   function startEditUid(badge) {
     setEditingUidId(badge.id);
     setNewUid(badge.uid);
+    setWaitingScanEdit(false);
+  }
+
+  function stopEditUid() {
+    setEditingUidId(null);
+    setWaitingScanEdit(false);
   }
 
   async function saveUid(badge) {
@@ -189,7 +200,7 @@ export default function Badges() {
       return;
     }
     if (newUid === badge.uid) {
-      setEditingUidId(null);
+      stopEditUid();
       return;
     }
 
@@ -197,7 +208,7 @@ export default function Badges() {
     try {
       const token = localStorage.getItem("token");
       const res  = await fetch(`${API_URL}/api/tags/${badge.id}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ uid: newUid.trim() })
       });
@@ -208,7 +219,7 @@ export default function Badges() {
         return;
       }
       showToast("UID aggiornato");
-      setEditingUidId(null);
+      stopEditUid();
       loadBadges();
     } catch (err) { showToast("Errore server", "error"); }
     finally { setUpdatingUid(false); }
@@ -348,7 +359,7 @@ export default function Badges() {
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <button
-                      onClick={() => editingUidId === badge.id ? setEditingUidId(null) : startEditUid(badge)}
+                      onClick={() => editingUidId === badge.id ? stopEditUid() : startEditUid(badge)}
                       className="h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-[10px] sm:text-xs font-semibold flex items-center gap-1 transition-colors"
                       title="Aggiorna l'UID del badge"
                     >
@@ -369,21 +380,31 @@ export default function Badges() {
                 {/* UID */}
                 <p className="text-[10px] sm:text-xs text-zinc-400 mb-0.5">UID</p>
                 {editingUidId === badge.id ? (
-                  <div className="flex gap-2 mb-3">
-                    <input
-                      type="text"
-                      value={newUid}
-                      onChange={e => setNewUid(e.target.value)}
-                      placeholder="Nuovo UID"
-                      className="flex-1 h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs outline-none font-mono"
-                      autoFocus
-                    />
+                  <div className="mb-3 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newUid}
+                        onChange={e => setNewUid(e.target.value)}
+                        placeholder="Nuovo UID"
+                        className="flex-1 h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs outline-none font-mono"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => saveUid(badge)}
+                        disabled={updatingUid}
+                        className="h-9 px-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold disabled:opacity-50 transition-colors"
+                      >
+                        {updatingUid ? "..." : "OK"}
+                      </button>
+                    </div>
                     <button
-                      onClick={() => saveUid(badge)}
-                      disabled={updatingUid}
-                      className="h-9 px-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold disabled:opacity-50 transition-colors"
+                      type="button"
+                      onClick={() => setWaitingScanEdit(true)}
+                      disabled={waitingScanEdit}
+                      className="w-full h-8 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-[10px] sm:text-xs font-semibold disabled:opacity-60 transition-colors"
                     >
-                      {updatingUid ? "..." : "OK"}
+                      {waitingScanEdit ? "Attendi scansione..." : "Leggi Tag NFC"}
                     </button>
                   </div>
                 ) : (
