@@ -27,15 +27,23 @@ export default function Login() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const user  = JSON.parse(localStorage.getItem("user") || "{}");
-    if (token) {
-      if (user.role === "superadmin")  navigate("/admin",     { replace: true });
-      else if (user.role === "dipendente") navigate("/portale",  { replace: true });
-      else                             navigate("/dashboard", { replace: true });
-      return;
-    }
-    setSplashExiting(true);
-    const t = setTimeout(() => setBooting(false), 300);
-    return () => clearTimeout(t);
+
+    // Lo splash resta visibile un momento fisso, anche se il controllo (istantaneo)
+    // ha già finito, così non sembra un lampo ma un vero avvio dell'app.
+    const minDisplay = setTimeout(() => {
+      setSplashExiting(true);
+      setTimeout(() => {
+        if (token) {
+          if (user.role === "superadmin")  navigate("/admin",     { replace: true });
+          else if (user.role === "dipendente") navigate("/portale",  { replace: true });
+          else                             navigate("/dashboard", { replace: true });
+        } else {
+          setBooting(false);
+        }
+      }, 300);
+    }, 900);
+
+    return () => clearTimeout(minDisplay);
   }, []);
 
   if (booting) {
