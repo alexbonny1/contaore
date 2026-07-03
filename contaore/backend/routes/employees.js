@@ -1156,7 +1156,7 @@ export default async function employeeRoutes(fastify) {
       if (req.user.role === 'dipendente') return reply.status(403).send({ success: false })
       const { id }    = req.params
       const companyId = req.user.company_id
-      const { nome, cognome, email, promemoria_entrata_minuti, promemoria_uscita_minuti, importo_orario } = req.body || {}
+      const { nome, cognome, email, importo_orario } = req.body || {}
 
       const { data: emp } = await supabase
         .from('dipendenti')
@@ -1171,28 +1171,24 @@ export default async function employeeRoutes(fastify) {
       const newNome    = (nome    ?? emp.nome) || ''
       const newCognome = (cognome ?? emp.cognome) || ''
       const newEmail   = (email   ?? emp.email) || null
-      const nameChanged = newNome !== (emp.nome || '') || newCognome !== (emp.cognome || '')
+      const nameChanged  = newNome !== (emp.nome || '') || newCognome !== (emp.cognome || '')
+      const emailChanged = newEmail !== (emp.email || null)
 
       const dipUpdate = { nome: newNome, cognome: newCognome, email: newEmail }
 
-      if (promemoria_entrata_minuti !== undefined) {
-        const v = promemoria_entrata_minuti === null ? null : parseInt(promemoria_entrata_minuti)
-        if (v === null || (!isNaN(v) && v >= 0 && v <= 120)) dipUpdate.promemoria_entrata_minuti = v
-      }
-      if (promemoria_uscita_minuti !== undefined) {
-        const v = promemoria_uscita_minuti === null ? null : parseInt(promemoria_uscita_minuti)
-        if (v === null || (!isNaN(v) && v >= 0 && v <= 120)) dipUpdate.promemoria_uscita_minuti = v
-      }
       if (importo_orario !== undefined) {
         const v = importo_orario === null ? null : parseFloat(importo_orario)
-        if (v === null || (!isNaN(v) && v > 0)) dipUpdate.importo_orario = v
+        if (v !== null && (isNaN(v) || v <= 0)) {
+          return reply.send({ success: false, error: 'INVALID_IMPORTO_ORARIO' })
+        }
+        dipUpdate.importo_orario = v
       }
 
       const { error: dipUpdateError } = await supabase.from('dipendenti')
         .update(dipUpdate)
         .eq('id', id).eq('company_id', companyId)
       if (dipUpdateError) {
-        request.log.error(dipUpdateError)
+        req.log.error(dipUpdateError)
         return reply.send({ success: false, error: 'UPDATE_FAILED', detail: dipUpdateError.message })
       }
 
@@ -1223,54 +1219,59 @@ export default async function employeeRoutes(fastify) {
           account = existingByEmail
         }
 
-        let username
-        if (account && !nameChanged) {
-          username = account.username
-        } else {
-          username = await findAvailableUsername(buildUsername(newNome, newCognome))
+        // Rigenera e reinvia le credenziali solo se l'account non esiste ancora
+        // oppure se è cambiato qualcosa nell'anagrafica che lo riguarda (nome/cognome/email).
+        // Se è cambiato solo un campo estraneo all'accesso (es. tariffa oraria), non fare nulla.
+        if (!account || nameChanged || emailChanged) {
+          let username
+          if (account && !nameChanged) {
+            username = account.username
+          } else {
+            username = await findAvailableUsername(buildUsername(newNome, newCognome))
+          }
+          const plainPwd  = generatePassword(10)
+          const hashedPwd = await bcrypt.hash(plainPwd, 10)
+
+          if (account) {
+            const { error: updateError } = await supabase.from('user_account')
+              .update({ username, email: newEmail, password: hashedPwd, dipendente_id: id })
+              .eq('id', account.id)
+            if (updateError) {
+              return reply.send({ success: false, error: 'ACCOUNT_UPDATE_FAILED', detail: updateError.message })
+            }
+          } else {
+            // Controlla se un account con la stessa email già esiste in un'altra azienda
+            const { data: conflicting } = await supabase
+              .from('user_account')
+              .select('id, email, company_id')
+              .eq('email', newEmail)
+              .maybeSingle()
+
+            if (conflicting) {
+              return reply.send({ success: false, error: 'EMAIL_ALREADY_IN_USE' })
+            }
+
+            const { error: insertError } = await supabase.from('user_account').insert({
+              company_id: companyId, dipendente_id: id, username,
+              email: newEmail, password: hashedPwd, role: 'dipendente',
+              two_factor_enabled: false
+            })
+            if (insertError) {
+              return reply.send({ success: false, error: 'ACCOUNT_CREATE_FAILED', detail: insertError.message })
+            }
+          }
+
+          try {
+            const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
+            await sendCredenziali({ email: newEmail, nome: newNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
+            credenziali_inviate = true
+          } catch (_) {}
         }
-        const plainPwd  = generatePassword(10)
-        const hashedPwd = await bcrypt.hash(plainPwd, 10)
-
-        if (account) {
-          const { error: updateError } = await supabase.from('user_account')
-            .update({ username, email: newEmail, password: hashedPwd, dipendente_id: id })
-            .eq('id', account.id)
-          if (updateError) {
-            return reply.send({ success: false, error: 'ACCOUNT_UPDATE_FAILED', detail: updateError.message })
-          }
-        } else {
-          // Controlla se un account con la stessa email già esiste in un'altra azienda
-          const { data: conflicting } = await supabase
-            .from('user_account')
-            .select('id, email, company_id')
-            .eq('email', newEmail)
-            .maybeSingle()
-
-          if (conflicting) {
-            return reply.send({ success: false, error: 'EMAIL_ALREADY_IN_USE' })
-          }
-
-          const { error: insertError } = await supabase.from('user_account').insert({
-            company_id: companyId, dipendente_id: id, username,
-            email: newEmail, password: hashedPwd, role: 'dipendente',
-            two_factor_enabled: false
-          })
-          if (insertError) {
-            return reply.send({ success: false, error: 'ACCOUNT_CREATE_FAILED', detail: insertError.message })
-          }
-        }
-
-        try {
-          const loginUrl = process.env.FRONTEND_URL || 'https://contaore-eight.vercel.app'
-          await sendCredenziali({ email: newEmail, nome: newNome, username, password: plainPwd, companyNome: company.nome, loginUrl })
-          credenziali_inviate = true
-        } catch (_) {}
       }
 
       return reply.send({ success: true, credenziali_inviate })
     } catch (err) {
-      request.log.error(err)
+      req.log.error(err)
       return reply.status(500).send({ success: false })
     }
   })

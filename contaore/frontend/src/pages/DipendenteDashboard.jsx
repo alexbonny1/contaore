@@ -4,7 +4,7 @@ import {
   Clock, Calendar, AlertCircle, CheckCircle2,
   XCircle, ChevronDown, ChevronUp, Send, LogOut, Lock,
   Sun, Moon, TrendingUp, UserCheck, Umbrella, Pencil, Download,
-  User, Shield, ChevronLeft, Trash2
+  User, Shield, ChevronLeft, Trash2, Bell
 } from "lucide-react";
 import { API_URL, apiFetch } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -124,7 +124,7 @@ export default function DipendenteDashboard() {
   const [showTurniForm, setShowTurniForm]             = useState(false);
   const [richiesteTurni, setRichiesteTurni]           = useState([]);
 
-  // profilo sub-view: null (hub) | 'profilo' | 'sicurezza'
+  // profilo sub-view: null (hub) | 'profilo' | 'sicurezza' | 'notifiche'
   const [profiloSub, setProfiloSub]                   = useState(null);
 
   // profilo edit
@@ -142,6 +142,11 @@ export default function DipendenteDashboard() {
   // 2FA
   const [twoFaEnabled, setTwoFaEnabled]               = useState(false);
   const [loadingTwoFa, setLoadingTwoFa]               = useState(false);
+
+  // promemoria timbratura (self-service)
+  const [editPromemoriaEntrata, setEditPromemoriaEntrata] = useState(null);
+  const [editPromemoriaUscita, setEditPromemoriaUscita]   = useState(null);
+  const [savingPromemoria, setSavingPromemoria]           = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -239,6 +244,25 @@ export default function DipendenteDashboard() {
       loadMe();
     } catch (err) { showToast("Errore server", "error"); }
     finally { setSavingProfile(false); }
+  }
+
+  async function savePromemoria() {
+    setSavingPromemoria(true);
+    try {
+      const res  = await fetch(API_URL + "/api/dipendente/promemoria", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          promemoria_entrata_minuti: editPromemoriaEntrata,
+          promemoria_uscita_minuti:  editPromemoriaUscita
+        })
+      });
+      const json = await res.json();
+      if (!json.success) { showToast(json.error || "Errore salvataggio", "error"); return; }
+      showToast("Preferenze notifiche aggiornate");
+      loadMe();
+    } catch (err) { showToast("Errore server", "error"); }
+    finally { setSavingPromemoria(false); }
   }
 
   async function deleteAccount() {
@@ -1382,6 +1406,18 @@ export default function DipendenteDashboard() {
                     title="Sicurezza"
                     subtitle="Password e autenticazione a due fattori"
                   />
+                  <SettingRow
+                    onClick={() => {
+                      setEditPromemoriaEntrata(employee.promemoria_entrata_minuti ?? null);
+                      setEditPromemoriaUscita(employee.promemoria_uscita_minuti ?? null);
+                      setProfiloSub('notifiche');
+                    }}
+                    icon={Bell}
+                    iconBg="bg-amber-50 dark:bg-amber-900/20"
+                    iconColor="text-amber-500"
+                    title="Notifiche"
+                    subtitle="Promemoria di entrata e uscita"
+                  />
                 </SettingsGroup>
 
                 {/* Tema */}
@@ -1593,6 +1629,68 @@ export default function DipendenteDashboard() {
                           Annulla
                         </button>
                       </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ── SUB-VIEW: NOTIFICHE ── */}
+            {profiloSub === 'notifiche' && (
+              <>
+                <button
+                  onClick={() => setProfiloSub(null)}
+                  className="inline-flex items-center gap-0.5 -ml-1 mb-1 text-sm font-medium text-blue-500">
+                  <ChevronLeft size={18} /> Impostazioni
+                </button>
+
+                <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6">
+                  {!employee.turni_attivi ? (
+                    <p className="text-sm text-zinc-500">
+                      I promemoria di timbratura sono disponibili solo se hai un turno di lavoro assegnato.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Promemoria timbratura</p>
+                      <p className="text-xs text-zinc-500 mb-2">Ricevi un'email se dimentichi di timbrare entrata o uscita.</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-zinc-400 mb-1">Entrata — minuti dopo</p>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={editPromemoriaEntrata !== null}
+                              onChange={e => setEditPromemoriaEntrata(e.target.checked ? 15 : null)}
+                              className="rounded"
+                            />
+                            {editPromemoriaEntrata !== null && (
+                              <input type="number" min="0" max="120" value={editPromemoriaEntrata}
+                                onChange={e => setEditPromemoriaEntrata(parseInt(e.target.value) || 0)}
+                                className="w-full h-9 px-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-zinc-400 mb-1">Uscita — minuti dopo</p>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={editPromemoriaUscita !== null}
+                              onChange={e => setEditPromemoriaUscita(e.target.checked ? 15 : null)}
+                              className="rounded"
+                            />
+                            {editPromemoriaUscita !== null && (
+                              <input type="number" min="0" max="120" value={editPromemoriaUscita}
+                                onChange={e => setEditPromemoriaUscita(parseInt(e.target.value) || 0)}
+                                className="w-full h-9 px-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={savePromemoria} disabled={savingPromemoria}
+                        className="w-full h-10 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50">
+                        {savingPromemoria ? "Salvataggio..." : "Salva"}
+                      </button>
                     </div>
                   )}
                 </div>

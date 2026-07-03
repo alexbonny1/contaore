@@ -348,8 +348,6 @@ export default function EmployeeDetails() {
   const [profileCognome, setProfileCognome]           = useState("");
   const [profileEmail, setProfileEmail]               = useState("");
   const [profileImportoOrario, setProfileImportoOrario] = useState("");
-  const [profilePromemoriaEntrata, setProfilePromemoriaEntrata] = useState(null);
-  const [profilePromemoriaUscita, setProfilePromemoriaUscita]   = useState(null);
   const [profileSaving, setProfileSaving]             = useState(false);
 
   const [showAddPresence, setShowAddPresence]   = useState(false);
@@ -374,8 +372,6 @@ export default function EmployeeDetails() {
     setProfileCognome(employee?.cognome || "");
     setProfileEmail(employee?.email || "");
     setProfileImportoOrario(employee?.importo_orario != null ? String(employee.importo_orario) : "");
-    setProfilePromemoriaEntrata(employee?.promemoria_entrata_minuti ?? null);
-    setProfilePromemoriaUscita(employee?.promemoria_uscita_minuti ?? null);
     setShowEditProfile(true);
   }
 
@@ -391,13 +387,17 @@ export default function EmployeeDetails() {
           nome: profileNome.trim(),
           cognome: profileCognome.trim(),
           email: profileEmail.trim() || null,
-          importo_orario: profileImportoOrario !== "" ? parseFloat(profileImportoOrario) : null,
-          promemoria_entrata_minuti: profilePromemoriaEntrata,
-          promemoria_uscita_minuti:  profilePromemoriaUscita
+          importo_orario: profileImportoOrario !== "" ? parseFloat(profileImportoOrario) : null
         })
       });
       const data = await res.json();
-      if (!data.success) { showToast(data.error || "Errore salvataggio", "error"); return; }
+      if (!data.success) {
+        const msg = data.error === "INVALID_IMPORTO_ORARIO"
+          ? "Tariffa oraria non valida: deve essere un numero maggiore di zero"
+          : (data.error || "Errore salvataggio");
+        showToast(msg, "error");
+        return;
+      }
       showToast(data.credenziali_inviate ? `Credenziali inviate a ${profileEmail.trim()}` : "Anagrafica aggiornata");
       setShowEditProfile(false);
       loadData();
@@ -486,7 +486,7 @@ export default function EmployeeDetails() {
     }
   }
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [id]);
 
   async function loadData() {
 
@@ -936,45 +936,6 @@ export default function EmployeeDetails() {
                   placeholder="es. 12.50"
                   className="w-full h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
               </div>
-              {turniAttivi && (
-                <div className="pt-1">
-                  <p className="text-xs text-zinc-500 font-medium mb-2">Promemoria timbratura (email al dipendente)</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-zinc-400 mb-1">Entrata — minuti dopo</p>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={profilePromemoriaEntrata !== null}
-                          onChange={e => setProfilePromemoriaEntrata(e.target.checked ? 15 : null)}
-                          className="rounded"
-                        />
-                        {profilePromemoriaEntrata !== null && (
-                          <input type="number" min="1" max="120" value={profilePromemoriaEntrata}
-                            onChange={e => setProfilePromemoriaEntrata(parseInt(e.target.value) || 15)}
-                            className="w-full h-9 px-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-400 mb-1">Uscita — minuti dopo</p>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={profilePromemoriaUscita !== null}
-                          onChange={e => setProfilePromemoriaUscita(e.target.checked ? 15 : null)}
-                          className="rounded"
-                        />
-                        {profilePromemoriaUscita !== null && (
-                          <input type="number" min="1" max="120" value={profilePromemoriaUscita}
-                            onChange={e => setProfilePromemoriaUscita(parseInt(e.target.value) || 15)}
-                            className="w-full h-9 px-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="flex gap-3 mt-6">
