@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabase.js'
-import { authenticate, requirePermission } from '../middleware/auth.js'
+import { authenticate } from '../middleware/auth.js'
 import { getAllowedDipendenteIds } from '../utils/adminAccess.js'
 import PDFDocument from 'pdfkit'
 import XLSX from 'xlsx'
@@ -619,19 +619,34 @@ ROUTE HTTP (thin wrapper attorno ai generatori riusabili)
 ────────────────────────────────────
 */
 
+// Come requirePermission('can_view_presenze'), ma lascia passare anche i dipendenti
+// (che poi vengono limitati ai propri soli dati subito dopo, nella route stessa) —
+// definito qui e non nel middleware condiviso perché can_view_presenze è usato solo
+// da queste due route: aprirlo qui non tocca gli altri controlli permessi dell'app.
+function canExportPresenze(request, reply) {
+  if (['owner', 'superadmin', 'dipendente'].includes(request.user?.role)) return
+  const perms = request.user?.permissions || {}
+  if (!perms.can_view_presenze) return reply.status(403).send({ error: 'FORBIDDEN' })
+}
+
 export default async function exportRoutes(fastify) {
 
   // ── PDF ──────────────────────────────────────────────────────────────
 
-  fastify.post('/api/export/pdf', { preHandler: [authenticate, requirePermission('can_view_presenze')] }, async (request, reply) => {
+  fastify.post('/api/export/pdf', { preHandler: [authenticate, canExportPresenze] }, async (request, reply) => {
 
     const { employee_ids, month } = request.body
     const companyId = request.user.company_id
 
     if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
 
-    const allowedIds = await getAllowedDipendenteIds(request.user)
-    const scopedIds  = allowedIds ? employee_ids.filter(id => allowedIds.includes(id)) : employee_ids
+    let scopedIds
+    if (request.user.role === 'dipendente') {
+      scopedIds = employee_ids.filter(id => id === request.user.dipendente_id)
+    } else {
+      const allowedIds = await getAllowedDipendenteIds(request.user)
+      scopedIds = allowedIds ? employee_ids.filter(id => allowedIds.includes(id)) : employee_ids
+    }
     if (!scopedIds.length) return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
 
     const pdfBuffer = await generatePdfBuffer(scopedIds, month, companyId)
@@ -646,15 +661,20 @@ export default async function exportRoutes(fastify) {
 
   // ── EXCEL ────────────────────────────────────────────────────────────
 
-  fastify.post('/api/export/excel', { preHandler: [authenticate, requirePermission('can_view_presenze')] }, async (request, reply) => {
+  fastify.post('/api/export/excel', { preHandler: [authenticate, canExportPresenze] }, async (request, reply) => {
 
     const { employee_ids, month } = request.body
     const companyId = request.user.company_id
 
     if (!employee_ids?.length) return reply.status(400).send({ success: false, error: 'MISSING_IDS' })
 
-    const allowedIds = await getAllowedDipendenteIds(request.user)
-    const scopedIds  = allowedIds ? employee_ids.filter(id => allowedIds.includes(id)) : employee_ids
+    let scopedIds
+    if (request.user.role === 'dipendente') {
+      scopedIds = employee_ids.filter(id => id === request.user.dipendente_id)
+    } else {
+      const allowedIds = await getAllowedDipendenteIds(request.user)
+      scopedIds = allowedIds ? employee_ids.filter(id => allowedIds.includes(id)) : employee_ids
+    }
     if (!scopedIds.length) return reply.status(403).send({ success: false, error: 'FORBIDDEN' })
 
     const buffer = await generateExcelBuffer(scopedIds, month, companyId)
