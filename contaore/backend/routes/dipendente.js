@@ -268,7 +268,8 @@ export default async function dipendenteRoutes(fastify) {
             badge_uid: employee.badge_uid,
             turni_attivi: employee.turni_attivi,
             promemoria_entrata_minuti: employee.promemoria_entrata_minuti,
-            promemoria_uscita_minuti:  employee.promemoria_uscita_minuti
+            promemoria_uscita_minuti:  employee.promemoria_uscita_minuti,
+            importo_orario: employee.importo_orario
           },
           shifts:         shifts || [],
           history_days:   days,

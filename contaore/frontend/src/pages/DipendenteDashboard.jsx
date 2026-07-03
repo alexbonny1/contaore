@@ -631,8 +631,17 @@ export default function DipendenteDashboard() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-5 py-5 sm:py-7 pb-28">
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-4 sm:mb-6 flex items-center gap-3 flex-wrap">
           <p className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Ciao, {employee.nome}</p>
+          {employee.importo_orario != null && (() => {
+            const stipendio = stats.ore_mese_corrente * employee.importo_orario;
+            if (stipendio <= 0) return null;
+            return (
+              <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-xl">
+                € {stipendio.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            );
+          })()}
         </div>
         <PullIndicator pulling={pulling} refreshing={refreshing} distance={distance} />
 
