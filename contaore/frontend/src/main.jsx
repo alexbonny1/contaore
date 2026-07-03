@@ -180,7 +180,10 @@ function AppWithInactivity2FA() {
 // schermo bianco dopo uno swipe indietro seguito da un download)
 window.addEventListener("pageshow", (event) => {
   if (event.persisted) {
-    window.location.reload();
+    // location.replace forza un caricamento davvero pulito del documento; su Safari
+    // in modalità standalone, location.reload() a volte non lo fa correttamente
+    // dopo un ripristino da bfcache, lasciando la pagina bianca.
+    window.location.replace(window.location.href);
   }
 });
 
