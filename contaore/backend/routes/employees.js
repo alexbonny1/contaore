@@ -1188,9 +1188,13 @@ export default async function employeeRoutes(fastify) {
         if (v === null || (!isNaN(v) && v > 0)) dipUpdate.importo_orario = v
       }
 
-      await supabase.from('dipendenti')
+      const { error: dipUpdateError } = await supabase.from('dipendenti')
         .update(dipUpdate)
         .eq('id', id).eq('company_id', companyId)
+      if (dipUpdateError) {
+        request.log.error(dipUpdateError)
+        return reply.send({ success: false, error: 'UPDATE_FAILED', detail: dipUpdateError.message })
+      }
 
       let credenziali_inviate = false
       const { data: company } = await supabase
