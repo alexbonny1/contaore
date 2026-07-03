@@ -623,7 +623,7 @@ ROUTE HTTP (thin wrapper attorno ai generatori riusabili)
 // (che poi vengono limitati ai propri soli dati subito dopo, nella route stessa) —
 // definito qui e non nel middleware condiviso perché can_view_presenze è usato solo
 // da queste due route: aprirlo qui non tocca gli altri controlli permessi dell'app.
-function canExportPresenze(request, reply) {
+async function canExportPresenze(request, reply) {
   if (['owner', 'superadmin', 'dipendente'].includes(request.user?.role)) return
   const perms = request.user?.permissions || {}
   if (!perms.can_view_presenze) return reply.status(403).send({ error: 'FORBIDDEN' })
