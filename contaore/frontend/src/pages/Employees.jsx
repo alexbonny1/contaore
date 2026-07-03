@@ -94,6 +94,12 @@ function ExportModal({ employees, onClose, token, initialIds }) {
 
   async function exportPDF() {
     setLoading(true);
+    // Apre subito una finestra vuota (sincrono, dentro il click) così Safari non la
+    // blocca come popup. Il PDF verrà caricato lì una volta pronto, invece che al
+    // posto della pagina dell'app: su iPhone Safari apre spesso i PDF a schermo
+    // intero sostituendo la pagina corrente, e tornare indietro da lì mostrava una
+    // schermata bianca.
+    const pdfWindow = window.open("", "_blank");
     try {
       const response = await fetch(`${API_URL}/api/export/pdf`, {
         method: "POST",
@@ -111,14 +117,19 @@ function ExportModal({ employees, onClose, token, initialIds }) {
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Timbry_${selectedMonth === "tutti" ? "storico" : selectedMonth.replace(/\s/g, "_")}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (pdfWindow) {
+        pdfWindow.location.href = url;
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Timbry_${selectedMonth === "tutti" ? "storico" : selectedMonth.replace(/\s/g, "_")}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     } catch (err) {
+      if (pdfWindow) pdfWindow.close();
     } finally {
       setLoading(false);
     }
