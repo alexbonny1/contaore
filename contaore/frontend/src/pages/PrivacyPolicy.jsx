@@ -54,14 +54,22 @@ export default function PrivacyPolicy() {
               legge in materia di rilevazione presenze (artt. 6(1)(b)(c) GDPR; art. 4 L. 300/1970 come
               modificato dal D.Lgs. 151/2015).
             </P>
+            <P>
+              <strong>Dati di utilizzo/analitici (solo con consenso):</strong> pagine visitate, azioni
+              compiute nell'app (es. accesso, creazione di un dipendente, approvazione o rifiuto di una
+              richiesta) e registrazione della sessione (con i campi di testo oscurati), raccolti tramite
+              PostHog esclusivamente se l'utente presta consenso dal banner mostrato al primo accesso.
+              Base giuridica: consenso (art. 6(1)(a) GDPR).
+            </P>
           </Sec>
 
           <Sec title="3. Cookie e archiviazione locale">
             <P>
-              La piattaforma Timbry <strong>non utilizza cookie</strong> di profilazione, analitici o di
-              terze parti. Viene utilizzato esclusivamente il <strong>localStorage</strong> del browser per
-              conservare il token JWT di autenticazione e le preferenze di tema. Si tratta di archiviazione
-              strettamente tecnica, non accessibile a server o terze parti. Per dettagli:{" "}
+              La piattaforma Timbry <strong>non utilizza cookie HTTP</strong> di profilazione o di terze
+              parti. Utilizza il <strong>localStorage</strong> del browser per conservare il token JWT di
+              autenticazione e le preferenze di tema (archiviazione tecnica, non accessibile a server o
+              terze parti), e — solo se l'utente acconsente dal banner dei cookie — <strong>PostHog</strong>,
+              uno strumento di analisi dell'utilizzo dell'app con server in UE. Per dettagli:{" "}
               <Link to="/cookie-policy" className="underline text-zinc-700 dark:text-zinc-300">
                 Cookie Policy
               </Link>.
@@ -75,8 +83,17 @@ export default function PrivacyPolicy() {
                 center UE (Francoforte, Germania)
               </li>
               <li>
-                <strong>Provider e-mail transazionale</strong> — invio credenziali di accesso ai
+                <strong>Resend</strong> — invio credenziali di accesso e notifiche via e-mail ai
                 dipendenti
+              </li>
+              <li>
+                <strong>Twilio Inc.</strong> — invio del codice di verifica via SMS/WhatsApp per
+                l'autenticazione a due fattori (2FA)
+              </li>
+              <li>
+                <strong>PostHog</strong> — analisi dell'utilizzo della piattaforma (pagine visitate,
+                eventi, registrazione sessione); infrastruttura in UE; attivo solo con consenso
+                dell'utente
               </li>
             </ul>
             <P>Ogni sub-responsabile è vincolato da apposito DPA conforme all’art. 28 GDPR.</P>

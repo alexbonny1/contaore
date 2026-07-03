@@ -27,10 +27,14 @@ export default function CookiePolicy() {
 
           <Sec title="2. Elementi di archiviazione utilizzati da Timbry">
             <P>
-              La piattaforma Timbry <strong>non utilizza cookie HTTP</strong> di alcun tipo (tecnici,
-              analitici, di profilazione o di terze parti).
+              La piattaforma Timbry <strong>non utilizza cookie HTTP</strong> tecnici o di profilazione.
+              Utilizza invece <strong>PostHog</strong>, uno strumento di analisi del comportamento degli
+              utenti (pagine visitate, azioni compiute nell'app, registrazione della sessione con i campi
+              di testo oscurati), ospitato su server europei. PostHog viene attivato solo se dai il
+              consenso tramite il banner che compare al primo accesso — se rifiuti, o finché non scegli,
+              resta disattivato e non raccoglie alcun dato.
             </P>
-            <P>Viene utilizzato esclusivamente il <strong>localStorage</strong> del browser per:</P>
+            <P>Viene inoltre utilizzato il <strong>localStorage</strong> del browser per:</P>
             <div className="overflow-x-auto mb-3">
               <table className="w-full text-xs border-collapse">
                 <thead>
@@ -55,9 +59,21 @@ export default function CookiePolicy() {
                     <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/50">Fino al logout</td>
                   </tr>
                   <tr>
-                    <td className="px-3 py-2 font-mono text-zinc-700 dark:text-zinc-300">theme</td>
-                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">Preferenza tema (light/dark)</td>
-                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">Personalizzazione visiva</td>
+                    <td className="px-3 py-2 font-mono text-zinc-700 dark:text-zinc-300 border-b border-zinc-100 dark:border-zinc-800/50">theme</td>
+                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/50">Preferenza tema (light/dark)</td>
+                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/50">Personalizzazione visiva</td>
+                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/50">Persistente (fino a reset)</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-mono text-zinc-700 dark:text-zinc-300 border-b border-zinc-100 dark:border-zinc-800/50">timbry_chart_prefs</td>
+                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/50">Preferenze di visualizzazione dei grafici</td>
+                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/50">Personalizzazione visiva</td>
+                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/50">Persistente (fino a reset)</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-mono text-zinc-700 dark:text-zinc-300">cookie_consent</td>
+                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">Scelta fatta sul banner (accettato/rifiutato)</td>
+                    <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">Ricordare la scelta sulle analitiche</td>
                     <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">Persistente (fino a reset)</td>
                   </tr>
                 </tbody>
@@ -72,8 +88,13 @@ export default function CookiePolicy() {
 
           <Sec title="3. Cookie di terze parti">
             <P>
-              La piattaforma non include tracker, pixel di retargeting, widget social o analytics esterni.
-              Non vengono impostati cookie di terze parti.
+              La piattaforma non include pixel di retargeting o widget social. Non vengono impostati
+              cookie HTTP di terze parti. È presente <strong>PostHog</strong> (vedi sezione 2), che salva
+              i propri dati tecnici nel localStorage del browser anziché in un cookie HTTP tradizionale, e
+              solo dopo il tuo consenso. È inoltre presente <strong>Twilio</strong>, usato dal server per
+              inviare SMS/WhatsApp con il codice di verifica quando l'autenticazione a due fattori è
+              attiva: non installa nulla nel tuo browser, riceve solo il numero di telefono al momento
+              dell'invio.
             </P>
           </Sec>
 
@@ -87,8 +108,10 @@ export default function CookiePolicy() {
 
           <Sec title="5. Modifiche">
             <P>
-              La presente Cookie Policy sarà aggiornata in caso di introduzione di nuovi servizi (es.
-              analytics, Stripe.js). La versione aggiornata sarà disponibile a questo indirizzo.
+              Aggiornamento di luglio 2026: introdotto PostHog per le analitiche di utilizzo, attivabile
+              solo con consenso esplicito. La presente Cookie Policy sarà aggiornata anche in futuro in
+              caso di introduzione di nuovi servizi (es. Stripe.js per i pagamenti). La versione
+              aggiornata sarà disponibile a questo indirizzo.
             </P>
           </Sec>
 
