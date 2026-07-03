@@ -72,6 +72,7 @@ const Billing             = lazy(() => import("./pages/Billing"));
 import ProtectedRoute from "./ProtectedRoute";
 import OwnerLayout from "./components/OwnerLayout";
 import CookieConsentBanner from "./components/CookieConsentBanner";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Minimal inline fallback — no extra component needed
 function PageLoader() {
@@ -185,9 +186,11 @@ window.addEventListener("pageshow", (event) => {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AppWithInactivity2FA />
-      <CookieConsentBanner />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppWithInactivity2FA />
+        <CookieConsentBanner />
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );
