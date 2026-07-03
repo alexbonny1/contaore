@@ -3,7 +3,7 @@ import { authenticate } from '../middleware/auth.js'
 
 export default async function billingRoutes(fastify) {
 
-  /*
+  /* 
     POST /api/billing/create-checkout-session
     Crea una Stripe Checkout Session per l'abbonamento.
     Configurare STRIPE_SECRET_KEY e STRIPE_PRICE_ID nelle variabili d'ambiente.
