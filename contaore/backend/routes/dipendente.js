@@ -266,7 +266,9 @@ export default async function dipendenteRoutes(fastify) {
             cognome:  employee.cognome,
             email:    employee.email,
             badge_uid: employee.badge_uid,
-            turni_attivi: employee.turni_attivi
+            turni_attivi: employee.turni_attivi,
+            promemoria_entrata_minuti: employee.promemoria_entrata_minuti,
+            promemoria_uscita_minuti:  employee.promemoria_uscita_minuti
           },
           shifts:         shifts || [],
           history_days:   days,
@@ -941,6 +943,56 @@ export default async function dipendenteRoutes(fastify) {
       } catch (err) {
         request.log.error(err)
         return reply.status(500).send({ error: 'SERVER_ERROR' })
+      }
+    }
+  )
+
+  // ─── PROMEMORIA TIMBRATURA (self-service) ────────────────────────────────────
+  fastify.put(
+    '/api/dipendente/promemoria',
+    { preHandler: authenticateDipendente },
+    async (request, reply) => {
+      try {
+        const dipendenteId = request.user.dipendente_id
+        const companyId    = request.user.company_id
+        const { promemoria_entrata_minuti, promemoria_uscita_minuti } = request.body || {}
+
+        const dipUpdate = {}
+
+        if (promemoria_entrata_minuti !== undefined) {
+          const v = promemoria_entrata_minuti === null ? null : parseInt(promemoria_entrata_minuti)
+          if (v !== null && (isNaN(v) || v < 0 || v > 120)) {
+            return reply.status(400).send({ success: false, error: 'INVALID_PROMEMORIA_ENTRATA' })
+          }
+          dipUpdate.promemoria_entrata_minuti = v
+        }
+        if (promemoria_uscita_minuti !== undefined) {
+          const v = promemoria_uscita_minuti === null ? null : parseInt(promemoria_uscita_minuti)
+          if (v !== null && (isNaN(v) || v < 0 || v > 120)) {
+            return reply.status(400).send({ success: false, error: 'INVALID_PROMEMORIA_USCITA' })
+          }
+          dipUpdate.promemoria_uscita_minuti = v
+        }
+
+        if (Object.keys(dipUpdate).length === 0) {
+          return reply.send({ success: true })
+        }
+
+        const { error } = await supabase
+          .from('dipendenti')
+          .update(dipUpdate)
+          .eq('id', dipendenteId).eq('company_id', companyId)
+
+        if (error) {
+          request.log.error(error)
+          return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
+        }
+
+        return reply.send({ success: true })
+
+      } catch (err) {
+        request.log.error(err)
+        return reply.status(500).send({ success: false, error: 'SERVER_ERROR' })
       }
     }
   )
