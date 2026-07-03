@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt'
 import { supabase }              from '../services/supabase.js'
 import { authenticateDipendente } from '../middleware/auth.js'
-import { sendNotificaRichiestaFerie, sendCredenziali } from '../services/email.js'
+import { sendNotificaRichiestaFerie, sendCredenziali, sendNotificaRichiestaGiustificazione } from '../services/email.js'
 import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
 import {
   GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours,
@@ -346,6 +346,39 @@ export default async function dipendenteRoutes(fastify) {
         if (error) {
           request.log.error(error)
           return reply.status(500).send({ error: 'SERVER_ERROR' })
+        }
+
+        // notifica email al titolare (se ha email)
+        try {
+          const { data: owner } = await supabase
+            .from('user_account')
+            .select('email')
+            .eq('company_id', company_id)
+            .eq('role', 'owner')
+            .maybeSingle()
+
+          const { data: emp } = await supabase
+            .from('dipendenti')
+            .select('nome, cognome')
+            .eq('id', dipendente_id)
+            .single()
+
+          const { data: company } = await supabase
+            .from('company')
+            .select('nome')
+            .eq('id', company_id)
+            .single()
+
+          if (owner?.email) {
+            await sendNotificaRichiestaGiustificazione({
+              emailOwner:     owner.email,
+              nomeDipendente: `${emp.nome} ${emp.cognome}`,
+              data,
+              motivo:         motivo.trim(),
+              companyNome:    company?.nome || ''
+            })
+          }
+        } catch (mailErr) {
         }
 
         return reply.send({ success: true, giustificazione: result })

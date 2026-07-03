@@ -776,8 +776,8 @@ export default function DipendenteDashboard() {
                                       </button>
                                     )}
                                     {giust && (
-                                      <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium ${statoBadge("giustificata").color}`}>
-                                        Giust.
+                                      <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium ${statoBadgeFerie(giust.stato).color}`}>
+                                        {giust.stato === "rifiutata" ? "Giust. rifiutata" : giust.stato === "approvata" ? "Giustificata" : "Giust. in attesa"}
                                       </span>
                                     )}
                                   </div>

@@ -233,6 +233,65 @@ export async function sendEsitoFerie({ emailDipendente, nome, dataInizio, dataFi
     return false
   }
 }
+// ─── Notifica al titolare: nuova giustificazione di assenza ──────────────────
+export async function sendNotificaRichiestaGiustificazione({ emailOwner, nomeDipendente, data, motivo, companyNome }) {
+  try {
+    await safeSend({
+      from:    FROM,
+      to:      emailOwner,
+      subject: `Nuova giustificazione — ${nomeDipendente}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#f5f4f0;">
+          <div style="background:#fff;border-radius:8px;padding:32px;border:1px solid #dddbd7;">
+            <p style="font-family:monospace;font-size:13px;color:#2563eb;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 16px;">TIMBRY — ${companyNome}</p>
+            <h2 style="font-size:20px;font-weight:600;color:#1a1a1a;margin:0 0 16px;">Nuova giustificazione di assenza</h2>
+            <p style="font-size:15px;color:#6b6b6b;margin:0 0 20px;line-height:1.6;">
+              <strong style="color:#1a1a1a;">${nomeDipendente}</strong> ha giustificato un'assenza:
+            </p>
+            <div style="background:#f5f4f0;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0 0 8px;font-size:15px;color:#1a1a1a;">Giorno: <strong>${data}</strong></p>
+              <p style="margin:0;font-size:15px;color:#1a1a1a;">Motivo: ${motivo}</p>
+            </div>
+            <p style="font-size:13px;color:#6b6b6b;">Accedi al pannello per approvare o rifiutare la giustificazione.</p>
+          </div>
+        </div>
+      `
+    })
+    return true
+  } catch (err) {
+    console.error('sendNotificaRichiestaGiustificazione error:', err)
+    return false
+  }
+}
+
+// ─── Notifica al dipendente: giustificazione approvata o rifiutata ───────────
+export async function sendEsitoGiustificazione({ emailDipendente, nome, data, approvata }) {
+  try {
+    await safeSend({
+      from:    FROM,
+      to:      emailDipendente,
+      subject: `Giustificazione ${approvata ? 'approvata' : 'rifiutata'}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#f5f4f0;">
+          <div style="background:#fff;border-radius:8px;padding:32px;border:1px solid #dddbd7;">
+            <p style="font-family:monospace;font-size:13px;color:#2563eb;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 16px;">TIMBRY</p>
+            <h2 style="font-size:20px;font-weight:600;color:#1a1a1a;margin:0 0 16px;">
+              Ciao ${nome}, la tua giustificazione è stata <span style="color:${approvata ? '#16a34a' : '#dc2626'}">${approvata ? 'approvata' : 'rifiutata'}</span>
+            </h2>
+            <p style="font-size:15px;color:#6b6b6b;line-height:1.6;">
+              Giorno: <strong>${data}</strong>
+            </p>
+          </div>
+        </div>
+      `
+    })
+    return true
+  } catch (err) {
+    console.error('sendEsitoGiustificazione error:', err)
+    return false
+  }
+}
+
 // ─── Reset password: invia link all'utente (owner o dipendente) ──────────────
 export async function sendResetPassword({ email, username, resetUrl }) {
   try {
