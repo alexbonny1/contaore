@@ -95,6 +95,10 @@ export default function PrivacyPolicy() {
                 eventi, registrazione sessione); infrastruttura in UE; attivo solo con consenso
                 dell'utente
               </li>
+              <li>
+                <strong>Sentry</strong> — monitoraggio tecnico degli errori dell'applicazione (frontend e
+                backend), per individuare e correggere malfunzionamenti
+              </li>
             </ul>
             <P>Ogni sub-responsabile è vincolato da apposito DPA conforme all’art. 28 GDPR.</P>
           </Sec>
