@@ -7,13 +7,20 @@ import * as Sentry from "@sentry/react";
 import "./index.css";
 
 // ─── PostHog analytics ────────────────────────────────────────────────────────
+// Parte disattivato di default: si attiva solo se l'utente accetta dal banner
+// dei cookie (CookieConsentBanner.jsx), che chiama posthog.opt_in_capturing().
 if (import.meta.env.VITE_POSTHOG_KEY) {
   posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
-    api_host:            import.meta.env.VITE_POSTHOG_HOST || "https://eu.i.posthog.com",
-    capture_pageview:    true,
-    session_recording:   { maskAllInputs: true },
+    api_host:                     import.meta.env.VITE_POSTHOG_HOST || "https://eu.i.posthog.com",
+    capture_pageview:             true,
+    session_recording:            { maskAllInputs: true },
+    opt_out_capturing_by_default: true,
     loaded: (ph) => {
-      if (import.meta.env.DEV) ph.opt_out_capturing();
+      if (import.meta.env.DEV) {
+        ph.opt_out_capturing();
+      } else if (localStorage.getItem("cookie_consent") === "accepted") {
+        ph.opt_in_capturing();
+      }
     },
   });
 }
@@ -64,6 +71,7 @@ const Billing             = lazy(() => import("./pages/Billing"));
 
 import ProtectedRoute from "./ProtectedRoute";
 import OwnerLayout from "./components/OwnerLayout";
+import CookieConsentBanner from "./components/CookieConsentBanner";
 
 // Minimal inline fallback — no extra component needed
 function PageLoader() {
@@ -155,6 +163,9 @@ function AppWithInactivity2FA() {
         if (data?.error === 'SESSION_EXPIRED') {
           localStorage.clear();
           window.location.href = '/?session_expired=1';
+        } else if (data?.error === 'PORTAL_DISABLED') {
+          localStorage.clear();
+          window.location.href = '/?portal_disabled=1';
         }
       } catch {}
     }
@@ -176,6 +187,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AppWithInactivity2FA />
+      <CookieConsentBanner />
     </BrowserRouter>
   </React.StrictMode>
 );

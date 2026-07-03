@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
 import { validateSession } from '../services/sessions.js'
+import { supabase } from '../services/supabase.js'
 
 dotenv.config()
 
@@ -101,6 +102,14 @@ export async function authenticateDipendente(request, reply) {
     }
     if (!await validateSession(token)) {
       return reply.status(401).send({ error: 'SESSION_EXPIRED' })
+    }
+    const { data: company } = await supabase
+      .from('company')
+      .select('portale_dipendenti')
+      .eq('id', decoded.company_id)
+      .single()
+    if (!company?.portale_dipendenti) {
+      return reply.status(403).send({ error: 'PORTAL_DISABLED' })
     }
     request.user = decoded
   } catch (err) {

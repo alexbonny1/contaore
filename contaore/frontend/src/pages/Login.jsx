@@ -16,6 +16,8 @@ export default function Login() {
       ? "Password aggiornata con successo. Accedi con le nuove credenziali."
       : searchParams.get("session_expired") === "1"
       ? "Sessione scaduta: password modificata su un altro dispositivo. Accedi di nuovo."
+      : searchParams.get("portal_disabled") === "1"
+      ? "Portale disattivato dal titolare. Contatta l'azienda."
       : ""
   );
 
@@ -53,7 +55,7 @@ export default function Login() {
       }
 
       if (!data.success) {
-        setError("Credenziali non valide");
+        setError(data.error === "PORTAL_DISABLED" ? "Portale disattivato dal titolare" : "Credenziali non valide");
         return;
       }
 

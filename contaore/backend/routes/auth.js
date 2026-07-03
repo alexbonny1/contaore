@@ -77,6 +77,11 @@ export default async function authRoutes(fastify) {
 
       // ─── LOGIN SENZA 2FA ───────────────────────────────────────────────────────
       const portale_dipendenti = user.company?.portale_dipendenti ?? false
+
+      if (user.role === 'dipendente' && !portale_dipendenti) {
+        return reply.status(403).send({ success: false, error: 'PORTAL_DISABLED' })
+      }
+
       const lastActivityTimestamp = new Date().toISOString()
 
       const token = jwt.sign(
@@ -191,6 +196,11 @@ export default async function authRoutes(fastify) {
       // Genera JWT completo
       const user = attempt.user
       const portale_dipendenti    = user.company?.portale_dipendenti ?? false
+
+      if (user.role === 'dipendente' && !portale_dipendenti) {
+        return reply.status(403).send({ success: false, error: 'PORTAL_DISABLED' })
+      }
+
       const lastActivityTimestamp = new Date().toISOString()
 
       const token = jwt.sign(
