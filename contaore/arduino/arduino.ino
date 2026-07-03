@@ -4,7 +4,7 @@
  * v3.1
  * 
  
- * PIN MAP:  
+ * PIN MAP:   
  * ─────────────────────────────────────
  * TFT ILI9488 (SPI)
  *   MOSI → GPIO 23 / SCK → GPIO 18
