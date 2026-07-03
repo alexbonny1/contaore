@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_URL } from "../api";
 import LegalFooter from "../components/LegalFooter";
+import SplashScreen from "../components/SplashScreen";
 import { track } from "../main";
 
 export default function Login() {
@@ -11,6 +12,8 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
+  const [booting, setBooting]   = useState(true);
+  const [splashExiting, setSplashExiting] = useState(false);
   const [error, setError]       = useState(
     searchParams.get("password_changed") === "1"
       ? "Password aggiornata con successo. Accedi con le nuove credenziali."
@@ -28,8 +31,16 @@ export default function Login() {
       if (user.role === "superadmin")  navigate("/admin",     { replace: true });
       else if (user.role === "dipendente") navigate("/portale",  { replace: true });
       else                             navigate("/dashboard", { replace: true });
+      return;
     }
+    setSplashExiting(true);
+    const t = setTimeout(() => setBooting(false), 300);
+    return () => clearTimeout(t);
   }, []);
+
+  if (booting) {
+    return <SplashScreen exiting={splashExiting} />;
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
