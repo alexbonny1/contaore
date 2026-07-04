@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
+import pg from 'pg'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 
+const __dirname = dirname(fileURLToPath(import.meta.url))
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_KEY
+const DATABASE_URL = process.env.DATABASE_URL
 
 export async function runMigrations() {
   // Se non ci sono credenziali Supabase, skippa le migrazioni
@@ -29,447 +35,53 @@ export async function runMigrations() {
 
     console.log('[Migrations] ✅ Database connection successful')
 
-    // ─── Schema iniziale: tabelle core (IF NOT EXISTS — sicuro su DB esistente) ──
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS company (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        nome varchar(255) NOT NULL,
-        slug varchar(255) UNIQUE,
-        portale_dipendenti boolean DEFAULT false,
-        tolleranza_straordinario_minuti integer DEFAULT 0,
-        arrotonda_ore_al_turno boolean DEFAULT false,
-        auto_cleanup_enabled boolean DEFAULT false,
-        auto_cleanup_retention_months integer DEFAULT 12,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS dipendenti (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        nome varchar(255) NOT NULL,
-        cognome varchar(255) NOT NULL,
-        badge_uid varchar(255),
-        email varchar(255),
-        turni_attivi boolean DEFAULT false,
-        turni_attivati_il timestamptz,
-        informativa_consegnata boolean DEFAULT false,
-        informativa_consegnata_il timestamptz,
-        data_inizio date,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS user_account (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid REFERENCES company(id) ON DELETE CASCADE,
-        username varchar(255) UNIQUE NOT NULL,
-        email varchar(255),
-        password varchar(255) NOT NULL,
-        role varchar(50) DEFAULT 'dipendente',
-        dipendente_id uuid REFERENCES dipendenti(id) ON DELETE SET NULL,
-        phone_number varchar(20),
-        two_factor_enabled boolean DEFAULT false,
-        two_factor_method varchar(10) DEFAULT 'email',
-        reset_token text,
-        reset_token_expires_at timestamptz,
-        password_changed_at timestamptz,
-        is_temporary_credentials boolean DEFAULT false,
-        temporary_credentials_used_at timestamptz,
-        nome varchar(100),
-        cognome varchar(100),
-        created_at timestamptz DEFAULT now(),
-        updated_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS dispositivo (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        reader_id varchar(255) NOT NULL UNIQUE,
-        stato varchar(50) DEFAULT 'offline',
-        ultimo_ping timestamptz,
-        nome varchar(100),
-        firmware_version varchar(50),
-        sede varchar(100),
-        nfc_ok boolean,
-        display_ok boolean,
-        ota_pending boolean DEFAULT false,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS tag (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        uid varchar(255) NOT NULL,
-        dipendente_id uuid REFERENCES dipendenti(id) ON DELETE SET NULL,
-        stato varchar(50),
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS turni (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        dipendente_id uuid NOT NULL REFERENCES dipendenti(id) ON DELETE CASCADE,
-        turno_nome varchar(255),
-        giorno_settimana varchar(20) NOT NULL,
-        ingresso_1 time,
-        uscita_1 time,
-        ingresso_2 time,
-        uscita_2 time,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS fasce_orarie (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        nome varchar(255),
-        ora_inizio time NOT NULL,
-        ora_fine time NOT NULL,
-        tipo varchar(20) NOT NULL,
-        reader_id varchar(255),
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS presenza (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        tag_uid varchar(255) NOT NULL,
-        reader_id varchar(255),
-        tipo varchar(20) NOT NULL,
-        manuale boolean DEFAULT false,
-        automatica boolean DEFAULT false,
-        timestamp timestamptz,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS richieste_ferie (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        dipendente_id uuid NOT NULL REFERENCES dipendenti(id) ON DELETE CASCADE,
-        data_inizio date NOT NULL,
-        data_fine date NOT NULL,
-        note text,
-        stato varchar(20) DEFAULT 'in_attesa',
-        approvato_da uuid REFERENCES user_account(id) ON DELETE SET NULL,
-        approvato_il timestamptz,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS richieste_timbratura (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        dipendente_id uuid NOT NULL REFERENCES dipendenti(id) ON DELETE CASCADE,
-        data date NOT NULL,
-        tipo varchar(20) NOT NULL,
-        ora_uscita time,
-        motivo text NOT NULL,
-        stato varchar(20) DEFAULT 'in_attesa',
-        presenza_id uuid REFERENCES presenza(id) ON DELETE SET NULL,
-        nuovo_datetime timestamptz,
-        approvato_da uuid REFERENCES user_account(id) ON DELETE SET NULL,
-        approvato_il timestamptz,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS giustificazioni (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        dipendente_id uuid NOT NULL REFERENCES dipendenti(id) ON DELETE CASCADE,
-        data date NOT NULL,
-        motivo text NOT NULL,
-        stato varchar(20) DEFAULT 'in_attesa',
-        approvato_da uuid REFERENCES user_account(id) ON DELETE SET NULL,
-        approvato_il timestamptz,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS pausa_aziendale (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        data_inizio date NOT NULL,
-        data_fine date NOT NULL,
-        motivo text NOT NULL,
-        attiva boolean DEFAULT true,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS notifiche_settings (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        tipo varchar(100) NOT NULL,
-        attiva boolean DEFAULT false,
-        parametri jsonb DEFAULT '{}',
-        target_ids jsonb,
-        email_destinatario varchar(255),
-        last_triggered_at timestamptz,
-        updated_at timestamptz DEFAULT now(),
-        created_at timestamptz DEFAULT now(),
-        UNIQUE(company_id, tipo)
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS ota_release (
-        id integer PRIMARY KEY,
-        version varchar(50) NOT NULL,
-        url text NOT NULL,
-        attivo boolean DEFAULT true,
-        updated_at timestamptz DEFAULT now(),
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS device_claim (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        token varchar(255) NOT NULL UNIQUE,
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        used boolean DEFAULT false,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS admin_settings (
-        id integer PRIMARY KEY,
-        alert_email varchar(255),
-        offline_minuti integer DEFAULT 15,
-        alert_attivo boolean DEFAULT false,
-        alert_companies jsonb,
-        updated_at timestamptz DEFAULT now(),
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(() => ({}))
-
-    // ─── ALTER TABLE / colonne aggiuntive ────────────────────────────────────────
-
-    // Esegui una migration di test semplice
-    const { error: alterError } = await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS phone_number varchar(20);`
-    }).catch(() => ({ error: null })) // Ignora errore se rpc non esiste
-
-    if (alterError) {
-      console.warn('[Migrations] ⚠️  Could not add phone_number column:', alterError.message)
+    // Esegui il file SQL 011_complete_schema_fix.sql
+    if (DATABASE_URL) {
+      try {
+        await runSQLMigrations(DATABASE_URL)
+      } catch (err) {
+        console.warn('[Migrations] ⚠️  Error running SQL migrations:', err.message)
+        console.warn('[Migrations] ⏭️  Continuing anyway - some features may not work')
+      }
     } else {
-      console.log('[Migrations] ✅ phone_number column added')
+      console.warn('[Migrations] ⚠️  DATABASE_URL not set, skipping DDL migrations')
     }
 
-    // Colonne per la pulizia automatica dello storico presenze
+    // Reload schema cache di PostgREST
     await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_enabled boolean DEFAULT false;`
-    }).catch(() => ({ error: null }))
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_retention_months integer DEFAULT 12;`
-    }).catch(() => ({ error: null }))
-
-    // Credenziali temporanee per nuovi owner (migration 004)
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS is_temporary_credentials boolean DEFAULT false;`
-    }).catch(() => ({ error: null }))
-
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS temporary_credentials_used_at timestamptz DEFAULT null;`
-    }).catch(() => ({ error: null }))
-
-    // Colonne opzionali tabella dispositivo (migration 005)
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS nome varchar(100);`
-    }).catch(() => ({ error: null }))
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS firmware_version varchar(50);`
-    }).catch(() => ({ error: null }))
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS sede varchar(100);`
-    }).catch(() => ({ error: null }))
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS nfc_ok boolean;`
-    }).catch(() => ({ error: null }))
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS display_ok boolean;`
-    }).catch(() => ({ error: null }))
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dispositivo ADD COLUMN IF NOT EXISTS ota_pending boolean DEFAULT false;`
-    }).catch(() => ({ error: null }))
-
-    // Colonne profilo personale per titolare (migration 006)
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS nome varchar(100);`
-    }).catch(() => ({}))
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS cognome varchar(100);`
-    }).catch(() => ({}))
-
-    // Tabelle richieste permessi e turni (migration 002)
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS richieste_permessi (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        dipendente_id uuid NOT NULL REFERENCES dipendenti(id) ON DELETE CASCADE,
-        data_uscita date,
-        ora_uscita time,
-        data_entrata date,
-        ora_entrata time,
-        tipo varchar(50) DEFAULT 'personale',
-        motivo text NOT NULL,
-        stato varchar(20) DEFAULT 'in_attesa',
-        created_at timestamptz DEFAULT now(),
-        updated_at timestamptz DEFAULT now(),
-        approved_at timestamptz,
-        approved_by uuid REFERENCES user_account(id) ON DELETE SET NULL
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS richieste_turni (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        dipendente_id uuid NOT NULL REFERENCES dipendenti(id) ON DELETE CASCADE,
-        data_dal date NOT NULL,
-        data_al date NOT NULL,
-        giorni varchar(255) NOT NULL,
-        orari jsonb,
-        motivo text NOT NULL,
-        stato varchar(20) DEFAULT 'in_attesa',
-        created_at timestamptz DEFAULT now(),
-        updated_at timestamptz DEFAULT now(),
-        approved_at timestamptz,
-        approved_by uuid REFERENCES user_account(id) ON DELETE SET NULL
-      );`
-    }).catch(() => ({}))
-
-    // Tolleranza in difetto per calcolo ore mensili (migration 005)
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS tolleranza_difetto_minuti integer DEFAULT 15;`
-    }).catch(() => ({}))
-
-    // Colonna per invalidazione sessioni al cambio password
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS password_changed_at timestamptz DEFAULT NULL;`
-    }).catch(() => ({}))
-
-    // Tabella sessioni utente (sostituzione password_version)
-    await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS user_sessions (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id uuid NOT NULL REFERENCES user_account(id) ON DELETE CASCADE,
-        token_hash text NOT NULL UNIQUE,
-        created_at timestamptz DEFAULT now(),
-        expires_at timestamptz NOT NULL
-      );`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash ON user_sessions(token_hash);`
-    }).catch(() => ({}))
-
-    await supabase.rpc('exec', {
-      sql: `CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);`
-    }).catch(() => ({}))
-
-    // Promemoria timbratura per dipendente (migration 006)
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dipendenti ADD COLUMN IF NOT EXISTS promemoria_entrata_minuti integer DEFAULT NULL;`
-    }).catch(() => ({}))
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dipendenti ADD COLUMN IF NOT EXISTS promemoria_uscita_minuti integer DEFAULT NULL;`
-    }).catch(() => ({}))
-
-    // Permessi admin granulari (migration 007)
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS permissions jsonb DEFAULT '{}';`
-    }).catch(() => ({}))
-
-    // Tariffa oraria dipendente per calcolo stipendio (migration 008)
-    await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS dipendenti ADD COLUMN IF NOT EXISTS importo_orario numeric(10,2) DEFAULT NULL;`
-    }).catch(() => ({}))
-
-    // Pulizia automatica su giorno preciso del mese + coda invio riepilogo ore (migration 009)
-    const { error: cleanupGiornoError } = await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_giorno integer DEFAULT 15;`
-    }).catch(e => ({ error: e }))
-    if (cleanupGiornoError) {
-      console.warn('[Migrations] ⚠️  Could not add auto_cleanup_giorno column:', cleanupGiornoError.message)
-    } else {
-      console.log('[Migrations] ✅ auto_cleanup_giorno column added')
-    }
-
-    const { error: cleanupLastRunError } = await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS auto_cleanup_last_run varchar(7);`
-    }).catch(e => ({ error: e }))
-    if (cleanupLastRunError) {
-      console.warn('[Migrations] ⚠️  Could not add auto_cleanup_last_run column:', cleanupLastRunError.message)
-    } else {
-      console.log('[Migrations] ✅ auto_cleanup_last_run column added')
-    }
-
-    const { error: riepilogoOreInviiError } = await supabase.rpc('exec', {
-      sql: `CREATE TABLE IF NOT EXISTS riepilogo_ore_invii (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_id uuid NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-        periodo varchar(100) NOT NULL,
-        dipendente_ids jsonb,
-        formato varchar(10) NOT NULL,
-        destinatario_email varchar(255) NOT NULL,
-        stato varchar(20) DEFAULT 'in_attesa',
-        approvato_da uuid REFERENCES user_account(id) ON DELETE SET NULL,
-        inviato_il timestamptz,
-        created_at timestamptz DEFAULT now()
-      );`
-    }).catch(e => ({ error: e }))
-    if (riepilogoOreInviiError) {
-      console.warn('[Migrations] ⚠️  Could not create riepilogo_ore_invii table:', riepilogoOreInviiError.message)
-    } else {
-      console.log('[Migrations] ✅ riepilogo_ore_invii table created')
-    }
-
-    // Restrizione accesso admin a un sottoinsieme di dipendenti (migration 010)
-    const { error: assignedDipError } = await supabase.rpc('exec', {
-      sql: `ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS assigned_dipendente_ids jsonb;`
-    }).catch(e => ({ error: e }))
-    if (assignedDipError) {
-      console.warn('[Migrations] ⚠️  Could not add assigned_dipendente_ids column:', assignedDipError.message)
-    } else {
-      console.log('[Migrations] ✅ assigned_dipendente_ids column added')
-    }
-
-    // Forza il reload della cache schema di PostgREST — le modifiche DDL fatte tramite
-    // rpc('exec', ...) a volte non vengono rilevate automaticamente da PostgREST.
-    const { error: reloadError } = await supabase.rpc('exec', {
       sql: `NOTIFY pgrst, 'reload schema';`
-    }).catch(e => ({ error: e }))
-    if (reloadError) {
-      console.warn('[Migrations] ⚠️  Could not notify PostgREST schema reload:', reloadError.message)
-    } else {
-      console.log('[Migrations] ✅ PostgREST schema reload notified')
-    }
+    }).catch(() => ({}))
 
     console.log('[Migrations] ✅ Complete')
+    return
   } catch (err) {
     console.warn('[Migrations] ⚠️  Error during migrations:', err.message)
     console.warn('[Migrations] ⏭️  Continuing anyway - server will start')
+  }
+}
+
+async function runSQLMigrations(databaseUrl) {
+  const client = new pg.Client({ connectionString: databaseUrl })
+
+  try {
+    await client.connect()
+    console.log('[Migrations] 📝 Executing 011_complete_schema_fix.sql...')
+
+    const sqlPath = join(__dirname, '011_complete_schema_fix.sql')
+    const sql = readFileSync(sqlPath, 'utf-8')
+
+    // Esegui il file SQL in un'unica transazione
+    await client.query('BEGIN')
+    try {
+      await client.query(sql)
+      await client.query('COMMIT')
+      console.log('[Migrations] ✅ SQL migration executed successfully')
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    }
+  } finally {
+    await client.end()
   }
 }
 
