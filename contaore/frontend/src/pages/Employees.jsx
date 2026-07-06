@@ -599,7 +599,7 @@ export default function Employees() {
         </div>
 
         {selectionMode && (
-          <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/70 dark:bg-[#161618]/70 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          <div className="mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/70 dark:bg-[#161618]/70 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <button
               onClick={toggleSelectAll}
               className="flex items-center gap-2 h-9 sm:h-10 px-3 sm:px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-xs sm:text-sm font-medium"
@@ -608,7 +608,7 @@ export default function Employees() {
                 ? <><CheckSquare size={16} className="text-indigo-500" /> Deseleziona tutti</>
                 : <><Square size={16} /> Seleziona tutti</>}
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
               <span className="hidden sm:inline text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 {selectedEmployeeIds.length} selezionat{selectedEmployeeIds.length === 1 ? "o" : "i"}
               </span>

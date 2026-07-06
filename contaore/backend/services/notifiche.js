@@ -705,18 +705,19 @@ export function startScheduler() {
     checkPromemoriaTimbratura().catch(e => console.error('checkPromemoriaTimbratura:', e))
   }, 5 * 60 * 1000)
 
-  // Every 30 min: timbrature mancanti + straordinari + riepiloghi
-  setInterval(() => {
+  // Every 30 min: timbrature mancanti + straordinari + riepiloghi (giornaliero/settimanale/mensile)
+  // + pulizia automatica storico presenze. Girano ogni 30 min (invece che una volta ogni 24h)
+  // così un riavvio del server (deploy, sleep/wake dell'hosting) non fa saltare l'intero giorno
+  // in cui scadono: last_triggered_at/auto_cleanup_last_run li rendono comunque idempotenti.
+  const runPeriodic30min = () => {
     checkTimbraturaMancante().catch(e => console.error('checkTimbraturaMancante:', e))
     checkStraordinarioMensile().catch(e => console.error('checkStraordinarioMensile:', e))
     checkRiepilogoGiornaliero().catch(e => console.error('checkRiepilogoGiornaliero:', e))
     checkRiepilogoSettimanale().catch(e => console.error('checkRiepilogoSettimanale:', e))
-  }, 30 * 60 * 1000)
-
-  // Every 24h: pulizia automatica storico presenze + invio riepilogo ore mensile
-  setInterval(() => {
     autoCleanupPresenze().catch(e => console.error('autoCleanupPresenze:', e))
     checkInvioRiepilogoOre().catch(e => console.error('checkInvioRiepilogoOre:', e))
-  }, 24 * 60 * 60 * 1000)
+  }
+  runPeriodic30min()
+  setInterval(runPeriodic30min, 30 * 60 * 1000)
 
 }
