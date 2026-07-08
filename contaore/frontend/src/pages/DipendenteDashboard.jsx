@@ -12,6 +12,7 @@ import DipendenteBottomNav from "../components/DipendenteBottomNav";
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
 import { ThemeRow } from "../components/ThemeSelector";
 import PushPrompt from "../components/PushPrompt";
+import PushStatusCard from "../components/PushStatusCard";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -1419,6 +1420,9 @@ export default function DipendenteDashboard() {
                     subtitle="Promemoria di entrata e uscita"
                   />
                 </SettingsGroup>
+
+                {/* Notifiche push */}
+                <PushStatusCard onToast={(msg, isError) => showToast(msg, isError ? "error" : "success")} />
 
                 {/* Tema */}
                 <SettingsGroup>

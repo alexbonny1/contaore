@@ -97,6 +97,11 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       }
     }
 
+    // Una giustificazione approvata per questo giorno prevale sullo stato calcolato
+    // dalla presenza (es. una timbratura parziale/anomala non deve nascondere il
+    // fatto che il titolare ha approvato una giustificazione per quella data).
+    if (giustSet.has(giorno)) stato = 'giustificata'
+
     return { giorno, coppie: buildCoppie(daySessions), ore_totali: oreLavorate, ore_effettive: ore_effettive ?? oreLavorate, ore_previste, ore_straordinario, stato, ritardo_minuti, assente: false }
   })
 
