@@ -2,11 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   Calendar, UserX, Clock, TrendingUp,
-  WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle, ChevronLeft, Bell, Mail
+  WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle, ChevronLeft, Mail
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
-import { isPushSupported, requestPushPermission } from "../push";
+import PushStatusCard from "../components/PushStatusCard";
 
 // ─── notification type definitions ───────────────────────────────────────────
 
@@ -314,9 +314,6 @@ export default function Notifications() {
   const [toast, setToast]       = useState(null);
   const [employees, setEmployees] = useState([]);
   const [readers, setReaders]     = useState([]);
-  const [pushPermission, setPushPermission] = useState(
-    typeof Notification !== "undefined" ? Notification.permission : "unsupported"
-  );
   const [emailCc, setEmailCc]         = useState(false);
   const [emailCcLoading, setEmailCcLoading] = useState(true);
   const token = localStorage.getItem("token");
@@ -351,28 +348,8 @@ export default function Notifications() {
     } catch (e) { setEmailCc(!next); setToast({ msg: "Errore server", type: "error" }); }
   }
 
-  async function handleEnablePush() {
-    const { permission, subscribed, error } = await requestPushPermission();
-    setPushPermission(permission);
-    if (permission === "granted" && subscribed) {
-      setToast({ msg: "Notifiche push abilitate", type: "ok" });
-    } else if (permission === "granted" && !subscribed) {
-      setToast({ msg: `Permesso concesso ma registrazione fallita: ${error || "errore sconosciuto"}`, type: "error" });
-    }
-  }
-
-  async function handleTestPush() {
-    try {
-      const res  = await fetch(`${API_URL}/api/push/test`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      if (data.success) {
-        setToast({ msg: `Notifica di prova inviata (${data.subscriptions} dispositivo/i)`, type: "ok" });
-      } else {
-        setToast({ msg: data.message || data.error || "Errore invio notifica di prova", type: "error" });
-      }
-    } catch (e) {
-      setToast({ msg: "Errore di rete durante il test", type: "error" });
-    }
+  function handlePushToast(message, isError = false) {
+    setToast({ msg: message, type: isError ? "error" : "ok" });
   }
 
   async function loadSettings() {
@@ -443,29 +420,8 @@ export default function Notifications() {
           </p>
         </div>
 
-        <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5 mb-4 sm:mb-5 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center shrink-0">
-            <Bell size={17} className="text-indigo-500" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Notifiche push</p>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              {pushPermission === "granted" ? "Abilitate su questo dispositivo"
-                : pushPermission === "denied" ? "Bloccate dal browser — riabilitale dalle impostazioni del sito"
-                : pushPermission === "unsupported" ? "Non supportate su questo browser/dispositivo"
-                : "Non ancora abilitate su questo dispositivo"}
-            </p>
-          </div>
-          {pushPermission === "default" && (
-            <button onClick={handleEnablePush} className="shrink-0 h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium">
-              Abilita
-            </button>
-          )}
-          {pushPermission === "granted" && (
-            <button onClick={handleTestPush} className="shrink-0 h-9 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-medium">
-              Invia prova
-            </button>
-          )}
+        <div className="mb-4 sm:mb-5">
+          <PushStatusCard onToast={handlePushToast} />
         </div>
 
         <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5 mb-6 sm:mb-8 flex items-center gap-3">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
-import { isPushSupported, isIosSafariNotStandalone, requestPushPermission } from "../push";
+import { isPushSupported, isIosSafariNotStandalone, requestPushPermission, subscribeToPush } from "../push";
 
 const DISMISS_KEY = "push_prompt_dismissed";
 
@@ -9,8 +9,20 @@ export default function PushPrompt() {
   const [iosInstallHint, setIosInstallHint] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem(DISMISS_KEY) === "1") return;
     if (typeof Notification === "undefined") return;
+
+    // Il permesso del browser è già "granted" ma la subscription sul server
+    // potrebbe non essersi mai salvata (rete, tabella non ancora creata al
+    // momento del primo tentativo, ecc.): senza questo, l'utente resta
+    // bloccato per sempre senza un modo per far ripartire la registrazione,
+    // perché il prompt/bottone "Abilita" appare solo quando il permesso è
+    // ancora "default". Riprova quindi in background ad ogni avvio.
+    if (Notification.permission === "granted") {
+      subscribeToPush().catch(() => {});
+      return;
+    }
+
+    if (localStorage.getItem(DISMISS_KEY) === "1") return;
     if (Notification.permission !== "default") return;
 
     setIosInstallHint(isIosSafariNotStandalone());
