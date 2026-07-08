@@ -16,6 +16,10 @@ import {
 } from './email.js'
 import { generatePdfBuffer, generateExcelBuffer } from '../routes/export.js'
 import { GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours } from '../utils/timeHelpers.js'
+import {
+  sendPushToUser, sendPushToUsers,
+  ownerUserAccountId, dipendenteUserAccountId, superadminUserAccountIds
+} from './webpush.js'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -71,6 +75,14 @@ async function getActive(tipo) {
   return data || []
 }
 
+// Le notifiche convertite a push di default mandano l'email solo se la company
+// ha attivato esplicitamente "invia anche via email" (impostazioni notifiche).
+export async function emailCcEnabled(companyId) {
+  const { data } = await supabase
+    .from('company').select('notifiche_anche_email').eq('id', companyId).maybeSingle()
+  return !!data?.notifiche_anche_email
+}
+
 async function ctx(companyId, emailOverride) {
   const [email, nome] = await Promise.all([ownerEmail(companyId), companyNome(companyId)])
   return { email: emailOverride || email, nome }
@@ -91,9 +103,19 @@ export async function onBadgeNonRiconosciuto({ uid, readerId, companyId }) {
         .select('id').eq('reader_id', readerId).eq('company_id', companyId).maybeSingle()
       if (!device || !targetIds.includes(device.id)) return
     }
-    const { email, nome } = await ctx(companyId, setting.email_destinatario)
-    if (!email) return
-    await sendNotificaBadgeNonRiconosciuto({ emailOwner: email, companyNome: nome, uid, readerId })
+    const nome = await companyNome(companyId)
+    const ownerId = await ownerUserAccountId(companyId)
+    if (ownerId) {
+      sendPushToUser(ownerId, {
+        title: `Badge non riconosciuto — ${nome}`,
+        body:  `UID ${uid}${readerId ? ` — lettore ${readerId}` : ''}`,
+        url:   '/badges'
+      }).catch(e => console.error('push badge_non_riconosciuto:', e))
+    }
+    if (await emailCcEnabled(companyId)) {
+      const { email } = await ctx(companyId, setting.email_destinatario)
+      if (email) await sendNotificaBadgeNonRiconosciuto({ emailOwner: email, companyNome: nome, uid, readerId })
+    }
   } catch (e) { console.error('onBadgeNonRiconosciuto:', e) }
 }
 
@@ -126,16 +148,24 @@ export async function onRitardo({ uid, companyId }) {
     const key = `${companyId}:ritardo:${emp.id}:${todayStr()}`
     if (!canSend(key)) return
 
-    const { email, nome } = await ctx(companyId, setting.email_destinatario)
-    if (!email) return
-
     const h = String(now.getHours()).padStart(2, '0')
     const m = String(now.getMinutes()).padStart(2, '0')
-    await sendNotificaRitardo({
-      emailOwner: email, nomeDipendente: emp.nome, companyNome: nome,
-      orarioTurno:  shifts.find(s => s.ingresso_1)?.ingresso_1 || '',
-      orarioArrivo: `${h}:${m}`
-    })
+    const orarioArrivo = `${h}:${m}`
+    const orarioTurno  = shifts.find(s => s.ingresso_1)?.ingresso_1 || ''
+    const nome = await companyNome(companyId)
+
+    const ownerId = await ownerUserAccountId(companyId)
+    if (ownerId) {
+      sendPushToUser(ownerId, {
+        title: `Ritardo: ${emp.nome}`,
+        body:  `Timbrato alle ${orarioArrivo}${orarioTurno ? ` (turno dalle ${orarioTurno})` : ''}`,
+        url:   '/dashboard'
+      }).catch(e => console.error('push ritardo:', e))
+    }
+    if (await emailCcEnabled(companyId)) {
+      const { email } = await ctx(companyId, setting.email_destinatario)
+      if (email) await sendNotificaRitardo({ emailOwner: email, nomeDipendente: emp.nome, companyNome: nome, orarioTurno, orarioArrivo })
+    }
   } catch (e) { console.error('onRitardo:', e) }
 }
 
@@ -154,6 +184,8 @@ export async function checkAssenti() {
     const cid       = setting.company_id
     const tol       = setting.parametri?.minuti_tolleranza ?? 30
     const targetIds = setting.target_ids?.length ? setting.target_ids : null
+    const ownerId   = await ownerUserAccountId(cid)
+    const emailCc   = await emailCcEnabled(cid)
 
     const [{ data: emps }, { data: shifts }, { data: pres }] = await Promise.all([
       supabase.from('dipendenti').select('id, nome, badge_uid').eq('company_id', cid).eq('turni_attivi', true),
@@ -174,12 +206,19 @@ export async function checkAssenti() {
       if (!late) continue
       const key = `${cid}:assente:${emp.id}:${today}`
       if (!canSend(key)) continue
-      const { email, nome } = await ctx(cid, setting.email_destinatario)
-      if (!email) continue
-      await sendNotificaAssente({
-        emailOwner: email, nomeDipendente: emp.nome, companyNome: nome,
-        turnoOra: empShifts.find(s => s.ingresso_1)?.ingresso_1 || ''
-      })
+      const turnoOra = empShifts.find(s => s.ingresso_1)?.ingresso_1 || ''
+
+      if (ownerId) {
+        sendPushToUser(ownerId, {
+          title: `Assente: ${emp.nome}`,
+          body:  `Non ha timbrato l'entrata${turnoOra ? ` (turno dalle ${turnoOra})` : ''}`,
+          url:   '/dashboard'
+        }).catch(e => console.error('push assente:', e))
+      }
+      if (emailCc) {
+        const { email, nome } = await ctx(cid, setting.email_destinatario)
+        if (email) await sendNotificaAssente({ emailOwner: email, nomeDipendente: emp.nome, companyNome: nome, turnoOra })
+      }
     }
   }
 }
@@ -197,6 +236,8 @@ export async function checkTimbraturaMancante() {
     const cid       = setting.company_id
     const ore       = setting.parametri?.ore_soglia ?? 10
     const targetIds = setting.target_ids?.length ? setting.target_ids : null
+    const ownerId   = await ownerUserAccountId(cid)
+    const emailCc   = await emailCcEnabled(cid)
 
     const [{ data: emps }, { data: pres }] = await Promise.all([
       supabase.from('dipendenti').select('id, nome, badge_uid').eq('company_id', cid),
@@ -218,11 +259,20 @@ export async function checkTimbraturaMancante() {
       if (hoursSince < ore) continue
       const key = `${cid}:mancante:${emp.id}:${today}`
       if (!canSend(key)) continue
-      const { email, nome } = await ctx(cid, setting.email_destinatario)
-      if (!email) continue
       const dt = new Date(lastIn.created_at)
       const orario = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
-      await sendNotificaTimbraturaMancante({ emailOwner: email, nomeDipendente: emp.nome, companyNome: nome, orarioEntrata: orario })
+
+      if (ownerId) {
+        sendPushToUser(ownerId, {
+          title: `Uscita mancante: ${emp.nome}`,
+          body:  `Entrata alle ${orario}, uscita non ancora timbrata`,
+          url:   '/dashboard'
+        }).catch(e => console.error('push timbratura_mancante:', e))
+      }
+      if (emailCc) {
+        const { email, nome } = await ctx(cid, setting.email_destinatario)
+        if (email) await sendNotificaTimbraturaMancante({ emailOwner: email, nomeDipendente: emp.nome, companyNome: nome, orarioEntrata: orario })
+      }
     }
   }
 }
@@ -240,6 +290,8 @@ export async function checkLettoriOffline() {
     const cid       = setting.company_id
     const mins      = setting.parametri?.minuti_assenza ?? 60
     const targetIds = setting.target_ids?.length ? setting.target_ids : null
+    const ownerId   = await ownerUserAccountId(cid)
+    const emailCc   = await emailCcEnabled(cid)
 
     const { data: readers } = await supabase.from('dispositivo')
       .select('id, reader_id, nome').eq('company_id', cid)
@@ -256,13 +308,21 @@ export async function checkLettoriOffline() {
       if (minSince < mins) continue
       const key = `${cid}:reader_off:${reader.reader_id}:${today}`
       if (!canSend(key)) continue
-      const { email, nome } = await ctx(cid, setting.email_destinatario)
-      if (!email) continue
-      await sendNotificaLettoreOffline({
-        emailOwner: email, companyNome: nome,
-        nomeReader: reader.nome || reader.reader_id,
-        minutiAssenza: Math.round(minSince)
-      })
+      const nomeReader = reader.nome || reader.reader_id
+      const minutiAssenza = Math.round(minSince)
+
+      if (ownerId) {
+        const ore = minutiAssenza >= 60 ? `${Math.round(minutiAssenza / 60)}h` : `${minutiAssenza} min`
+        sendPushToUser(ownerId, {
+          title: `Lettore offline: ${nomeReader}`,
+          body:  `Non invia dati da ${ore}`,
+          url:   '/readers'
+        }).catch(e => console.error('push lettore_offline:', e))
+      }
+      if (emailCc) {
+        const { email, nome } = await ctx(cid, setting.email_destinatario)
+        if (email) await sendNotificaLettoreOffline({ emailOwner: email, companyNome: nome, nomeReader, minutiAssenza })
+      }
     }
   }
 }
@@ -304,10 +364,19 @@ export async function checkRiepilogoGiornaliero() {
       else if (withShift.has(emp.id) && emp.turni_attivi && !lastTipo[emp.badge_uid]) { assenti.push(emp.nome) }
     }
 
-    const { email, nome } = await ctx(cid)
-    if (!email) continue
-
-    await sendRiepilogoGiornaliero({ emailOwner: email, companyNome: nome, data: today, presenti, assenti })
+    const ownerId = await ownerUserAccountId(cid)
+    if (ownerId) {
+      const nome = await companyNome(cid)
+      sendPushToUser(ownerId, {
+        title: `Riepilogo ${today}`,
+        body:  `Presenti: ${presenti.length} — Assenti: ${assenti.length}`,
+        url:   '/dashboard'
+      }).catch(e => console.error('push riepilogo_giornaliero:', e))
+    }
+    if (await emailCcEnabled(cid)) {
+      const { email, nome } = await ctx(cid)
+      if (email) await sendRiepilogoGiornaliero({ emailOwner: email, companyNome: nome, data: today, presenti, assenti })
+    }
     await supabase.from('notifiche_settings').update({ last_triggered_at: now.toISOString() })
       .eq('company_id', cid).eq('tipo', 'riepilogo_giornaliero')
   }
@@ -351,12 +420,21 @@ export async function checkRiepilogoSettimanale() {
       empHours[emp.nome] = Number(calcHours(empP).toFixed(1))
     }
 
-    const { email, nome } = await ctx(cid)
-    if (!email) continue
-
     const wStart = lastMon.toISOString().split('T')[0]
     const wEnd   = lastSun.toISOString().split('T')[0]
-    await sendRiepilogoSettimanale({ emailOwner: email, companyNome: nome, weekStart: wStart, weekEnd: wEnd, empHours })
+
+    const ownerId = await ownerUserAccountId(cid)
+    if (ownerId) {
+      sendPushToUser(ownerId, {
+        title: `Riepilogo settimanale`,
+        body:  `Settimana ${wStart} – ${wEnd} pronta`,
+        url:   '/dashboard'
+      }).catch(e => console.error('push riepilogo_settimanale:', e))
+    }
+    if (await emailCcEnabled(cid)) {
+      const { email, nome } = await ctx(cid)
+      if (email) await sendRiepilogoSettimanale({ emailOwner: email, companyNome: nome, weekStart: wStart, weekEnd: wEnd, empHours })
+    }
     await supabase.from('notifiche_settings').update({ last_triggered_at: now.toISOString() })
       .eq('company_id', cid).eq('tipo', 'riepilogo_settimanale')
   }
@@ -375,6 +453,8 @@ export async function checkStraordinarioMensile() {
     const cid       = setting.company_id
     const soglia    = setting.parametri?.ore_soglia ?? 10
     const targetIds = setting.target_ids?.length ? setting.target_ids : null
+    const ownerId   = await ownerUserAccountId(cid)
+    const emailCc   = await emailCcEnabled(cid)
 
     const [{ data: emps }, { data: pres }, { data: allShifts }] = await Promise.all([
       supabase.from('dipendenti').select('id, nome, badge_uid').eq('company_id', cid).eq('turni_attivi', true),
@@ -403,13 +483,19 @@ export async function checkStraordinarioMensile() {
       const key = `${cid}:straord:${emp.id}:${thisMonth}`
       if (!canSend(key)) continue
 
-      const { email, nome } = await ctx(cid, setting.email_destinatario)
-      if (!email) continue
+      const oreStraord = Number(straord.toFixed(1))
 
-      await sendNotificaStraordinario({
-        emailOwner: email, nomeDipendente: emp.nome, companyNome: nome,
-        oreStraord: Number(straord.toFixed(1)), soglia
-      })
+      if (ownerId) {
+        sendPushToUser(ownerId, {
+          title: `Straordinario: ${emp.nome}`,
+          body:  `${oreStraord}h accumulate questo mese (soglia ${soglia}h)`,
+          url:   '/dashboard'
+        }).catch(e => console.error('push straordinario_mensile:', e))
+      }
+      if (emailCc) {
+        const { email, nome } = await ctx(cid, setting.email_destinatario)
+        if (email) await sendNotificaStraordinario({ emailOwner: email, nomeDipendente: emp.nome, companyNome: nome, oreStraord, soglia })
+      }
     }
   }
 }
@@ -437,6 +523,14 @@ export async function onComponenteErrore({ companyId, nomeReader, issues }) {
     if (!settings?.alert_email || settings.alert_attivo === false) return
     if (!companyAlertEnabled(settings, companyId)) return
     const nome = await companyNome(companyId)
+
+    const adminIds = await superadminUserAccountIds()
+    sendPushToUsers(adminIds, {
+      title: `Errore componente: ${nomeReader}`,
+      body:  `${nome} — ${issues}`,
+      url:   '/admin'
+    }).catch(e => console.error('push componente_errore:', e))
+
     await sendNotificaComponenteErrore({
       emailAdmin: settings.alert_email, companyNome: nome, nomeReader, issues
     })
@@ -482,9 +576,17 @@ export async function checkAlertSuperadmin() {
     const shouldAlert = !alertInviato || (lastPing && alertInviato < lastPing)
     if (!shouldAlert) continue
 
+    const minutiAssenza = minsSincePing === Infinity ? 999 : Math.round(minsSincePing)
+
+    superadminUserAccountIds().then(ids => sendPushToUsers(ids, {
+      title: `Lettore offline: ${nomeReader}`,
+      body:  `${companyNomeStr} — assente da ${minutiAssenza} min`,
+      url:   '/admin'
+    })).catch(e => console.error('push alert_superadmin lettore_offline:', e))
+
     await sendNotificaLettoreOffline({
       emailOwner: alertEmail, companyNome: companyNomeStr, nomeReader,
-      minutiAssenza: minsSincePing === Infinity ? 999 : Math.round(minsSincePing)
+      minutiAssenza
     })
     const { error: updErr } = await supabase.from('dispositivo')
       .update({ alert_inviato_at: now.toISOString() })
@@ -630,7 +732,7 @@ export async function checkPromemoriaTimbratura() {
   // Dipendenti con turni attivi e almeno un promemoria configurato
   const { data: emps } = await supabase
     .from('dipendenti')
-    .select('id, nome, email, badge_uid, promemoria_entrata_minuti, promemoria_uscita_minuti')
+    .select('id, nome, email, company_id, badge_uid, promemoria_entrata_minuti, promemoria_uscita_minuti')
     .eq('turni_attivi', true)
     .not('email', 'is', null)
     .or('promemoria_entrata_minuti.not.is.null,promemoria_uscita_minuti.not.is.null')
@@ -662,11 +764,19 @@ export async function checkPromemoriaTimbratura() {
         if (nowMins >= triggerMins && !entered.has(emp.badge_uid)) {
           const key = `promemoria_entrata:${emp.id}:${today}`
           if (canSend(key)) {
-            await sendPromemoriaEntrata({
-              emailDipendente: emp.email,
-              nomeDipendente:  emp.nome,
-              oraTurno:        shift.ingresso_1.slice(0, 5)
-            }).catch(e => console.error('sendPromemoriaEntrata:', e))
+            const oraTurno = shift.ingresso_1.slice(0, 5)
+            dipendenteUserAccountId(emp.id).then(id => id && sendPushToUser(id, {
+              title: `Promemoria entrata — ${oraTurno}`,
+              body:  `Il tuo turno era previsto alle ${oraTurno}, non risulta ancora nessuna timbratura`,
+              url:   '/portale'
+            })).catch(e => console.error('push promemoria_entrata:', e))
+            if (await emailCcEnabled(emp.company_id)) {
+              await sendPromemoriaEntrata({
+                emailDipendente: emp.email,
+                nomeDipendente:  emp.nome,
+                oraTurno
+              }).catch(e => console.error('sendPromemoriaEntrata:', e))
+            }
           }
         }
       }
@@ -678,11 +788,19 @@ export async function checkPromemoriaTimbratura() {
         if (nowMins >= triggerMins && !exited.has(emp.badge_uid)) {
           const key = `promemoria_uscita:${emp.id}:${today}`
           if (canSend(key)) {
-            await sendPromemoriaUscita({
-              emailDipendente: emp.email,
-              nomeDipendente:  emp.nome,
-              oraTurno:        oraUscita.slice(0, 5)
-            }).catch(e => console.error('sendPromemoriaUscita:', e))
+            const oraTurnoUscita = oraUscita.slice(0, 5)
+            dipendenteUserAccountId(emp.id).then(id => id && sendPushToUser(id, {
+              title: `Promemoria uscita — ${oraTurnoUscita}`,
+              body:  `Il tuo turno prevedeva l'uscita alle ${oraTurnoUscita}, non risulta ancora nessuna timbratura`,
+              url:   '/portale'
+            })).catch(e => console.error('push promemoria_uscita:', e))
+            if (await emailCcEnabled(emp.company_id)) {
+              await sendPromemoriaUscita({
+                emailDipendente: emp.email,
+                nomeDipendente:  emp.nome,
+                oraTurno: oraTurnoUscita
+              }).catch(e => console.error('sendPromemoriaUscita:', e))
+            }
           }
         }
       }

@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   Calendar, UserX, Clock, TrendingUp,
-  WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle, ChevronLeft
+  WifiOff, BarChart2, ShieldAlert, LogOut, CheckCircle2, XCircle, ChevronLeft, Bell, Mail
 } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
+import { isPushSupported, requestPushPermission } from "../push";
 
 // ─── notification type definitions ───────────────────────────────────────────
 
@@ -16,7 +17,7 @@ const CONFIGS = [
     color:      "text-red-500",
     bg:         "bg-red-50 dark:bg-red-900/10",
     title:      "Dipendente assente",
-    desc:       "Email quando un dipendente non timbra entro la tolleranza dall'inizio del turno",
+    desc:       "Notifica push quando un dipendente non timbra entro la tolleranza dall'inizio del turno",
     targetType: "employee",
     params:     [{ key: "minuti_tolleranza", label: "Minuti di tolleranza", type: "number", min: 5, max: 120, default: 30, unit: "min" }]
   },
@@ -26,7 +27,7 @@ const CONFIGS = [
     color:      "text-amber-500",
     bg:         "bg-amber-50 dark:bg-amber-900/10",
     title:      "Ritardo",
-    desc:       "Email quando un dipendente timbra l'entrata dopo l'orario del turno",
+    desc:       "Notifica push quando un dipendente timbra l'entrata dopo l'orario del turno",
     targetType: "employee",
     params:     [{ key: "minuti_tolleranza", label: "Tolleranza prima di notificare", type: "number", min: 0, max: 60, default: 5, unit: "min" }]
   },
@@ -36,7 +37,7 @@ const CONFIGS = [
     color:      "text-orange-500",
     bg:         "bg-orange-50 dark:bg-orange-900/10",
     title:      "Timbratura uscita mancante",
-    desc:       "Email quando un dipendente è ancora dentro dopo il tempo limite",
+    desc:       "Notifica push quando un dipendente è ancora dentro dopo il tempo limite",
     targetType: "employee",
     params:     [{ key: "ore_soglia", label: "Ore senza uscita", type: "number", min: 1, max: 24, default: 10, unit: "h" }]
   },
@@ -46,7 +47,7 @@ const CONFIGS = [
     color:      "text-red-600",
     bg:         "bg-red-50 dark:bg-red-900/10",
     title:      "Badge non riconosciuto",
-    desc:       "Email quando viene scansionato un badge non registrato nel sistema",
+    desc:       "Notifica push quando viene scansionato un badge non registrato nel sistema",
     targetType: "reader",
     params:     []
   },
@@ -56,7 +57,7 @@ const CONFIGS = [
     color:      "text-zinc-500",
     bg:         "bg-zinc-50 dark:bg-zinc-800/40",
     title:      "Lettore NFC offline",
-    desc:       "Email quando un lettore non invia dati da troppo tempo",
+    desc:       "Notifica push quando un lettore non invia dati da troppo tempo",
     targetType: "reader",
     params:     [{ key: "minuti_assenza", label: "Minuti senza dati", type: "number", min: 15, max: 1440, default: 60, unit: "min" }]
   },
@@ -66,7 +67,7 @@ const CONFIGS = [
     color:      "text-purple-500",
     bg:         "bg-purple-50 dark:bg-purple-900/10",
     title:      "Straordinario mensile",
-    desc:       "Email quando un dipendente supera il limite di ore straordinario nel mese",
+    desc:       "Notifica push quando un dipendente supera il limite di ore straordinario nel mese",
     targetType: "employee",
     params:     [{ key: "ore_soglia", label: "Soglia ore straordinario", type: "number", min: 1, max: 200, default: 10, unit: "h" }]
   },
@@ -76,7 +77,7 @@ const CONFIGS = [
     color:      "text-blue-500",
     bg:         "bg-blue-50 dark:bg-blue-900/10",
     title:      "Riepilogo giornaliero",
-    desc:       "Email ogni sera con il riepilogo delle presenze del giorno",
+    desc:       "Notifica push ogni sera con il riepilogo delle presenze del giorno",
     targetType: "employee",
     params:     [{ key: "ora_invio", label: "Ora di invio", type: "time", default: "18:00" }]
   },
@@ -86,7 +87,7 @@ const CONFIGS = [
     color:      "text-indigo-500",
     bg:         "bg-indigo-50 dark:bg-indigo-900/10",
     title:      "Riepilogo settimanale",
-    desc:       "Email ogni lunedì con il riepilogo ore della settimana precedente",
+    desc:       "Notifica push ogni lunedì con il riepilogo ore della settimana precedente",
     targetType: "employee",
     params:     [{ key: "ora_invio", label: "Ora di invio (lunedì)", type: "time", default: "08:00" }]
   }
@@ -313,6 +314,11 @@ export default function Notifications() {
   const [toast, setToast]       = useState(null);
   const [employees, setEmployees] = useState([]);
   const [readers, setReaders]     = useState([]);
+  const [pushPermission, setPushPermission] = useState(
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported"
+  );
+  const [emailCc, setEmailCc]         = useState(false);
+  const [emailCcLoading, setEmailCcLoading] = useState(true);
   const token = localStorage.getItem("token");
 
   const { pulling, refreshing, distance } = usePullToRefresh(loadSettings)
@@ -320,7 +326,36 @@ export default function Notifications() {
   useEffect(() => {
     loadSettings();
     loadTargetLists();
+    loadEmailCc();
   }, []);
+
+  async function loadEmailCc() {
+    try {
+      const res  = await fetch(`${API_URL}/api/notifications/email-cc`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.success) setEmailCc(!!data.enabled);
+    } catch (e) { }
+    finally { setEmailCcLoading(false); }
+  }
+
+  async function handleEmailCcToggle(next) {
+    setEmailCc(next);
+    try {
+      const res  = await fetch(`${API_URL}/api/notifications/email-cc`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ enabled: next })
+      });
+      const data = await res.json();
+      if (!data.success) { setEmailCc(!next); setToast({ msg: "Errore salvataggio", type: "error" }); }
+    } catch (e) { setEmailCc(!next); setToast({ msg: "Errore server", type: "error" }); }
+  }
+
+  async function handleEnablePush() {
+    const permission = await requestPushPermission();
+    setPushPermission(permission);
+    if (permission === "granted") setToast({ msg: "Notifiche push abilitate", type: "ok" });
+  }
 
   async function loadSettings() {
     try {
@@ -386,8 +421,39 @@ export default function Notifications() {
         <div className="mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Notifiche</h2>
           <p className="text-sm sm:text-base text-zinc-500 mt-1 sm:mt-2">
-            Le email vengono inviate all'indirizzo del tuo account. Attiva e configura le notifiche che ti interessano.
+            Le notifiche arrivano come push sul tuo dispositivo. Attiva e configura quelle che ti interessano.
           </p>
+        </div>
+
+        <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5 mb-4 sm:mb-5 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center shrink-0">
+            <Bell size={17} className="text-indigo-500" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Notifiche push</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {pushPermission === "granted" ? "Abilitate su questo dispositivo"
+                : pushPermission === "denied" ? "Bloccate dal browser — riabilitale dalle impostazioni del sito"
+                : pushPermission === "unsupported" ? "Non supportate su questo browser/dispositivo"
+                : "Non ancora abilitate su questo dispositivo"}
+            </p>
+          </div>
+          {pushPermission === "default" && (
+            <button onClick={handleEnablePush} className="shrink-0 h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium">
+              Abilita
+            </button>
+          )}
+        </div>
+
+        <div className="rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-4 sm:p-5 mb-6 sm:mb-8 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center shrink-0">
+            <Mail size={17} className="text-teal-500" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Invia anche via email</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Oltre alla push, ricevi queste notifiche anche via email</p>
+          </div>
+          <Toggle checked={emailCc} onChange={handleEmailCcToggle} disabled={emailCcLoading} />
         </div>
 
         {loading ? (

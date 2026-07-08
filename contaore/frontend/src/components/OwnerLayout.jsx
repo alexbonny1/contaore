@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { apiFetch } from "../api";
 import OwnerHeader from "./OwnerHeader";
 import BottomNav from "./BottomNav";
+import PushPrompt from "./PushPrompt";
 
 /**
  * Layout persistente area titolare: header + barra in basso montati UNA sola volta.
@@ -14,12 +15,6 @@ export default function OwnerLayout() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const [portaleAttivo, setPortaleAttivo] = useState(user.portale_dipendenti !== false);
   const [requestsData, setRequestsData]   = useState(null);
-
-  /* THEME: applica il tema salvato una volta sola */
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") document.documentElement.classList.add("dark");
-  }, []);
 
   const refreshRequests = useCallback(() => {
     return apiFetch('/api/requests/dashboard')
@@ -56,6 +51,7 @@ export default function OwnerLayout() {
       </main>
 
       <BottomNav portaleAttivo={portaleAttivo} pendingCount={pendingCount} />
+      <PushPrompt />
     </div>
   );
 }

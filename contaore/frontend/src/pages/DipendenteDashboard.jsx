@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import {
   Clock, Calendar, AlertCircle, CheckCircle2,
   XCircle, ChevronDown, ChevronUp, Send, LogOut, Lock,
-  Sun, Moon, TrendingUp, UserCheck, Umbrella, Pencil, Download,
+  Sun, TrendingUp, UserCheck, Umbrella, Pencil, Download,
   User, Shield, ChevronLeft, Trash2, Bell
 } from "lucide-react";
 import { API_URL, apiFetch } from "../api";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import DipendenteBottomNav from "../components/DipendenteBottomNav";
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
+import { ThemeRow } from "../components/ThemeSelector";
+import PushPrompt from "../components/PushPrompt";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -55,7 +57,6 @@ export default function DipendenteDashboard() {
 
   const navigate = useNavigate();
 
-  const [dark, setDark]                 = useState(false);
   const [loading, setLoading]           = useState(true);
   const [data, setData]                 = useState(null);
   const [toast, setToast]               = useState(null);
@@ -147,16 +148,6 @@ export default function DipendenteDashboard() {
   const [editPromemoriaEntrata, setEditPromemoriaEntrata] = useState(null);
   const [editPromemoriaUscita, setEditPromemoriaUscita]   = useState(null);
   const [savingPromemoria, setSavingPromemoria]           = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
-  }, []);
-
-  useEffect(() => {
-    if (dark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
-    else       { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
-  }, [dark]);
 
   function showToast(msg, type = "success") { setToast({ message: msg, type }); }
 
@@ -1431,14 +1422,7 @@ export default function DipendenteDashboard() {
 
                 {/* Tema */}
                 <SettingsGroup>
-                  <SettingRow
-                    onClick={() => setDark(d => !d)}
-                    icon={dark ? Sun : Moon}
-                    iconBg="bg-zinc-100 dark:bg-zinc-800"
-                    iconColor="text-zinc-600 dark:text-zinc-300"
-                    title={dark ? "Modalità chiara" : "Modalità scura"}
-                    subtitle={dark ? "Passa al tema chiaro" : "Passa al tema scuro"}
-                  />
+                  <ThemeRow />
                 </SettingsGroup>
 
                 {/* Logout */}
@@ -1712,6 +1696,7 @@ export default function DipendenteDashboard() {
       </div>
 
       <DipendenteBottomNav active={tab} onSelect={setTab} />
+      <PushPrompt />
     </div>
 
     {showChangePassword && (

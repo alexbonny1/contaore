@@ -4,9 +4,11 @@ import {
   Building2, Plus, Trash2,
   X, Copy, Check, Clock, ChevronDown, ChevronUp,
   Users, ToggleLeft, ToggleRight, Mail, RefreshCw, CheckCircle2, XCircle, Radio, Download,
-  FileText, ExternalLink, Shield, Upload, RotateCcw, Sun, Moon, LogOut, Key
+  FileText, ExternalLink, Shield, Upload, RotateCcw, LogOut, Key
 } from "lucide-react";
 import { API_URL } from "../api";
+import { ThemeSegmented } from "../components/ThemeSelector";
+import PushPrompt from "../components/PushPrompt";
 
 function Toast({ message, type, onClose }) {
   useEffect(() => {
@@ -57,7 +59,6 @@ export default function Admin() {
 
   const navigate = useNavigate();
 
-  const [dark, setDark]                     = useState(false);
   const [companies, setCompanies]           = useState([]);
   const [loading, setLoading]               = useState(true);
 
@@ -525,16 +526,6 @@ export default function Admin() {
     setTimeout(() => setCopiedId(null), 2000);
   }
 
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") { setDark(true); document.documentElement.classList.add("dark"); }
-  }, []);
-
-  useEffect(() => {
-    if (dark) { document.documentElement.classList.add("dark"); localStorage.setItem("theme", "dark"); }
-    else       { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light"); }
-  }, [dark]);
-
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -566,9 +557,7 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setDark(d => !d)} className="flex items-center justify-center h-10 w-10 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
-              {dark ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
+            <ThemeSegmented compact />
             <button onClick={logout} className="flex items-center gap-1.5 h-10 px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-sm font-medium">
               <LogOut size={14} /> Esci
             </button>
@@ -1403,6 +1392,7 @@ export default function Admin() {
         </div>}{/* fine tab aziende */}
 
       </div>
+      <PushPrompt />
     </div>
   );
 }

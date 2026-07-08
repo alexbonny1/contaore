@@ -2,6 +2,8 @@ import bcrypt from 'bcrypt'
 import { supabase }              from '../services/supabase.js'
 import { authenticateDipendente } from '../middleware/auth.js'
 import { sendNotificaRichiestaFerie, sendCredenziali, sendNotificaRichiestaGiustificazione } from '../services/email.js'
+import { sendPushToUser, ownerUserAccountId } from '../services/webpush.js'
+import { emailCcEnabled } from '../services/notifiche.js'
 import { generatePassword, buildUsername, findAvailableUsername } from '../utils/userHelpers.js'
 import {
   GIORNI, timeToMinutes, shiftDurationMins, shiftExpectedHours,
@@ -351,15 +353,8 @@ export default async function dipendenteRoutes(fastify) {
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
-        // notifica email al titolare (se ha email)
+        // notifica al titolare: push di default, email solo se la company l'ha attivata
         try {
-          const { data: owner } = await supabase
-            .from('user_account')
-            .select('email')
-            .eq('company_id', company_id)
-            .eq('role', 'owner')
-            .maybeSingle()
-
           const { data: emp } = await supabase
             .from('dipendenti')
             .select('nome, cognome')
@@ -372,14 +367,30 @@ export default async function dipendenteRoutes(fastify) {
             .eq('id', company_id)
             .single()
 
-          if (owner?.email) {
-            await sendNotificaRichiestaGiustificazione({
-              emailOwner:     owner.email,
-              nomeDipendente: `${emp.nome} ${emp.cognome}`,
-              data,
-              motivo:         motivo.trim(),
-              companyNome:    company?.nome || ''
-            })
+          const nomeDipendente = `${emp.nome} ${emp.cognome}`
+
+          const ownerId = await ownerUserAccountId(company_id)
+          if (ownerId) {
+            sendPushToUser(ownerId, {
+              title: `Nuova giustificazione — ${nomeDipendente}`,
+              body:  `${data} — ${motivo.trim()}`,
+              url:   '/requests'
+            }).catch(e => console.error('push richiesta_giustificazione:', e))
+          }
+
+          if (await emailCcEnabled(company_id)) {
+            const { data: owner } = await supabase
+              .from('user_account').select('email')
+              .eq('company_id', company_id).eq('role', 'owner').maybeSingle()
+            if (owner?.email) {
+              await sendNotificaRichiestaGiustificazione({
+                emailOwner:     owner.email,
+                nomeDipendente,
+                data,
+                motivo:         motivo.trim(),
+                companyNome:    company?.nome || ''
+              })
+            }
           }
         } catch (mailErr) {
         }
@@ -517,15 +528,8 @@ export default async function dipendenteRoutes(fastify) {
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
-        // notifica email al titolare (se ha email)
+        // notifica al titolare: push di default, email solo se la company l'ha attivata
         try {
-          const { data: owner } = await supabase
-            .from('user_account')
-            .select('email')
-            .eq('company_id', company_id)
-            .eq('role', 'owner')
-            .maybeSingle()
-
           const { data: emp } = await supabase
             .from('dipendenti')
             .select('nome, cognome')
@@ -538,14 +542,30 @@ export default async function dipendenteRoutes(fastify) {
             .eq('id', company_id)
             .single()
 
-          if (owner?.email) {
-            await sendNotificaRichiestaFerie({
-              emailOwner:      owner.email,
-              nomeDipendente:  `${emp.nome} ${emp.cognome}`,
-              dataInizio:      data_inizio,
-              dataFine:        data_fine,
-              companyNome:     company?.nome || ''
-            })
+          const nomeDipendente = `${emp.nome} ${emp.cognome}`
+
+          const ownerId = await ownerUserAccountId(company_id)
+          if (ownerId) {
+            sendPushToUser(ownerId, {
+              title: `Nuova richiesta ferie — ${nomeDipendente}`,
+              body:  `Dal ${data_inizio} al ${data_fine}`,
+              url:   '/requests'
+            }).catch(e => console.error('push richiesta_ferie:', e))
+          }
+
+          if (await emailCcEnabled(company_id)) {
+            const { data: owner } = await supabase
+              .from('user_account').select('email')
+              .eq('company_id', company_id).eq('role', 'owner').maybeSingle()
+            if (owner?.email) {
+              await sendNotificaRichiestaFerie({
+                emailOwner:      owner.email,
+                nomeDipendente,
+                dataInizio:      data_inizio,
+                dataFine:        data_fine,
+                companyNome:     company?.nome || ''
+              })
+            }
           }
         } catch (mailErr) {
         }

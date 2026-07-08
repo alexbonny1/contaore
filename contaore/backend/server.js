@@ -31,6 +31,7 @@ import ferieRoutes      from './routes/ferie.js'
 import requestsRoutes   from './routes/requests.js'    // ← nuovo
 import pauseRoutes      from './routes/pause.js'       // ← nuovo
 import notificheRoutes  from './routes/notifiche.js'
+import pushRoutes       from './routes/push.js'
 import billingRoutes    from './routes/billing.js'
 import { startScheduler } from './services/notifiche.js'
 
@@ -99,6 +100,7 @@ await fastify.register(ferieRoutes)
 await fastify.register(requestsRoutes)     // ← nuovo
 await fastify.register(pauseRoutes)        // ← nuovo
 await fastify.register(notificheRoutes)
+await fastify.register(pushRoutes)
 await fastify.register(billingRoutes)
 
 fastify.get('/', async () => {
