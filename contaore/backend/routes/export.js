@@ -174,7 +174,12 @@ function buildEmployeeData(reads, shifts, turniAttivi, turniAttivatIl, selectedM
       month: 'long', year: 'numeric'
     })
 
-    presentDays[dateStr] = { dateStr, meseName, coppie, oreLavorate, oreEffettive, stato, ritardoMin, straordinarioOre, orePreviste, assente: false }
+    // Una giustificazione approvata per questo giorno prevale sullo stato calcolato
+    // dalla presenza (es. una timbratura parziale/anomala non deve nascondere il
+    // fatto che il titolare ha approvato una giustificazione per quella data).
+    const statoFinale = giustSet.has(dateStr) ? 'giustificata' : stato
+
+    presentDays[dateStr] = { dateStr, meseName, coppie, oreLavorate, oreEffettive, stato: statoFinale, ritardoMin, straordinarioOre, orePreviste, assente: false }
   })
 
   // giorni assenti

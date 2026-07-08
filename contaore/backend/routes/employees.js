@@ -189,6 +189,11 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
       }
     }
 
+    // Una giustificazione approvata per questo giorno prevale sullo stato calcolato
+    // dalla presenza (es. una timbratura parziale/anomala non deve nascondere il
+    // fatto che il titolare ha approvato una giustificazione per quella data).
+    if (giustificazioni.some(g => g.stato === 'approvata' && g.data === giorno)) stato = 'giustificata'
+
     return {
       giorno,
       coppie:           buildCoppie(daySessions),
