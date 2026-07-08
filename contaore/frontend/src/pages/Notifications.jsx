@@ -352,9 +352,27 @@ export default function Notifications() {
   }
 
   async function handleEnablePush() {
-    const permission = await requestPushPermission();
+    const { permission, subscribed, error } = await requestPushPermission();
     setPushPermission(permission);
-    if (permission === "granted") setToast({ msg: "Notifiche push abilitate", type: "ok" });
+    if (permission === "granted" && subscribed) {
+      setToast({ msg: "Notifiche push abilitate", type: "ok" });
+    } else if (permission === "granted" && !subscribed) {
+      setToast({ msg: `Permesso concesso ma registrazione fallita: ${error || "errore sconosciuto"}`, type: "error" });
+    }
+  }
+
+  async function handleTestPush() {
+    try {
+      const res  = await fetch(`${API_URL}/api/push/test`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.success) {
+        setToast({ msg: `Notifica di prova inviata (${data.subscriptions} dispositivo/i)`, type: "ok" });
+      } else {
+        setToast({ msg: data.message || data.error || "Errore invio notifica di prova", type: "error" });
+      }
+    } catch (e) {
+      setToast({ msg: "Errore di rete durante il test", type: "error" });
+    }
   }
 
   async function loadSettings() {
@@ -441,6 +459,11 @@ export default function Notifications() {
           {pushPermission === "default" && (
             <button onClick={handleEnablePush} className="shrink-0 h-9 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-medium">
               Abilita
+            </button>
+          )}
+          {pushPermission === "granted" && (
+            <button onClick={handleTestPush} className="shrink-0 h-9 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-medium">
+              Invia prova
             </button>
           )}
         </div>
