@@ -178,7 +178,7 @@ function ChartPanel({ historyMonths, turniAttivi }) {
   const pieData = useMemo(() => {
     const counts = {};
     giorni.forEach(d => {
-      const k = d.assente ? "assente" : d.stato;
+      const k = d.stato;
       if (!chartPrefs.hiddenStati.includes(k)) counts[k] = (counts[k] ?? 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
@@ -209,7 +209,7 @@ function ChartPanel({ historyMonths, turniAttivi }) {
       const week = giorni.filter(d => new Date(d.giorno + "T12:00:00").getDay() === jsDay);
       return {
         g: label,
-        ass: week.filter(d => d.assente || d.stato === "assente").length,
+        ass: week.filter(d => d.stato === "assente").length,
         rit: week.filter(d => (d.ritardo_minuti ?? 0) > 0 || d.stato === "ritardo").length,
         str: week.filter(d => (d.ore_straordinario ?? 0) > 0 || d.stato === "straordinario").length,
       };
@@ -768,15 +768,15 @@ export default function EmployeeDetails() {
                     {month.giorni.map(day => {
                       let badgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
                       let badgeLabel = 'Presente'
-                      if (day.assente) {
-                        badgeColor = 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                        badgeLabel = 'Assente'
-                      } else if (day.stato === 'ferie') {
+                      if (day.stato === 'ferie') {
                         badgeColor = 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
                         badgeLabel = 'Ferie'
                       } else if (day.stato === 'giustificata') {
                         badgeColor = 'bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400'
                         badgeLabel = 'Giustificata'
+                      } else if (day.assente) {
+                        badgeColor = 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                        badgeLabel = 'Assente'
                       } else if (day.stato === 'parziale') {
                         badgeColor = 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'
                         badgeLabel = 'Parziale'
