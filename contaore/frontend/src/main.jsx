@@ -5,6 +5,16 @@ import posthog from "posthog-js";
 import * as Sentry from "@sentry/react";
 
 import "./index.css";
+import { initTheme } from "./theme";
+import { registerServiceWorker } from "./push";
+
+// Applica il tema (chiaro/scuro/automatico) subito, prima del render, per
+// evitare un flash del tema sbagliato; resta anche in ascolto dei cambi di
+// tema del sistema operativo per l'opzione "automatico".
+initTheme();
+
+// Service worker per le notifiche push (non blocca il render)
+registerServiceWorker();
 
 // ─── PostHog analytics ────────────────────────────────────────────────────────
 // Parte disattivato di default: si attiva solo se l'utente accetta dal banner

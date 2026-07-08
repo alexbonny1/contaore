@@ -407,5 +407,24 @@ CREATE INDEX IF NOT EXISTS idx_richieste_timbratura_company ON richieste_timbrat
 CREATE INDEX IF NOT EXISTS idx_giustificazioni_company ON giustificazioni(company_id, dipendente_id);
 
 -- ============================================================================
+-- 8. NOTIFICHE PUSH (web-push / VAPID)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_account_id uuid NOT NULL REFERENCES user_account(id) ON DELETE CASCADE,
+  endpoint text NOT NULL UNIQUE,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  user_agent text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_account_id);
+
+-- company: interruttore "invia anche via email" per le notifiche passate a push
+ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS notifiche_anche_email boolean DEFAULT false;
+
+-- ============================================================================
 -- Migration complete: nessun dato cancellato, tutte le operazioni idempotenti
 -- ============================================================================

@@ -23,6 +23,34 @@ const DEFAULTS = {
 
 export default async function notificheRoutes(fastify) {
 
+  /* GET /api/notifications/email-cc — stato dell'interruttore "invia anche via email" */
+  fastify.get('/api/notifications/email-cc', { preHandler: [authenticateOwner, requirePermission('can_manage_employees')] }, async (req, reply) => {
+    try {
+      const { data } = await supabase
+        .from('company').select('notifiche_anche_email')
+        .eq('id', req.user.company_id).maybeSingle()
+      return reply.send({ success: true, enabled: !!data?.notifiche_anche_email })
+    } catch (err) {
+      req.log.error(err)
+      return reply.send({ success: false })
+    }
+  })
+
+  /* PUT /api/notifications/email-cc */
+  fastify.put('/api/notifications/email-cc', { preHandler: [authenticateOwner, requirePermission('can_manage_employees')] }, async (req, reply) => {
+    try {
+      const { enabled } = req.body
+      const { error } = await supabase
+        .from('company').update({ notifiche_anche_email: !!enabled })
+        .eq('id', req.user.company_id)
+      if (error) return reply.send({ success: false, error: error.message })
+      return reply.send({ success: true, enabled: !!enabled })
+    } catch (err) {
+      req.log.error(err)
+      return reply.send({ success: false })
+    }
+  })
+
   /* GET /api/notifications/settings */
   fastify.get('/api/notifications/settings', { preHandler: [authenticateOwner, requirePermission('can_manage_employees')] }, async (req, reply) => {
     try {

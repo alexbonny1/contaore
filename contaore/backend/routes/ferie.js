@@ -1,7 +1,50 @@
 import { supabase }          from '../services/supabase.js'
 import { authenticateOwner, requirePermission }  from '../middleware/auth.js'
 import { sendEsitoFerie, sendEsitoGiustificazione } from '../services/email.js'
+import { sendPushToUser, dipendenteUserAccountId } from '../services/webpush.js'
+import { emailCcEnabled } from '../services/notifiche.js'
 import { getAllowedDipendenteIds, isDipendenteAllowed } from '../utils/adminAccess.js'
+
+async function notifyEsitoFerie(companyId, richiesta, approvata) {
+  const dipId = await dipendenteUserAccountId(richiesta.dipendente_id)
+  if (dipId) {
+    sendPushToUser(dipId, {
+      title: `Richiesta ferie ${approvata ? 'approvata' : 'rifiutata'}`,
+      body:  `Dal ${richiesta.data_inizio} al ${richiesta.data_fine}`,
+      url:   '/portale'
+    }).catch(e => console.error('push esito_ferie:', e))
+  }
+  const emailDip = richiesta.dipendenti?.email
+  if (emailDip && await emailCcEnabled(companyId)) {
+    await sendEsitoFerie({
+      emailDipendente: emailDip,
+      nome:            richiesta.dipendenti.nome,
+      dataInizio:      richiesta.data_inizio,
+      dataFine:        richiesta.data_fine,
+      approvata
+    })
+  }
+}
+
+async function notifyEsitoGiustificazione(companyId, existing, approvata) {
+  const dipId = await dipendenteUserAccountId(existing.dipendente_id)
+  if (dipId) {
+    sendPushToUser(dipId, {
+      title: `Giustificazione ${approvata ? 'approvata' : 'rifiutata'}`,
+      body:  `Giorno ${existing.data}`,
+      url:   '/portale'
+    }).catch(e => console.error('push esito_giustificazione:', e))
+  }
+  const emailDip = existing.dipendenti?.email
+  if (emailDip && await emailCcEnabled(companyId)) {
+    await sendEsitoGiustificazione({
+      emailDipendente: emailDip,
+      nome:            existing.dipendenti.nome,
+      data:            existing.data,
+      approvata
+    })
+  }
+}
 
 export default async function ferieRoutes(fastify) {
 
@@ -97,17 +140,7 @@ export default async function ferieRoutes(fastify) {
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
-        // manda email al dipendente
-        const emailDip = richiesta.dipendenti?.email
-        if (emailDip) {
-          await sendEsitoFerie({
-            emailDipendente: emailDip,
-            nome:            richiesta.dipendenti.nome,
-            dataInizio:      richiesta.data_inizio,
-            dataFine:        richiesta.data_fine,
-            approvata:       true
-          })
-        }
+        await notifyEsitoFerie(company_id, richiesta, true)
 
         return reply.send({ success: true, richiesta: updated })
 
@@ -171,16 +204,7 @@ export default async function ferieRoutes(fastify) {
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
-        const emailDip = richiesta.dipendenti?.email
-        if (emailDip) {
-          await sendEsitoFerie({
-            emailDipendente: emailDip,
-            nome:            richiesta.dipendenti.nome,
-            dataInizio:      richiesta.data_inizio,
-            dataFine:        richiesta.data_fine,
-            approvata:       false
-          })
-        }
+        await notifyEsitoFerie(company_id, richiesta, false)
 
         return reply.send({ success: true, richiesta: updated })
 
@@ -277,15 +301,7 @@ export default async function ferieRoutes(fastify) {
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
-        const emailDipGiustApprova = existing.dipendenti?.email
-        if (emailDipGiustApprova) {
-          await sendEsitoGiustificazione({
-            emailDipendente: emailDipGiustApprova,
-            nome:            existing.dipendenti.nome,
-            data:            existing.data,
-            approvata:       true
-          })
-        }
+        await notifyEsitoGiustificazione(company_id, existing, true)
 
         return reply.send({ success: true, giustificazione: updated })
 
@@ -338,15 +354,7 @@ export default async function ferieRoutes(fastify) {
           return reply.status(500).send({ error: 'SERVER_ERROR' })
         }
 
-        const emailDipGiustRifiuta = existing.dipendenti?.email
-        if (emailDipGiustRifiuta) {
-          await sendEsitoGiustificazione({
-            emailDipendente: emailDipGiustRifiuta,
-            nome:            existing.dipendenti.nome,
-            data:            existing.data,
-            approvata:       false
-          })
-        }
+        await notifyEsitoGiustificazione(company_id, existing, false)
 
         return reply.send({ success: true, giustificazione: updated })
 
