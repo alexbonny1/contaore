@@ -24,34 +24,44 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
+// Ritorna { ok, error } invece di lanciare/ingoiare in silenzio: un fallimento qui
+// (rete, VAPID non configurata, subscribe rifiutata da Apple/Google) va mostrato
+// all'utente, altrimenti sembra tutto "abilitato" ma non arriva mai nulla.
 export async function subscribeToPush() {
-  if (!isPushSupported()) return false;
+  if (!isPushSupported()) return { ok: false, error: "UNSUPPORTED" };
 
-  const registration = await navigator.serviceWorker.ready;
+  try {
+    const registration = await navigator.serviceWorker.ready;
 
-  const keyRes = await fetch(API_URL + "/api/push/vapid-public-key");
-  const keyData = await keyRes.json();
-  if (!keyData.success) return false;
+    const keyRes = await fetch(API_URL + "/api/push/vapid-public-key");
+    const keyData = await keyRes.json();
+    if (!keyData.success) return { ok: false, error: keyData.error || "NO_VAPID_KEY" };
 
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(keyData.publicKey),
-  });
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(keyData.publicKey),
+    });
 
-  const json = subscription.toJSON();
-  const res = await apiFetch("/api/push/subscribe", {
-    method: "POST",
-    body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
-  });
+    const json = subscription.toJSON();
+    const res = await apiFetch("/api/push/subscribe", {
+      method: "POST",
+      body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+    });
 
-  return !!res.success;
+    if (!res.success) return { ok: false, error: res.error || "SUBSCRIBE_SAVE_FAILED" };
+    return { ok: true };
+  } catch (e) {
+    console.error("subscribeToPush:", e);
+    return { ok: false, error: e.message };
+  }
 }
 
 export async function requestPushPermission() {
-  if (!isPushSupported()) return "unsupported";
+  if (!isPushSupported()) return { permission: "unsupported", subscribed: false };
   const permission = await Notification.requestPermission();
+  let subscribeResult = { ok: false };
   if (permission === "granted") {
-    try { await subscribeToPush(); } catch (e) { console.error("subscribeToPush:", e); }
+    subscribeResult = await subscribeToPush();
   }
-  return permission;
+  return { permission, subscribed: subscribeResult.ok, error: subscribeResult.error };
 }

@@ -1,6 +1,6 @@
 import { supabase } from '../services/supabase.js'
 import { authenticate } from '../middleware/auth.js'
-import { getVapidPublicKey } from '../services/webpush.js'
+import { getVapidPublicKey, sendPushToUser } from '../services/webpush.js'
 
 export default async function pushRoutes(fastify) {
 
@@ -38,6 +38,39 @@ export default async function pushRoutes(fastify) {
     } catch (err) {
       request.log.error(err)
       return reply.status(500).send({ success: false })
+    }
+  })
+
+  /* POST /api/push/test — invia una notifica di prova al proprio account, per diagnosticare la catena */
+  fastify.post('/api/push/test', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      if (!getVapidPublicKey()) {
+        return reply.send({ success: false, error: 'PUSH_NOT_CONFIGURED', message: 'Il server non ha le chiavi VAPID configurate' })
+      }
+
+      const { data: subs, error } = await supabase
+        .from('push_subscriptions')
+        .select('id')
+        .eq('user_account_id', request.user.id)
+
+      if (error) {
+        request.log.error(error)
+        return reply.send({ success: false, error: error.message, message: 'Errore leggendo push_subscriptions — la tabella esiste sul DB?' })
+      }
+      if (!subs?.length) {
+        return reply.send({ success: false, error: 'NO_SUBSCRIPTIONS', message: 'Nessuna subscription salvata per questo account: il dispositivo non ha completato la registrazione sul server' })
+      }
+
+      await sendPushToUser(request.user.id, {
+        title: 'Notifica di prova',
+        body:  'Se la vedi, le notifiche push funzionano.',
+        url:   '/'
+      })
+
+      return reply.send({ success: true, subscriptions: subs.length })
+    } catch (err) {
+      request.log.error(err)
+      return reply.status(500).send({ success: false, error: err.message })
     }
   })
 
