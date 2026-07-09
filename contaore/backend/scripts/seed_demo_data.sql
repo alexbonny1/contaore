@@ -21,6 +21,18 @@
 --
 -- Rieseguendo lo script si duplicano i dati (non è idempotente): pensato
 -- per un ambiente demo/staging, non per produzione.
+--
+-- Per ripulire i dati demo prima di rilanciare lo script (es. dopo una
+-- versione precedente con orari sfasati), scommenta ed esegui a parte,
+-- SOSTITUENDO l'uuid con lo stesso v_company_id usato sotto:
+--
+-- DELETE FROM richieste_turni    WHERE dipendente_id IN (SELECT id FROM dipendenti WHERE company_id = '662e1425-e083-42b1-950f-d0ace2a7623c' AND badge_uid LIKE 'DEMO-BADGE-%');
+-- DELETE FROM giustificazioni    WHERE dipendente_id IN (SELECT id FROM dipendenti WHERE company_id = '662e1425-e083-42b1-950f-d0ace2a7623c' AND badge_uid LIKE 'DEMO-BADGE-%');
+-- DELETE FROM richieste_permessi WHERE dipendente_id IN (SELECT id FROM dipendenti WHERE company_id = '662e1425-e083-42b1-950f-d0ace2a7623c' AND badge_uid LIKE 'DEMO-BADGE-%');
+-- DELETE FROM richieste_ferie    WHERE dipendente_id IN (SELECT id FROM dipendenti WHERE company_id = '662e1425-e083-42b1-950f-d0ace2a7623c' AND badge_uid LIKE 'DEMO-BADGE-%');
+-- DELETE FROM turni              WHERE dipendente_id IN (SELECT id FROM dipendenti WHERE company_id = '662e1425-e083-42b1-950f-d0ace2a7623c' AND badge_uid LIKE 'DEMO-BADGE-%');
+-- DELETE FROM presenza           WHERE company_id = '662e1425-e083-42b1-950f-d0ace2a7623c' AND tag_uid LIKE 'DEMO-BADGE-%';
+-- DELETE FROM dipendenti         WHERE company_id = '662e1425-e083-42b1-950f-d0ace2a7623c' AND badge_uid LIKE 'DEMO-BADGE-%';
 -- ═══════════════════════════════════════════════════════════════════════
 
 BEGIN;
@@ -83,31 +95,35 @@ BEGIN
       v_jitter_in  := (random() * 12)::int - 3;  -- entrata ~08:57-09:09
       v_jitter_out := (random() * 40)::int - 10; -- uscita ~17:50-18:30 (straordinari vari)
 
+      -- I timestamp vengono calcolati come ora locale Europe/Rome e convertiti in
+      -- timestamptz con AT TIME ZONE: un timestamp "naive" (es. d + time '09:00')
+      -- verrebbe interpretato nel timezone di sessione di Postgres (in genere UTC),
+      -- sfasando entrata/uscita di 1-2 ore rispetto ai turni (CET/CEST).
       INSERT INTO presenza (company_id, tag_uid, reader_id, tipo, manuale, automatica, "timestamp", created_at)
       VALUES (
         v_company_id, v_badge, 'DEMO-READER-01', 'ENTRATA', false, true,
-        d + time '09:00' + (v_jitter_in || ' minutes')::interval,
-        d + time '09:00' + (v_jitter_in || ' minutes')::interval
+        (d + time '09:00' + (v_jitter_in || ' minutes')::interval) AT TIME ZONE 'Europe/Rome',
+        (d + time '09:00' + (v_jitter_in || ' minutes')::interval) AT TIME ZONE 'Europe/Rome'
       );
 
       INSERT INTO presenza (company_id, tag_uid, reader_id, tipo, manuale, automatica, "timestamp", created_at)
       VALUES (
         v_company_id, v_badge, 'DEMO-READER-01', 'USCITA', false, true,
-        d + time '13:00', d + time '13:00'
+        (d + time '13:00') AT TIME ZONE 'Europe/Rome', (d + time '13:00') AT TIME ZONE 'Europe/Rome'
       );
 
       IF NOT v_incomplete THEN
         INSERT INTO presenza (company_id, tag_uid, reader_id, tipo, manuale, automatica, "timestamp", created_at)
         VALUES (
           v_company_id, v_badge, 'DEMO-READER-01', 'ENTRATA', false, true,
-          d + time '14:00', d + time '14:00'
+          (d + time '14:00') AT TIME ZONE 'Europe/Rome', (d + time '14:00') AT TIME ZONE 'Europe/Rome'
         );
 
         INSERT INTO presenza (company_id, tag_uid, reader_id, tipo, manuale, automatica, "timestamp", created_at)
         VALUES (
           v_company_id, v_badge, 'DEMO-READER-01', 'USCITA', false, true,
-          d + time '18:00' + (v_jitter_out || ' minutes')::interval,
-          d + time '18:00' + (v_jitter_out || ' minutes')::interval
+          (d + time '18:00' + (v_jitter_out || ' minutes')::interval) AT TIME ZONE 'Europe/Rome',
+          (d + time '18:00' + (v_jitter_out || ' minutes')::interval) AT TIME ZONE 'Europe/Rome'
         );
       END IF;
     END LOOP;
