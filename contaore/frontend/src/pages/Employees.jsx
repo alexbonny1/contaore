@@ -6,6 +6,14 @@ import {
 import { API_URL, hasPermission, hasAnyPermission } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 import { cachedFetch, authHeaders, prefetchEmployeeDetails, prefetchBadges } from "../prefetch";
+import { getEmployeeViewMode, getEmployeeViewColumns } from "../employeeView";
+
+// Tailwind ha bisogno delle classi scritte per intero nel sorgente per
+// generarle: non si può interpolare un numero a runtime in "grid-cols-N".
+const GRID_COLS_CLASSES = {
+  2: "grid-cols-2 md:grid-cols-3 xl:grid-cols-4",
+  3: "grid-cols-3 md:grid-cols-4 xl:grid-cols-5",
+};
 
 /*
 ────────────────────────────────────
@@ -434,6 +442,8 @@ export default function Employees() {
   const [deleteConfirm, setDeleteConfirm]           = useState(false);
   const [deleteLoading, setDeleteLoading]           = useState(false);
   const [toast, setToast]                           = useState(null);
+  const [viewMode]  = useState(getEmployeeViewMode);
+  const [viewCols]  = useState(getEmployeeViewColumns);
   const token = localStorage.getItem("token");
   const canManageEmployees = hasPermission("can_manage_employees");
   const canViewPresenze    = hasPermission("can_view_presenze");
@@ -689,7 +699,7 @@ export default function Employees() {
         )}
 
         {!loading && !apiError && employees.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+          <div className={`grid gap-3 sm:gap-5 ${viewMode === "grid" ? GRID_COLS_CLASSES[viewCols] : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"}`}>
             {employees.map((emp) => {
               const isSelected = selectedEmployeeIds.includes(emp.id);
               const stato = emp.attivo
@@ -699,12 +709,45 @@ export default function Employees() {
                 : emp.in_pausa
                 ? { dot: "bg-amber-500", label: "In pausa",     color: "text-amber-600 dark:text-amber-400" }
                 : { dot: "bg-zinc-400",  label: "Fuori orario", color: "text-zinc-500" };
+              const rowProps = {
+                key: emp.id,
+                onClick: () => selectionMode ? toggleEmployeeSelect(emp.id) : navigate("/employees/" + emp.id),
+                onMouseEnter: () => !selectionMode && prefetchEmployeeDetails(emp.id),
+                onTouchStart: () => !selectionMode && prefetchEmployeeDetails(emp.id),
+              };
+
+              if (viewMode === "grid") {
+                return (
+                  <div
+                    {...rowProps}
+                    className={`rounded-xl sm:rounded-2xl border bg-white dark:bg-[#161618] p-2.5 sm:p-3.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all ${
+                      selectionMode && isSelected
+                        ? "border-indigo-500 ring-2 ring-indigo-500/30"
+                        : "border-zinc-200 dark:border-zinc-800"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <h3 className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate min-w-0">
+                        {emp.nome} {emp.cognome}
+                      </h3>
+                      {selectionMode
+                        ? (isSelected
+                            ? <CheckSquare size={15} className="text-indigo-500 flex-shrink-0" />
+                            : <Square size={15} className="text-zinc-400 flex-shrink-0" />)
+                        : <span className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${stato.dot}`} />
+                      }
+                    </div>
+                    <p className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mt-2">{formatOre(emp.stats?.total_hours || 0)}</p>
+                    {!selectionMode && (
+                      <p className={`text-[10px] font-medium mt-0.5 truncate ${stato.color}`}>{stato.label}</p>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <div
-                  key={emp.id}
-                  onClick={() => selectionMode ? toggleEmployeeSelect(emp.id) : navigate("/employees/" + emp.id)}
-                  onMouseEnter={() => !selectionMode && prefetchEmployeeDetails(emp.id)}
-                  onTouchStart={() => !selectionMode && prefetchEmployeeDetails(emp.id)}
+                  {...rowProps}
                   className={`rounded-2xl sm:rounded-3xl border bg-white dark:bg-[#161618] p-4 sm:p-6 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all ${
                     selectionMode && isSelected
                       ? "border-indigo-500 ring-2 ring-indigo-500/30"

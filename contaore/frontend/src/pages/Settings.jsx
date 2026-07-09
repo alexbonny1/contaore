@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { SlidersHorizontal, BarChart2, Bell, Shield, Trash2, User, LogOut, Users, Mail } from "lucide-react";
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
 import { ThemeRow } from "../components/ThemeSelector";
+import { EmployeeViewRow } from "../components/EmployeeViewSelector";
 import { hasPermission } from "../api";
 import {
   prefetchNotifications, prefetchSettingsProfilo, prefetchSettingsAdmin,
@@ -116,6 +117,7 @@ export default function Settings() {
 
       <SettingsGroup>
         <ThemeRow />
+        {canManageEmployees && <EmployeeViewRow />}
       </SettingsGroup>
 
       <button

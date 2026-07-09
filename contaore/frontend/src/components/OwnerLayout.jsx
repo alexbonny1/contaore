@@ -42,6 +42,14 @@ export default function OwnerLayout() {
 
   const pendingCount = requestsData?.counts?.totali_in_attesa ?? 0;
 
+  // Ogni cambio pagina riparte sempre dalla cima (mai dalla posizione lasciata
+  // in precedenza): il ripristino nativo del browser è disattivato in main.jsx,
+  // quindi tocca a noi. window.scrollTo invece di scrollIntoView perché qui
+  // scrolla il documento, non un contenitore interno.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-[#0f0f10] transition-colors duration-300">
 
