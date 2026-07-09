@@ -723,7 +723,7 @@ export default function Employees() {
 
                   <div className="flex items-end justify-between gap-2 mt-4 sm:mt-5">
                     <div className="min-w-0">
-                      <p className="text-[10px] sm:text-xs text-zinc-400">Ore totali</p>
+                      <p className="text-[10px] sm:text-xs text-zinc-400">Ore questo mese</p>
                       <p className="text-lg sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">{formatOre(emp.stats?.total_hours || 0)}</p>
                     </div>
                     {!selectionMode && (
