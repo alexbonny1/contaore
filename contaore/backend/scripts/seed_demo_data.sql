@@ -79,7 +79,7 @@ BEGIN
     -- ── Turno standard lun-ven 09:00-13:00 / 14:00-18:00 ────────────
     INSERT INTO turni (company_id, dipendente_id, turno_nome, giorno_settimana, ingresso_1, uscita_1, ingresso_2, uscita_2)
     SELECT v_company_id, v_dip_id, 'Standard', gg, '09:00', '13:00', '14:00', '18:00'
-    FROM unnest(ARRAY['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi']) AS gg;
+    FROM unnest(ARRAY['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì']) AS gg;
 
     -- ── Presenze ultimi 3 mesi (solo giorni feriali) ────────────────
     FOR d IN
