@@ -11,6 +11,15 @@ import { registerServiceWorker } from "./push";
 import "./analytics";
 import "./sentry";
 
+// Disattiva il ripristino automatico dello scroll del browser: su cambio
+// pagina il ripristino nativo a volte scatta prima che il nuovo contenuto
+// abbia finito il layout (dati non ancora caricati), lasciando uno spazio
+// vuoto in alto finché non tocchi/scrolli. Gestiamo lo scroll noi stessi
+// (OwnerLayout) così ogni navigazione riparte sempre dalla cima.
+if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+  window.history.scrollRestoration = "manual";
+}
+
 // Applica il tema (chiaro/scuro/automatico) subito, prima del render, per
 // evitare un flash del tema sbagliato; resta anche in ascolto dei cambi di
 // tema del sistema operativo per l'opzione "automatico".

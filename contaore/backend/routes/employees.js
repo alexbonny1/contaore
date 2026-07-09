@@ -314,6 +314,7 @@ export default async function employeeRoutes(fastify) {
           .select('*')
           .eq('company_id', companyId)
           .order('created_at', { ascending: false })
+          .order('id', { ascending: true })
 
         if (employeesError) {
           return reply.send({ success: false, error: 'DB_DIPENDENTI', detail: employeesError.message })
