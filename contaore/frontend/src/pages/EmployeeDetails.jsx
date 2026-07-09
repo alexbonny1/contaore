@@ -555,6 +555,7 @@ export default function EmployeeDetails() {
     if (d) { todayDay = d; break; }
   }
   const inFerieOggi = todayDay?.stato === "ferie";
+  const meseSelezionatoData = historyMonths.find(m => m.mese === selectedMese);
   const headerStato = inFerieOggi
     ? { label: "In ferie",     cls: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" }
     : employee.attivo
@@ -589,9 +590,8 @@ export default function EmployeeDetails() {
                     {employee.nome} {employee.cognome}
                   </h1>
                   {employee.importo_orario != null && (() => {
-                    const meseData = historyMonths.find(m => m.mese === selectedMese);
-                    const oreEffettive = meseData
-                      ? meseData.giorni.reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali ?? 0), 0)
+                    const oreEffettive = meseSelezionatoData
+                      ? meseSelezionatoData.giorni.reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali ?? 0), 0)
                       : 0;
                     const stipendio = oreEffettive * employee.importo_orario;
                     if (stipendio <= 0) return null;
@@ -632,10 +632,10 @@ export default function EmployeeDetails() {
           <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5">
             <div className="flex items-center gap-2 mb-2">
               <Clock3 size={15} className="text-zinc-400" />
-              <p className="text-xs text-zinc-500">Ore mese corrente</p>
+              <p className="text-xs text-zinc-500 truncate">{selectedMese ? `Ore ${selectedMese}` : "Ore mese corrente"}</p>
             </div>
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              {formatOre(employee.stats?.total_hours ?? 0)}
+              {formatOre(meseSelezionatoData?.ore_totali ?? 0)}
             </p>
           </div>
 
@@ -683,7 +683,7 @@ export default function EmployeeDetails() {
                   <p className="text-xs text-red-500">Assenze</p>
                 </div>
                 <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {employee.stats?.giorni_assenti ?? 0}
+                  {meseSelezionatoData?.giorni_assenti ?? 0}
                 </p>
               </div>
 
@@ -693,7 +693,7 @@ export default function EmployeeDetails() {
                   <p className="text-xs text-amber-500">Straordinari</p>
                 </div>
                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {formatOre(parseFloat(employee.stats?.ore_straordinario ?? 0))}
+                  {formatOre(meseSelezionatoData?.ore_straordinario ?? 0)}
                 </p>
               </div>
 
