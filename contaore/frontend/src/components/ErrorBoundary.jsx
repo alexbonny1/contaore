@@ -1,5 +1,5 @@
 import { Component } from "react";
-import * as Sentry from "@sentry/react";
+import { loadSentry } from "../sentry";
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -12,7 +12,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    if (import.meta.env.VITE_SENTRY_DSN) Sentry.captureException(error, { extra: info });
+    loadSentry().then((Sentry) => Sentry && Sentry.captureException(error, { extra: info }));
   }
 
   render() {

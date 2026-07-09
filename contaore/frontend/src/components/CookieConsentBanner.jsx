@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import posthog from "posthog-js";
+import { loadPosthog } from "../analytics";
 
 export default function CookieConsentBanner() {
   const [choice, setChoice] = useState(() => localStorage.getItem("cookie_consent"));
@@ -8,7 +8,7 @@ export default function CookieConsentBanner() {
   if (choice) return null;
 
   function accept() {
-    posthog.opt_in_capturing();
+    loadPosthog().then((posthog) => posthog && posthog.opt_in_capturing());
     localStorage.setItem("cookie_consent", "accepted");
     setChoice("accepted");
   }

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_URL } from "../api";
 import LegalFooter from "../components/LegalFooter";
 import SplashScreen from "../components/SplashScreen";
-import { track } from "../main";
+import { track } from "../analytics";
 
 export default function Login() {
 

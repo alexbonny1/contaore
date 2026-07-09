@@ -62,3 +62,85 @@ header {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+   Animazioni globali — feedback tattile su ogni azione (bottoni, link,
+   modali, toast, accordion, cambio pagina), senza libreria: solo CSS/
+   Tailwind per non appesantire il bundle di avvio.
+   ──────────────────────────────────────────────────────────────────────── */
+
+button:not(:disabled),
+a,
+input,
+select,
+textarea {
+  transition: background-color 150ms ease-out, border-color 150ms ease-out,
+    color 150ms ease-out, opacity 150ms ease-out, transform 100ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Sfondo scuro dei modali */
+.anim-backdrop {
+  animation: fade-in 180ms ease-out both;
+}
+
+/* Pannello dei modali (card centrale) */
+.anim-modal-panel {
+  animation: modal-panel-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Toast/snackbar in basso */
+.anim-toast {
+  animation: toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Contenuto di pagina, per un cambio route più morbido */
+.anim-page {
+  animation: page-fade-in 220ms ease-out both;
+}
+
+/* Sezioni espandibili (accordion mesi, grafici comprimibili): transizione
+   fluida di altezza tramite grid-template-rows invece di show/hide secco. */
+.accordion-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease-out;
+}
+.accordion-grid.is-open {
+  grid-template-rows: 1fr;
+}
+.accordion-grid > div {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+

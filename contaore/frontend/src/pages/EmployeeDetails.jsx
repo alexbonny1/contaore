@@ -40,7 +40,7 @@ function Toast({ message, type, onClose }) {
   }, []);
   return (
     <div className={`
-      fixed bottom-28 left-1/2 -translate-x-1/2 z-50
+      anim-toast fixed bottom-28 left-1/2 -translate-x-1/2 z-50
       flex items-center gap-2
       px-5 py-3 rounded-2xl shadow-lg
       text-sm font-medium
@@ -905,7 +905,7 @@ export default function EmployeeDetails() {
             {showGrafici ? <ChevronUp size={18} className="text-zinc-400" /> : <ChevronDown size={18} className="text-zinc-400" />}
           </button>
           {showGrafici && (
-            <div className="px-4 sm:px-6 pb-6">
+            <div className="anim-page px-4 sm:px-6 pb-6">
               <ChartPanel historyMonths={historyMonths} turniAttivi={turniAttivi} />
             </div>
           )}
@@ -915,8 +915,8 @@ export default function EmployeeDetails() {
       {/* MODALE MODIFICA ANAGRAFICA */}
 
       {showEditProfile && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
+        <div className="anim-backdrop fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="anim-modal-panel w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Modifica anagrafica</h3>
             <p className="text-xs text-zinc-400 mb-5">
               {portaleAttivo
@@ -970,9 +970,9 @@ export default function EmployeeDetails() {
 
       {showAddPresence && canManagePresence && (
 
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+        <div className="anim-backdrop fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
 
-          <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
+          <div className="anim-modal-panel w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
 
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Aggiungi timbratura</h3>
             <p className="text-xs text-zinc-400 mb-5">La timbratura sarà marcata come <span className="text-amber-500 font-medium">manuale</span> in storico, PDF ed Excel</p>
@@ -1052,9 +1052,9 @@ export default function EmployeeDetails() {
 
       {showEditDay && canManagePresence && (
 
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+        <div className="anim-backdrop fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
 
-          <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl max-h-[85vh] overflow-y-auto">
+          <div className="anim-modal-panel w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl max-h-[85vh] overflow-y-auto">
 
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Modifica giorno</h3>
             <p className="text-xs text-zinc-400 mb-5">
