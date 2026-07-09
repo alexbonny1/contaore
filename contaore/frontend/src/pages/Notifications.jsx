@@ -7,6 +7,7 @@ import {
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
 import PushStatusCard from "../components/PushStatusCard";
+import { cachedFetch, authHeaders } from "../prefetch";
 
 // ─── notification type definitions ───────────────────────────────────────────
 
@@ -328,8 +329,7 @@ export default function Notifications() {
 
   async function loadEmailCc() {
     try {
-      const res  = await fetch(`${API_URL}/api/notifications/email-cc`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
+      const data = await cachedFetch(`${API_URL}/api/notifications/email-cc`, { headers: authHeaders() });
       if (data.success) setEmailCc(!!data.enabled);
     } catch (e) { }
     finally { setEmailCcLoading(false); }
@@ -354,8 +354,7 @@ export default function Notifications() {
 
   async function loadSettings() {
     try {
-      const res  = await fetch(`${API_URL}/api/notifications/settings`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
+      const data = await cachedFetch(`${API_URL}/api/notifications/settings`, { headers: authHeaders() });
       if (data.success) setSettings(data.settings || []);
     } catch (e) { }
     finally { setLoading(false); }
@@ -363,11 +362,10 @@ export default function Notifications() {
 
   async function loadTargetLists() {
     try {
-      const [empRes, readerRes] = await Promise.all([
-        fetch(`${API_URL}/api/employees`,      { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/api/readers`,        { headers: { Authorization: `Bearer ${token}` } })
+      const [empData, readerData] = await Promise.all([
+        cachedFetch(`${API_URL}/api/employees`, { headers: authHeaders() }),
+        cachedFetch(`${API_URL}/api/readers`,   { headers: authHeaders() })
       ]);
-      const [empData, readerData] = await Promise.all([empRes.json(), readerRes.json()]);
       if (empData.success)    setEmployees((empData.employees || []).map(e => ({ id: e.id, nome: e.nome })));
       if (readerData.success) setReaders((readerData.readers || []).map(r => ({ id: r.id, nome: r.nome || r.reader_id })));
     } catch (e) { }

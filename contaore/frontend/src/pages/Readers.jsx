@@ -4,6 +4,7 @@ import { Radio } from "lucide-react";
 
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
+import { cachedFetch, authHeaders } from "../prefetch";
 
 export default function Readers() {
 
@@ -17,23 +18,11 @@ export default function Readers() {
 
     try {
 
-      const token =
-        localStorage.getItem("token");
-
-      const response =
-        await fetch(
-          API_URL + "/api/readers",
-          {
-            headers: {
-              Authorization:
-                `Bearer ${token}`
-            }
-          }
-        );
-
       const data =
-        await response.json();
-
+        await cachedFetch(
+          API_URL + "/api/readers",
+          { headers: authHeaders() }
+        );
 
       if (data.success) {
 

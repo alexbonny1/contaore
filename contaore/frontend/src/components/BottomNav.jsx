@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, FileText, Radio, Settings } from "lucide-react";
 import { hasPermission } from "../api";
+import { prefetchRequests, prefetchReaders, prefetchSettings } from "../prefetch";
 
 /**
  * Barra di navigazione inferiore con indicatore "a goccia" elastico:
@@ -14,9 +15,9 @@ export default function BottomNav({ portaleAttivo = true, pendingCount = 0 }) {
   const navItems = [
     { title: "Dashboard", icon: LayoutDashboard, path: "/dashboard", match: p => p === "/dashboard" },
     hasPermission("can_approve_requests") && { title: portaleAttivo ? "Permessi" : "Ferie", icon: FileText, path: "/requests", notifica: pendingCount,
-      match: p => p.startsWith("/requests") || p.startsWith("/pause") },
-    { title: "Lettori",   icon: Radio,    path: "/readers", match: p => p.startsWith("/readers") },
-    { title: "Account",   icon: Settings, path: "/impostazioni", match: p => p.startsWith("/impostazioni") },
+      match: p => p.startsWith("/requests") || p.startsWith("/pause"), prefetch: prefetchRequests },
+    { title: "Lettori",   icon: Radio,    path: "/readers", match: p => p.startsWith("/readers"), prefetch: prefetchReaders },
+    { title: "Account",   icon: Settings, path: "/impostazioni", match: p => p.startsWith("/impostazioni"), prefetch: prefetchSettings },
   ].filter(Boolean);
 
   const activeIndex = navItems.findIndex(it => it.match(path));
@@ -60,6 +61,9 @@ export default function BottomNav({ portaleAttivo = true, pendingCount = 0 }) {
                 <Link
                   key={item.title}
                   to={item.path}
+                  onMouseEnter={item.prefetch}
+                  onTouchStart={item.prefetch}
+                  onFocus={item.prefetch}
                   className={`relative flex flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-3xl px-2 py-2 text-[10px] font-medium transition-colors duration-300 ${
                     isActive
                       ? "text-white dark:text-black"

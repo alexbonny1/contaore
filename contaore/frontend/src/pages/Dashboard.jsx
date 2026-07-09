@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle, Coffee, XCircle, ChevronRight } from "lucide-react";
 import { API_URL } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
+import { cachedFetch, authHeaders, prefetchEmployees } from "../prefetch";
 
 export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
@@ -21,9 +22,7 @@ export default function Dashboard() {
 
   async function loadDashboard() {
     try {
-      const token = localStorage.getItem("token");
-      const res   = await fetch(API_URL + "/api/employees", { headers: { Authorization: "Bearer " + token } });
-      const data  = await res.json();
+      const data = await cachedFetch(API_URL + "/api/employees", { headers: authHeaders() });
       if (data.success) setEmployees(data.employees || []);
     } catch (err) { }
   }
@@ -44,6 +43,9 @@ export default function Dashboard() {
         {/* RIQUADRO RIASSUNTIVO PRESENZE → Dipendenti */}
         <Link
           to="/employees"
+          onMouseEnter={prefetchEmployees}
+          onTouchStart={prefetchEmployees}
+          onFocus={prefetchEmployees}
           className="block rounded-3xl bg-white/70 dark:bg-[#161618]/70 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] p-5 sm:p-8 transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.10)] active:scale-[0.99]"
         >
           <div className="flex items-center justify-between mb-5 sm:mb-7">

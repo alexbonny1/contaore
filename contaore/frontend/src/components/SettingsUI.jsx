@@ -40,7 +40,7 @@ export function SettingsHeader({ title, subtitle }) {
 }
 
 /* Riga categoria in stile Apple (icona colorata + titolo + chevron) */
-export function SettingRow({ to, onClick, icon: Icon, iconBg, iconColor, title, subtitle, rightContent }) {
+export function SettingRow({ to, onClick, icon: Icon, iconBg, iconColor, title, subtitle, rightContent, prefetch }) {
   const inner = (
     <>
       <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 ${iconBg}`}>
@@ -63,7 +63,8 @@ export function SettingRow({ to, onClick, icon: Icon, iconBg, iconColor, title, 
     );
   }
   return (
-    <Link to={to} className="flex items-center gap-3 px-4 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+    <Link to={to} onMouseEnter={prefetch} onTouchStart={prefetch} onFocus={prefetch}
+      className="flex items-center gap-3 px-4 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
       {inner}
     </Link>
   );

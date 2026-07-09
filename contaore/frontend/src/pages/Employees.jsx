@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
   Download, X, CheckSquare, Square, FileText, Table2, UserPlus, Trash2
 } from "lucide-react";
-import { API_URL, apiFetch, hasPermission, hasAnyPermission } from "../api";
+import { API_URL, hasPermission, hasAnyPermission } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
+import { cachedFetch, authHeaders } from "../prefetch";
 
 /*
 ────────────────────────────────────
@@ -490,7 +491,7 @@ export default function Employees() {
 
   async function loadEmployees() {
     try {
-      const data = await apiFetch('/api/employees');
+      const data = await cachedFetch(`${API_URL}/api/employees`, { headers: authHeaders() });
       if (data.success) {
         setEmployees(data.employees || []);
         setApiError(false);

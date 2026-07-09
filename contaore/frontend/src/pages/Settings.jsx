@@ -4,6 +4,7 @@ import { SlidersHorizontal, BarChart2, Bell, Shield, Trash2, User, LogOut, Users
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
 import { ThemeRow } from "../components/ThemeSelector";
 import { hasPermission } from "../api";
+import { prefetchNotifications } from "../prefetch";
 
 // ─── Schermata principale impostazioni (stile Apple, categorie) ────────────────
 
@@ -69,6 +70,7 @@ export default function Settings() {
             iconColor="text-indigo-500"
             title="Notifiche"
             subtitle="Email e avvisi automatici"
+            prefetch={prefetchNotifications}
           />
         )}
         <SettingRow
