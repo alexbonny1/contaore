@@ -541,12 +541,12 @@ export default async function employeeRoutes(fastify) {
             history_months: months,
             stats: {
               total_hours:       (() => {
-                const currentMonth = new Date().toISOString().slice(0, 7)
+                const currentMonth = getLocalDateStr(new Date().toISOString()).slice(0, 7)
                 return Number(days.filter(d => d.giorno.slice(0, 7) === currentMonth).reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali), 0).toFixed(2))
               })(),
               total_reads:       reads.length,
               ore_straordinario: (() => {
-                const currentMonth = new Date().toISOString().slice(0, 7)
+                const currentMonth = getLocalDateStr(new Date().toISOString()).slice(0, 7)
                 const monthDays = days.filter(d => d.giorno.slice(0, 7) === currentMonth)
                 const totLav  = monthDays.reduce((s, d) => s + (d.ore_effettive ?? d.ore_totali), 0)
                 const totPrev = monthDays.reduce((s, d) => s + d.ore_previste, 0)
