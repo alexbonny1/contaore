@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { API_URL, hasPermission } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
+import { cachedFetch, authHeaders } from "../prefetch";
 
 function useNfcScan(waiting, onScanned) {
   useEffect(() => {
@@ -101,9 +102,7 @@ export default function Badges() {
 
   async function loadBadges() {
     try {
-      const token = localStorage.getItem("token");
-      const res   = await fetch(API_URL + "/api/tags", { headers: { Authorization: `Bearer ${token}` } });
-      const data  = await res.json();
+      const data = await cachedFetch(API_URL + "/api/tags", { headers: authHeaders() });
       if (data.success) setBadges(data.tags || []);
     } catch (err) { }
   }

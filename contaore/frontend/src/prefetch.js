@@ -59,3 +59,33 @@ export function prefetchRequests() {
   // qui basta anticipare il codice della pagina.
   import("./pages/Requests");
 }
+
+// Dettaglio dipendente: chiave dinamica per employee, è l'azione di
+// navigazione più frequente nell'app quindi vale la pena anticipare anche i
+// dati (non solo il chunk).
+export function prefetchEmployeeDetails(id) {
+  import("./pages/EmployeeDetails");
+  const headers = authHeaders();
+  cachedFetch(`${API_URL}/api/employees/${id}`, { headers });
+  cachedFetch(`${API_URL}/api/company/info`, { headers });
+}
+
+export function prefetchEmployeeTurni() {
+  // Legge in gran parte dagli stessi dati già scaldati da prefetchEmployeeDetails.
+  import("./pages/EmployeeTurni");
+}
+
+export function prefetchBadges() {
+  import("./pages/Badges");
+  cachedFetch(`${API_URL}/api/tags`, { headers: authHeaders() });
+}
+
+// Sotto-pagine di Impostazioni: menu/form leggeri, il salto è quasi
+// interamente dovuto al download del chunk, non ai dati → prefetch solo codice.
+export function prefetchSettingsProfilo()      { import("./pages/SettingsProfilo"); }
+export function prefetchSettingsAdmin()        { import("./pages/SettingsAdmin"); }
+export function prefetchSettingsPresenze()     { import("./pages/SettingsPresenze"); }
+export function prefetchSettingsGrafici()      { import("./pages/SettingsGrafici"); }
+export function prefetchSettingsSicurezza()    { import("./pages/SettingsSicurezza"); }
+export function prefetchSettingsDati()         { import("./pages/SettingsDati"); }
+export function prefetchSettingsRiepilogoOre() { import("./pages/SettingsRiepilogoOre"); }
