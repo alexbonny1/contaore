@@ -21,52 +21,24 @@ function isEmployeeInside(reads = []) {
   return Date.now() - new Date(last.entrata.created_at) < 18 * 3600000
 }
 
-function calculateHours(reads = []) {
-  let totalMinutes = 0
-  const sorted = [...reads].sort(
-    (a, b) => new Date(a.created_at) - new Date(b.created_at)
-  )
-  let lastEntrata = null
-  for (const read of sorted) {
-    if (read.tipo === 'ENTRATA') {
-      lastEntrata = read
-    } else if (read.tipo === 'USCITA' && lastEntrata) {
-      const diff = new Date(read.created_at) - new Date(lastEntrata.created_at)
-      if (diff > 0) totalMinutes += diff / 1000 / 60
-      lastEntrata = null
-    }
-  }
-  return Number((totalMinutes / 60).toFixed(2))
-}
-
-// calculateHours with per-day break deduction based on shift schedule
-function calculateHoursWithBreaks(reads, empShifts) {
+// Somma le ore effettive (stessa logica/tolleranza/arrotondamento di groupByDay,
+// tramite computeDayHoursStats) su un set di presenze già filtrato per periodo.
+// Usata dalla lista dipendenti per restare coerente con il dettaglio dipendente.
+function calculateEffectiveHours(reads, empShifts, turniAttivi, toleranceMins, toleranceDeficitMins) {
   const sessions = buildSessions(reads)
   const byDate = {}
   sessions.forEach(sess => {
     if (!byDate[sess.date]) byDate[sess.date] = []
     byDate[sess.date].push(sess)
   })
-  let totalMins = 0
+  const hasShiftsConfigured = turniAttivi && empShifts.length > 0
+  let totalHours = 0
   for (const [day, daySessions] of Object.entries(byDate)) {
-    let dayMins    = daySessions.reduce((sum, s) => sum + s.hours, 0) * 60
-    const dayName  = getDayName(day)
-    const dayShifts = empShifts.filter(s => s.giorno_settimana === dayName)
-    for (const s of dayShifts) {
-      if (s.uscita_1 && s.ingresso_2) {
-        const bStart = timeToMinutes(s.uscita_1)
-        const bEnd   = timeToMinutes(s.ingresso_2)
-        if (bEnd > bStart) {
-          const sorted = daySessions
-            .flatMap(sess => [sess.entrata, sess.uscita].filter(Boolean))
-            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-          dayMins -= computeBreakDeductionMins(sorted, bStart, bEnd)
-        }
-      }
-    }
-    totalMins += Math.max(0, dayMins)
+    const dayShifts = hasShiftsConfigured ? empShifts.filter(s => s.giorno_settimana === getDayName(day)) : []
+    const { ore_effettive } = computeDayHoursStats(daySessions, dayShifts, hasShiftsConfigured, toleranceMins, toleranceDeficitMins)
+    totalHours += ore_effettive
   }
-  return Number((totalMins / 60).toFixed(2))
+  return Number(totalHours.toFixed(2))
 }
 
 async function autoInsertBreakTimbrature(supabase, dipendenteId, companyId, tagUid, todayReads, shift, dateStr) {
@@ -103,6 +75,58 @@ async function autoInsertBreakTimbrature(supabase, dipendenteId, companyId, tagU
   }
 }
 
+// Ore lavorate/previste/straordinario/effettive per un singolo giorno, con
+// tolleranza configurabile. Condivisa tra groupByDay (dettaglio dipendente,
+// stipendio) e la lista dipendenti: le due viste devono concordare sulle
+// "ore totali" di un giorno/mese, altrimenti mostrano numeri diversi per
+// gli stessi dati (es. lista con somma grezza vs dettaglio con tolleranza).
+function computeDayHoursStats(daySessions, dayShifts, hasShiftsConfigured, toleranceMins, toleranceDeficitMins) {
+  let oreLavorate = Number(daySessions.reduce((sum, s) => sum + s.hours, 0).toFixed(2))
+  let ore_previste = 0
+  let ore_straordinario = 0
+  let ore_effettive = oreLavorate
+
+  if (hasShiftsConfigured) {
+    ore_previste = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
+
+    let breakDeductMins = 0
+    for (const s of dayShifts) {
+      if (s.uscita_1 && s.ingresso_2) {
+        const bStart = timeToMinutes(s.uscita_1)
+        const bEnd   = timeToMinutes(s.ingresso_2)
+        if (bEnd > bStart) {
+          const sorted = daySessions
+            .flatMap(sess => [sess.entrata, sess.uscita].filter(Boolean))
+            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+          breakDeductMins += computeBreakDeductionMins(sorted, bStart, bEnd)
+        }
+      }
+    }
+    if (breakDeductMins > 0) {
+      oreLavorate = Number(Math.max(0, oreLavorate - breakDeductMins / 60).toFixed(2))
+    }
+
+    ore_effettive = oreLavorate
+    if (ore_previste > 0) {
+      const extraMins = (oreLavorate - ore_previste) * 60
+      if (extraMins > 0) {
+        ore_straordinario = extraMins > toleranceMins
+          ? Number((extraMins / 60).toFixed(2))
+          : 0
+        ore_effettive = extraMins > toleranceMins ? oreLavorate : ore_previste
+      } else {
+        ore_straordinario = 0
+        const deficitMins = -extraMins
+        ore_effettive = deficitMins <= toleranceDeficitMins ? ore_previste : oreLavorate
+      }
+    } else {
+      ore_straordinario = Number(oreLavorate.toFixed(2))
+    }
+  }
+
+  return { ore_totali: oreLavorate, ore_previste, ore_straordinario, ore_effettive }
+}
+
 function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = null, ferieApprovate = [], giustificazioni = [], pausaAziendale = null, toleranceMins = 10, toleranceDeficitMins = 15) {
 
   const sessions = buildSessions(reads)
@@ -113,53 +137,17 @@ function groupByDay(reads = [], shifts = [], turniAttivi = false, dataInizio = n
     byDate[sess.date].push(sess)
   })
 
+  const hasShiftsConfigured = turniAttivi && shifts.length > 0
+
   const presentDays = Object.entries(byDate).map(([giorno, daySessions]) => {
-    let oreLavorate   = Number(daySessions.reduce((sum, s) => sum + s.hours, 0).toFixed(2))
+    const dayShifts = hasShiftsConfigured ? shifts.filter(s => s.giorno_settimana === getDayName(giorno)) : []
+    const { ore_totali: oreLavorate, ore_previste, ore_straordinario, ore_effettive } =
+      computeDayHoursStats(daySessions, dayShifts, hasShiftsConfigured, toleranceMins, toleranceDeficitMins)
 
-    let ore_previste      = 0
-    let ore_straordinario = 0
-    let stato             = 'presente'
-    let ritardo_minuti    = 0
+    let stato          = 'presente'
+    let ritardo_minuti = 0
 
-    if (turniAttivi && shifts.length > 0) {
-      const dayName   = getDayName(giorno)
-      const dayShifts = shifts.filter(s => s.giorno_settimana === dayName)
-      ore_previste    = dayShifts.reduce((sum, s) => sum + shiftExpectedHours(s), 0)
-
-      let breakDeductMins = 0
-      for (const s of dayShifts) {
-        if (s.uscita_1 && s.ingresso_2) {
-          const bStart = timeToMinutes(s.uscita_1)
-          const bEnd   = timeToMinutes(s.ingresso_2)
-          if (bEnd > bStart) {
-            const sorted = daySessions
-              .flatMap(sess => [sess.entrata, sess.uscita].filter(Boolean))
-              .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-            breakDeductMins += computeBreakDeductionMins(sorted, bStart, bEnd)
-          }
-        }
-      }
-      if (breakDeductMins > 0) {
-        oreLavorate = Number(Math.max(0, oreLavorate - breakDeductMins / 60).toFixed(2))
-      }
-
-      var ore_effettive = oreLavorate
-      if (ore_previste > 0) {
-        const extraMins = (oreLavorate - ore_previste) * 60
-        if (extraMins > 0) {
-          ore_straordinario = extraMins > toleranceMins
-            ? Number((extraMins / 60).toFixed(2))
-            : 0
-          ore_effettive = extraMins > toleranceMins ? oreLavorate : ore_previste
-        } else {
-          ore_straordinario = 0
-          const deficitMins = -extraMins
-          ore_effettive = deficitMins <= toleranceDeficitMins ? ore_previste : oreLavorate
-        }
-      } else {
-        ore_straordinario = Number(oreLavorate.toFixed(2))
-      }
-
+    if (hasShiftsConfigured) {
       // stato hierarchy
       if (ore_straordinario > 0) {
         stato = 'straordinario'
@@ -378,6 +366,16 @@ export default async function employeeRoutes(fastify) {
           .select('*')
           .eq('company_id', companyId)
 
+        // tolleranza straordinari/difetto configurabile per azienda (una sola query,
+        // non per dipendente): stessa logica del dettaglio dipendente per restare coerenti
+        const { data: companySettings } = await supabase
+          .from('company')
+          .select('tolleranza_straordinario_minuti, tolleranza_difetto_minuti')
+          .eq('id', companyId)
+          .single()
+        const toleranceMins        = companySettings?.tolleranza_straordinario_minuti ?? 10
+        const toleranceDeficitMins = companySettings?.tolleranza_difetto_minuti ?? 15
+
         const result = employees.map(emp => {
           try {
             const empReads   = reads.filter(r => r.tag_uid === emp.badge_uid)
@@ -433,9 +431,7 @@ export default async function employeeRoutes(fastify) {
                 total_reads: empReads.length,
                 today_reads: todayReads.length,
                 month_reads: monthReads.length,
-                total_hours: emp.turni_attivi
-                  ? calculateHoursWithBreaks(monthReads, empShifts)
-                  : calculateHours(monthReads),
+                total_hours: calculateEffectiveHours(monthReads, empShifts, emp.turni_attivi, toleranceMins, toleranceDeficitMins),
                 last_read: empReads.length
                   ? empReads[empReads.length - 1].created_at
                   : null
