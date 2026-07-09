@@ -335,20 +335,33 @@ export default async function employeeRoutes(fastify) {
         const employees  = allowedIds ? (employeesRaw || []).filter(e => allowedIds.includes(e.id)) : (employeesRaw || [])
 
         // Solo oggi/questo mese servono qui: limitiamo la query a un paio di mesi di
-        // margine. Senza questo filtro, su una company con molte presenze storiche,
-        // il limite di default di PostgREST (1000 righe) tronca il risultato alle
-        // righe più vecchie (order ascending) ed esclude quelle recenti, facendo
-        // apparire 0 ore/straordinari del mese corrente per tutti i dipendenti.
+        // margine. Il filtro data da solo non basta a evitare il troncamento: con
+        // abbastanza dipendenti/presenze anche una finestra di 2 mesi supera le 1000
+        // righe (il limite di default di PostgREST), quindi paginiamo esplicitamente
+        // con .range() finché non abbiamo letto tutte le righe della finestra.
         const readsWindowStart = new Date()
         readsWindowStart.setUTCMonth(readsWindowStart.getUTCMonth() - 1, 1)
         readsWindowStart.setUTCHours(0, 0, 0, 0)
 
-        const { data: readsRaw, error: readsError } = await supabase
-          .from('presenza')
-          .select('*')
-          .eq('company_id', companyId)
-          .gte('created_at', readsWindowStart.toISOString())
-          .order('created_at', { ascending: true })
+        let readsRaw    = []
+        let readsError  = null
+        {
+          const pageSize = 1000
+          let from = 0
+          while (true) {
+            const { data, error } = await supabase
+              .from('presenza')
+              .select('*')
+              .eq('company_id', companyId)
+              .gte('created_at', readsWindowStart.toISOString())
+              .order('created_at', { ascending: true })
+              .range(from, from + pageSize - 1)
+            if (error) { readsError = error; break }
+            readsRaw = readsRaw.concat(data || [])
+            if (!data || data.length < pageSize) break
+            from += pageSize
+          }
+        }
 
         if (readsError) {
         }
