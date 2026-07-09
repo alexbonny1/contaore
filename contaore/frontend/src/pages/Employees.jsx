@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { API_URL, hasPermission, hasAnyPermission } from "../api";
 import { usePullToRefresh, PullIndicator } from "../hooks/usePullToRefresh.jsx";
-import { cachedFetch, authHeaders } from "../prefetch";
+import { cachedFetch, authHeaders, prefetchEmployeeDetails, prefetchBadges } from "../prefetch";
 
 /*
 ────────────────────────────────────
@@ -591,6 +591,8 @@ export default function Employees() {
           {canManageEmployees && (
             <button
               onClick={() => navigate("/badges")}
+              onMouseEnter={prefetchBadges}
+              onTouchStart={prefetchBadges}
               className="flex items-center gap-2 h-12 sm:h-14 px-5 sm:px-6 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 text-sm sm:text-base font-medium shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
             >
               <UserPlus size={20} className="sm:w-[22px] sm:h-[22px]" />
@@ -701,6 +703,8 @@ export default function Employees() {
                 <div
                   key={emp.id}
                   onClick={() => selectionMode ? toggleEmployeeSelect(emp.id) : navigate("/employees/" + emp.id)}
+                  onMouseEnter={() => !selectionMode && prefetchEmployeeDetails(emp.id)}
+                  onTouchStart={() => !selectionMode && prefetchEmployeeDetails(emp.id)}
                   className={`rounded-2xl sm:rounded-3xl border bg-white dark:bg-[#161618] p-4 sm:p-6 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all ${
                     selectionMode && isSelected
                       ? "border-indigo-500 ring-2 ring-indigo-500/30"

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { API_URL, hasPermission } from "../api";
+import { cachedFetch, authHeaders, prefetchEmployeeTurni } from "../prefetch";
 
 function Toast({ message, type, onClose }) {
   useEffect(() => {
@@ -531,15 +532,11 @@ export default function EmployeeDetails() {
     try {
 
       setLoading(true);
-      const token = localStorage.getItem("token");
 
-      const [empRes, companyRes] = await Promise.all([
-        fetch(API_URL + "/api/employees/" + id, { headers: { Authorization: "Bearer " + token } }),
-        fetch(API_URL + "/api/company/info",    { headers: { Authorization: "Bearer " + token } })
+      const [empData, companyData] = await Promise.all([
+        cachedFetch(API_URL + "/api/employees/" + id, { headers: authHeaders() }),
+        cachedFetch(API_URL + "/api/company/info",    { headers: authHeaders() })
       ]);
-
-      const empData     = await empRes.json();
-      const companyData = await companyRes.json();
 
       if (companyData.success) {
         setPortaleAttivo(!!companyData.portale_dipendenti);
@@ -681,7 +678,7 @@ export default function EmployeeDetails() {
             const TurnoCard = canManageEmployees ? Link : "div";
             return (
               <TurnoCard
-                {...(canManageEmployees ? { to: `/employees/${id}/turni` } : {})}
+                {...(canManageEmployees ? { to: `/employees/${id}/turni`, onMouseEnter: prefetchEmployeeTurni, onTouchStart: prefetchEmployeeTurni } : {})}
                 className="text-left rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161618] p-5 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all"
               >
                 <div className="flex items-center justify-between mb-2">

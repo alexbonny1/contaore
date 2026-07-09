@@ -4,7 +4,11 @@ import { SlidersHorizontal, BarChart2, Bell, Shield, Trash2, User, LogOut, Users
 import { SettingRow, SettingsGroup } from "../components/SettingsUI";
 import { ThemeRow } from "../components/ThemeSelector";
 import { hasPermission } from "../api";
-import { prefetchNotifications } from "../prefetch";
+import {
+  prefetchNotifications, prefetchSettingsProfilo, prefetchSettingsAdmin,
+  prefetchSettingsPresenze, prefetchSettingsGrafici, prefetchSettingsSicurezza,
+  prefetchSettingsDati, prefetchSettingsRiepilogoOre
+} from "../prefetch";
 
 // ─── Schermata principale impostazioni (stile Apple, categorie) ────────────────
 
@@ -33,6 +37,7 @@ export default function Settings() {
           iconColor="text-blue-500"
           title="Profilo"
           subtitle="Nome, cognome e indirizzo email"
+          prefetch={prefetchSettingsProfilo}
         />
         {canManageAdmins && (
           <SettingRow
@@ -42,6 +47,7 @@ export default function Settings() {
             iconColor="text-violet-500"
             title="Account amministratori"
             subtitle="Accessi secondari con permessi limitati"
+            prefetch={prefetchSettingsAdmin}
           />
         )}
         {canManageEmployees && (
@@ -52,6 +58,7 @@ export default function Settings() {
             iconColor="text-zinc-600 dark:text-zinc-300"
             title="Presenze e turni"
             subtitle="Tolleranza e calcolo straordinari"
+            prefetch={prefetchSettingsPresenze}
           />
         )}
         <SettingRow
@@ -61,6 +68,7 @@ export default function Settings() {
           iconColor="text-amber-500"
           title="Grafici dipendente"
           subtitle="Personalizza il pannello riepilogo"
+          prefetch={prefetchSettingsGrafici}
         />
         {canManageEmployees && (
           <SettingRow
@@ -80,6 +88,7 @@ export default function Settings() {
           iconColor="text-green-500"
           title="Sicurezza"
           subtitle="Password e autenticazione a due fattori"
+          prefetch={prefetchSettingsSicurezza}
         />
         {canManageEmployees && (
           <SettingRow
@@ -89,6 +98,7 @@ export default function Settings() {
             iconColor="text-red-500"
             title="Gestione dati"
             subtitle="Elimina e pulizia automatica dello storico"
+            prefetch={prefetchSettingsDati}
           />
         )}
         {canManageEmployees && (
@@ -99,6 +109,7 @@ export default function Settings() {
             iconColor="text-teal-500"
             title="Invio riepilogo ore"
             subtitle="Invia automaticamente PDF o Excel via email"
+            prefetch={prefetchSettingsRiepilogoOre}
           />
         )}
       </SettingsGroup>
