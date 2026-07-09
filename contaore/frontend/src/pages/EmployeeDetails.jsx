@@ -356,12 +356,10 @@ export default function EmployeeDetails() {
   const [addTime, setAddTime]                   = useState("09:00");
   const [addPresenceSaving, setAddPresenceSaving] = useState(false);
 
-  const [showEditPresence, setShowEditPresence]     = useState(false);
-  const [editPresenceId, setEditPresenceId]         = useState(null);
-  const [editPresenceTipo, setEditPresenceTipo]     = useState("ENTRATA");
-  const [editPresenceDate, setEditPresenceDate]     = useState("");
-  const [editPresenceTime, setEditPresenceTime]     = useState("09:00");
-  const [editPresenceSaving, setEditPresenceSaving] = useState(false);
+  const [showEditDay, setShowEditDay]       = useState(false);
+  const [editDayDate, setEditDayDate]       = useState("");
+  const [editDayEntries, setEditDayEntries] = useState([]);
+  const [editDaySaving, setEditDaySaving]   = useState(false);
 
   function showToast(message, type = "success") {
     setToast({ message, type });
@@ -438,51 +436,91 @@ export default function EmployeeDetails() {
     }
   }
 
-  function startEditPresence(id, tipo, dateStr, timeStr) {
-    setEditPresenceId(id);
-    setEditPresenceTipo(tipo);
-    setEditPresenceDate(dateStr);
-    setEditPresenceTime(timeStr || "09:00");
-    setShowEditPresence(true);
+  function startEditDay(day) {
+    const entries = [];
+    day.coppie.forEach(c => {
+      if (c.entrata_id) {
+        entries.push({
+          key: `e-${c.entrata_id}`, id: c.entrata_id, tipo: "ENTRATA",
+          time: c.entrata || "", deletable: !!(c.entrata_manuale || c.entrata_automatica), isNew: false
+        });
+      }
+      if (c.uscita_id) {
+        entries.push({
+          key: `u-${c.uscita_id}`, id: c.uscita_id, tipo: "USCITA",
+          time: c.uscita_giorno_dopo ? "" : (c.uscita || ""), deletable: !!(c.uscita_manuale || c.uscita_automatica), isNew: false
+        });
+      }
+    });
+    setEditDayDate(day.giorno);
+    setEditDayEntries(entries);
+    setShowEditDay(true);
   }
 
-  async function saveEditPresence() {
-    if (!editPresenceDate || !editPresenceTime) return;
-    setEditPresenceSaving(true);
-    try {
-      const token    = localStorage.getItem("token");
-      const datetime = `${editPresenceDate}T${editPresenceTime}:00`;
-      const res      = await fetch(`${API_URL}/api/presenze/${editPresenceId}`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ tipo: editPresenceTipo, datetime })
-      });
-      const data = await res.json();
-      if (!data.success) { showToast(data.error || "Errore", "error"); return; }
-      showToast("Timbratura modificata");
-      setShowEditPresence(false);
-      loadData();
-    } catch (err) {
-      showToast("Errore server", "error");
-    } finally {
-      setEditPresenceSaving(false);
+  function addEditDayEntry() {
+    setEditDayEntries(prev => [
+      ...prev,
+      { key: `new-${Date.now()}-${Math.random()}`, id: null, tipo: "ENTRATA", time: "09:00", deletable: true, isNew: true }
+    ]);
+  }
+
+  function updateEditDayEntry(key, patch) {
+    setEditDayEntries(prev => prev.map(en => en.key === key ? { ...en, ...patch } : en));
+  }
+
+  async function deleteEditDayEntry(entry) {
+    if (entry.isNew) {
+      setEditDayEntries(prev => prev.filter(e => e.key !== entry.key));
+      return;
     }
-  }
-
-  async function deletePresence(presenceId) {
     if (!confirm("Eliminare questa timbratura?")) return;
     try {
       const token = localStorage.getItem("token");
-      const res   = await fetch(`${API_URL}/api/presenze/${presenceId}`, {
+      const res   = await fetch(`${API_URL}/api/presenze/${entry.id}`, {
         method:  "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (!data.success) { showToast("Errore eliminazione", "error"); return; }
+      setEditDayEntries(prev => prev.filter(e => e.key !== entry.key));
       showToast("Timbratura eliminata");
       loadData();
     } catch (err) {
       showToast("Errore server", "error");
+    }
+  }
+
+  async function saveEditDay() {
+    setEditDaySaving(true);
+    try {
+      const token = localStorage.getItem("token");
+      const tasks = editDayEntries
+        .filter(en => en.time)
+        .map(en => {
+          const datetime = `${editDayDate}T${en.time}:00`;
+          return en.isNew
+            ? fetch(`${API_URL}/api/employees/${id}/presence`, {
+                method:  "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body:    JSON.stringify({ tipo: en.tipo, datetime })
+              })
+            : fetch(`${API_URL}/api/presenze/${en.id}`, {
+                method:  "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body:    JSON.stringify({ tipo: en.tipo, datetime })
+              });
+        });
+      const results = await Promise.all(tasks);
+      const datas   = await Promise.all(results.map(r => r.json()));
+      const failed  = datas.find(d => !d.success);
+      if (failed) { showToast(failed.error || "Errore salvataggio", "error"); return; }
+      showToast("Giorno aggiornato");
+      setShowEditDay(false);
+      loadData();
+    } catch (err) {
+      showToast("Errore server", "error");
+    } finally {
+      setEditDaySaving(false);
     }
   }
 
@@ -797,10 +835,10 @@ export default function EmployeeDetails() {
                       }
 
                       return (
-                        <div key={day.giorno} className="flex items-center gap-3 px-5 sm:px-6 py-2.5 border-b border-zinc-50 dark:border-zinc-800/50 last:border-0">
+                        <div key={day.giorno} className="flex items-start gap-3 px-5 sm:px-6 py-2.5 border-b border-zinc-50 dark:border-zinc-800/50 last:border-0">
 
                           {/* DATA */}
-                          <span className="text-xs text-zinc-400 w-14 shrink-0 tabular-nums">
+                          <span className="text-xs text-zinc-400 w-14 shrink-0 tabular-nums pt-0.5">
                             {new Date(day.giorno + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
                           </span>
 
@@ -808,41 +846,17 @@ export default function EmployeeDetails() {
                           <span className={`shrink-0 w-[72px] text-center px-2 py-0.5 rounded-md text-[11px] font-medium ${badgeColor}`}>{badgeLabel}</span>
 
                           {/* TIMBRATURE */}
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0 pt-0.5">
                             {day.coppie.length > 0 ? day.coppie.map((c, i) => (
                               <div key={i} className="flex items-center gap-3">
                                 <div className="flex items-center gap-1">
                                   <span className="text-emerald-500 font-semibold text-xs">↑</span>
                                   <span className={`text-sm font-semibold tabular-nums ${entrataColor(c)}`}>{c.entrata || "—"}</span>
-                                  {canManagePresence && c.entrata_id && (
-                                    <button onClick={() => startEditPresence(c.entrata_id, "ENTRATA", day.giorno, c.entrata)}
-                                      className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
-                                      <Pencil size={11} />
-                                    </button>
-                                  )}
-                                  {canManagePresence && (c.entrata_manuale || c.entrata_automatica) && c.entrata_id && (
-                                    <button onClick={() => deletePresence(c.entrata_id)}
-                                      className="text-zinc-300 hover:text-red-500 transition-colors">
-                                      <X size={11} />
-                                    </button>
-                                  )}
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <span className="text-red-400 font-semibold text-xs">↓</span>
                                   <span className={`text-sm font-semibold tabular-nums ${uscitaColor(c)}`}>{c.uscita || "—"}</span>
                                   {c.uscita && c.uscita_giorno_dopo && <span className="text-indigo-500 text-[10px] font-medium ml-0.5">+1</span>}
-                                  {canManagePresence && c.uscita_id && (
-                                    <button onClick={() => startEditPresence(c.uscita_id, "USCITA", day.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
-                                      className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
-                                      <Pencil size={11} />
-                                    </button>
-                                  )}
-                                  {canManagePresence && (c.uscita_manuale || c.uscita_automatica) && c.uscita_id && (
-                                    <button onClick={() => deletePresence(c.uscita_id)}
-                                      className="text-zinc-300 hover:text-red-500 transition-colors">
-                                      <X size={11} />
-                                    </button>
-                                  )}
                                 </div>
                               </div>
                             )) : (
@@ -850,15 +864,15 @@ export default function EmployeeDetails() {
                             )}
                           </div>
 
-                          {/* ORE + ADD */}
-                          <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                          {/* ORE + MODIFICA GIORNO */}
+                          <div className="flex items-center gap-1.5 ml-auto shrink-0 pt-0.5">
                             {day.ore_totali > 0 && (
                               <span className="text-xs text-zinc-400 tabular-nums">{formatOre(day.ore_totali)}</span>
                             )}
-                            {canManagePresence && (
-                              <button onClick={() => startAddPresence(day.giorno)} title="Aggiungi timbratura"
-                                className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                <Plus size={12} />
+                            {canManagePresence && day.coppie.length > 0 && (
+                              <button onClick={() => startEditDay(day)} title="Modifica giorno"
+                                className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-blue-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                <Pencil size={12} />
                               </button>
                             )}
                           </div>
@@ -1034,78 +1048,75 @@ export default function EmployeeDetails() {
 
       )}
 
-      {/* MODALE MODIFICA TIMBRATURA — solo se canManagePresence */}
+      {/* MODALE MODIFICA GIORNO — tutte le timbrature del giorno insieme, solo se canManagePresence */}
 
-      {showEditPresence && canManagePresence && (
+      {showEditDay && canManagePresence && (
 
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
 
-          <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
+          <div className="w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl max-h-[85vh] overflow-y-auto">
 
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Modifica timbratura</h3>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Modifica giorno</h3>
             <p className="text-xs text-zinc-400 mb-5">
-              {editPresenceTipo === "ENTRATA" ? "Entrata" : "Uscita"} — modifica data e orario
+              {new Date(editDayDate + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long" })}
             </p>
 
-            <div className="space-y-4">
-
-              {/* TIPO */}
-              <div>
-                <p className="text-xs text-zinc-400 mb-2">Tipo</p>
-                <div className="flex gap-2">
-                  {["ENTRATA", "USCITA"].map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setEditPresenceTipo(t)}
-                      className={`flex-1 h-10 rounded-2xl text-sm font-medium border transition-all ${
-                        editPresenceTipo === t
-                          ? t === "ENTRATA"
-                            ? "bg-green-500 text-white border-transparent"
-                            : "bg-red-500 text-white border-transparent"
-                          : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
-                      }`}
-                    >
-                      {t === "ENTRATA" ? "Entrata" : "Uscita"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* DATA + ORA */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs text-zinc-400 mb-2">Data</p>
-                  <input
-                    type="date"
-                    value={editPresenceDate}
-                    onChange={(e) => setEditPresenceDate(e.target.value)}
-                    className="w-full min-w-0 h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
-                  />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-zinc-400 mb-2">Ora</p>
+            <div className="space-y-3">
+              {editDayEntries.map(en => (
+                <div key={en.key} className="flex items-center gap-2">
+                  <div className="flex gap-1 shrink-0">
+                    {["ENTRATA", "USCITA"].map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => updateEditDayEntry(en.key, { tipo: t })}
+                        className={`w-9 h-9 rounded-xl text-[11px] font-semibold border transition-all ${
+                          en.tipo === t
+                            ? t === "ENTRATA"
+                              ? "bg-green-500 text-white border-transparent"
+                              : "bg-red-500 text-white border-transparent"
+                            : "bg-zinc-50 dark:bg-zinc-900 text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                        }`}
+                        title={t === "ENTRATA" ? "Entrata" : "Uscita"}
+                      >
+                        {t === "ENTRATA" ? "↑" : "↓"}
+                      </button>
+                    ))}
+                  </div>
                   <input
                     type="time"
-                    value={editPresenceTime}
-                    onChange={(e) => setEditPresenceTime(e.target.value)}
-                    className="w-full min-w-0 h-11 px-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
+                    value={en.time}
+                    onChange={(e) => updateEditDayEntry(en.key, { time: e.target.value })}
+                    className="flex-1 min-w-0 h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 outline-none"
                   />
+                  {en.deletable && (
+                    <button onClick={() => deleteEditDayEntry(en)}
+                      className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl text-zinc-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
-              </div>
+              ))}
 
+              <button
+                onClick={addEditDayEntry}
+                className="w-full h-10 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 text-zinc-400 text-xs font-medium flex items-center justify-center gap-1.5 hover:border-zinc-300 dark:hover:border-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              >
+                <Plus size={13} />
+                Aggiungi orario
+              </button>
             </div>
 
             <div className="flex gap-3 mt-6">
               <button
-                onClick={saveEditPresence}
-                disabled={editPresenceSaving || !editPresenceDate || !editPresenceTime}
+                onClick={saveEditDay}
+                disabled={editDaySaving}
                 className="flex-1 h-11 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-sm font-medium disabled:opacity-50"
               >
-                {editPresenceSaving ? "Salvataggio..." : "Salva"}
+                {editDaySaving ? "Salvataggio..." : "Salva"}
               </button>
               <button
-                onClick={() => setShowEditPresence(false)}
+                onClick={() => setShowEditDay(false)}
                 className="flex-1 h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300"
               >
                 Annulla
