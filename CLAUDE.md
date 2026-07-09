@@ -87,6 +87,9 @@ Comunicano con gli endpoint in `backend/routes/hardware.js` e `scan.js`.
 
 - Branch di lavoro tipico creato da Claude Code: `claude/...` — vedi la
   cronologia commit per lo stile dei messaggi (italiano, sintetico).
+- **Push di test**: tutte le modifiche vanno sempre pushate sul branch
+  tester (`claude/push-tester-branch-*`), non su branch nuovi ad-hoc,
+  salvo istruzione esplicita diversa dell'utente.
 - Non esiste una audit-log/validazione centralizzata lato backend: la
   validazione degli input è fatta a mano in ciascuna route (non tramite uno
   schema condiviso).
