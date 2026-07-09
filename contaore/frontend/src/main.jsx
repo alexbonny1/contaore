@@ -1,12 +1,15 @@
 import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import posthog from "posthog-js";
-import * as Sentry from "@sentry/react";
 
 import "./index.css";
 import { initTheme } from "./theme";
 import { registerServiceWorker } from "./push";
+// PostHog e Sentry si auto-inizializzano lazy (idle callback / on-demand) non
+// appena importati: vedi analytics.js e sentry.js. Non pesano sul bundle
+// iniziale, si scaricano solo quando servono davvero.
+import "./analytics";
+import "./sentry";
 
 // Applica il tema (chiaro/scuro/automatico) subito, prima del render, per
 // evitare un flash del tema sbagliato; resta anche in ascolto dei cambi di
@@ -15,37 +18,6 @@ initTheme();
 
 // Service worker per le notifiche push (non blocca il render)
 registerServiceWorker();
-
-// ─── PostHog analytics ────────────────────────────────────────────────────────
-// Parte disattivato di default: si attiva solo se l'utente accetta dal banner
-// dei cookie (CookieConsentBanner.jsx), che chiama posthog.opt_in_capturing().
-if (import.meta.env.VITE_POSTHOG_KEY) {
-  posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
-    api_host:                     import.meta.env.VITE_POSTHOG_HOST || "https://eu.i.posthog.com",
-    capture_pageview:             true,
-    session_recording:            { maskAllInputs: true },
-    opt_out_capturing_by_default: true,
-    loaded: (ph) => {
-      if (import.meta.env.DEV) {
-        ph.opt_out_capturing();
-      } else if (localStorage.getItem("cookie_consent") === "accepted") {
-        ph.opt_in_capturing();
-      }
-    },
-  });
-}
-export function track(event, props) {
-  if (import.meta.env.VITE_POSTHOG_KEY) posthog.capture(event, props);
-}
-
-// ─── Sentry error tracking ────────────────────────────────────────────────────
-if (import.meta.env.VITE_SENTRY_DSN) {
-  Sentry.init({
-    dsn:              import.meta.env.VITE_SENTRY_DSN,
-    environment:      import.meta.env.MODE,
-    tracesSampleRate: 0.1,
-  });
-}
 
 // ─── Lazy-loaded pages ────────────────────────────────────────────────────────
 // Public / auth pages (keep eager: they're tiny and needed immediately)

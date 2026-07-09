@@ -73,8 +73,8 @@ export default function ChangePasswordModal({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-6">
+    <div className="anim-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="anim-modal-panel w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-6">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

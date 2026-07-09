@@ -168,8 +168,8 @@ function ExportModal({ employees, onClose, token, initialIds }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4">
-      <div className="w-full max-w-lg bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl flex flex-col max-h-[90vh]">
+    <div className="anim-backdrop fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="anim-modal-panel w-full max-w-lg bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl flex flex-col max-h-[90vh]">
 
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
           <div className="min-w-0 flex-1 pr-3">
@@ -325,8 +325,8 @@ function AssignShiftModal({ selectedEmployees, onClose, token }) {
   const n = selectedEmployees.length;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4">
-      <div className="w-full max-w-lg bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl flex flex-col max-h-[90vh]">
+    <div className="anim-backdrop fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="anim-modal-panel w-full max-w-lg bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl flex flex-col max-h-[90vh]">
 
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
           <div className="min-w-0 flex-1 pr-3">
@@ -395,7 +395,7 @@ function AssignShiftModal({ selectedEmployees, onClose, token }) {
           </div>
 
           {toast && (
-            <div className={`rounded-xl p-3 text-xs sm:text-sm font-medium ${toast.type === "ok" ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400" : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"}`}>
+            <div className={`anim-page rounded-xl p-3 text-xs sm:text-sm font-medium ${toast.type === "ok" ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400" : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"}`}>
               {toast.msg}
             </div>
           )}
@@ -525,8 +525,8 @@ export default function Employees() {
 
       {/* DIALOG CONFERMA ELIMINAZIONE */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-6">
+        <div className="anim-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="anim-modal-panel w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-500/20 flex items-center justify-center flex-shrink-0">
                 <Trash2 size={18} className="text-red-600 dark:text-red-400" />
@@ -564,7 +564,7 @@ export default function Employees() {
 
       {/* TOAST */}
       {toast && (
-        <div className={`fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium whitespace-nowrap ${
+        <div className={`anim-toast fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium whitespace-nowrap ${
           toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
         }`}>
           {toast.message}

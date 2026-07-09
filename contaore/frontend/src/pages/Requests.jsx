@@ -7,7 +7,7 @@ import {
 import { API_URL, hasPermission } from '../api'
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx'
 import PauseManager from '../components/PauseManager'
-import { track } from '../main'
+import { track } from '../analytics'
 
 function statoBadge(stato) {
   switch (stato) {
@@ -331,7 +331,7 @@ export default function Requests({ initialView = 'richieste' }) {
 
                   {/* EXPANDED: IN ATTESA */}
                   {isExpanded && req.stato === 'in_attesa' && (
-                    <div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 px-4 sm:px-6 py-3 sm:py-4">
+                    <div className="anim-page border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 px-4 sm:px-6 py-3 sm:py-4">
                       {(req.note || req.motivo) && (
                         <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mb-3">
                           <span className="text-zinc-400">Note: </span>{req.note || req.motivo}
@@ -362,7 +362,7 @@ export default function Requests({ initialView = 'richieste' }) {
 
                   {/* EXPANDED: PROCESSED */}
                   {isExpanded && req.stato !== 'in_attesa' && (
-                    <div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+                    <div className="anim-page border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
                       <p className="text-xs sm:text-sm text-zinc-500">
                         {req.stato === 'approvata' ? '✓ Approvata' : '✗ Rifiutata'}
                         {req.approvato_il && ` il ${fmt(req.approvato_il)}`}

@@ -17,7 +17,7 @@ function Toast({ message, type, onClose }) {
   }, []);
   return (
     <div className={`
-      fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] sm:w-auto
+      anim-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] sm:w-auto
       flex items-center gap-2 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium
       ${type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
     `}>
@@ -29,8 +29,8 @@ function Toast({ message, type, onClose }) {
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white dark:bg-[#161618] rounded-t-3xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 w-full sm:max-w-sm shadow-xl">
+    <div className="anim-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="anim-modal-panel bg-white dark:bg-[#161618] rounded-t-3xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 w-full sm:max-w-sm shadow-xl">
         <p className="text-zinc-900 dark:text-zinc-100 font-medium mb-6 leading-relaxed">{message}</p>
         <div className="flex gap-3">
           <button onClick={onConfirm} className="flex-1 h-12 rounded-2xl bg-red-500 text-white text-sm font-medium">
@@ -1119,7 +1119,7 @@ export default function Admin() {
 
                 {/* DETTAGLI ESPANDIBILI */}
                 {expandedCompany === company.id && (
-                  <div className="border-t border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 flex flex-col gap-5">
+                  <div className="anim-page border-t border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 flex flex-col gap-5">
 
                     {/* ACCOUNT */}
                     <div>
