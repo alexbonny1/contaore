@@ -563,3 +563,23 @@ CREATE TABLE IF NOT EXISTS riepilogo_ore_invii (
 -- null/vuoto = accesso a tutti i dipendenti della company (comportamento attuale, invariato)
 -- array di id = l'admin vede/gestisce solo questi dipendenti
 ALTER TABLE IF EXISTS user_account ADD COLUMN IF NOT EXISTS assigned_dipendente_ids jsonb;
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- Migration 011 — Notifiche push (web-push / VAPID)
+-- File originale: 011_complete_schema_fix.sql
+-- ═══════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_account_id uuid NOT NULL REFERENCES user_account(id) ON DELETE CASCADE,
+  endpoint text NOT NULL UNIQUE,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  user_agent text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_account_id);
+
+-- company: interruttore "invia anche via email" per le notifiche passate a push
+ALTER TABLE IF EXISTS company ADD COLUMN IF NOT EXISTS notifiche_anche_email boolean DEFAULT false;
