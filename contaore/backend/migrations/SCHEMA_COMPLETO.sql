@@ -484,10 +484,10 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_audit_log_company ON audit_log(company_id, created_at DESC);
-CREATE INDEX idx_audit_log_user ON audit_log(user_id, created_at DESC);
-CREATE INDEX idx_audit_log_action ON audit_log(action, created_at DESC);
-CREATE INDEX idx_audit_log_resource ON audit_log(resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_company ON audit_log(company_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_resource ON audit_log(resource_type, resource_id);
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- Migration 004 — Credenziali temporanee nuovo owner
