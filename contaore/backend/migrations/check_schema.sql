@@ -67,7 +67,11 @@ WITH checks(categoria, oggetto, tipo) AS (
     -- Colonne aggiunte su dipendenti
     ('6. Colonne dipendenti', 'dipendenti.promemoria_entrata_minuti', 'column'),
     ('6. Colonne dipendenti', 'dipendenti.promemoria_uscita_minuti', 'column'),
-    ('6. Colonne dipendenti', 'dipendenti.importo_orario', 'column')
+    ('6. Colonne dipendenti', 'dipendenti.importo_orario', 'column'),
+
+    -- Notifiche push (web-push / VAPID)
+    ('7. Notifiche push', 'push_subscriptions', 'table'),
+    ('7. Notifiche push', 'company.notifiche_anche_email', 'column')
 )
 SELECT
   categoria,
