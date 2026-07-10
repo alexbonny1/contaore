@@ -99,6 +99,11 @@ export default function DipendenteDashboard() {
   const [modifyMotivo, setModifyMotivo]               = useState("");
   const [savingModify, setSavingModify]               = useState(false);
 
+  // scelta di quale orario del giorno richiedere di modificare (un solo
+  // pulsante "matita" per giorno invece di uno per ogni singolo orario)
+  const [showDayChooser, setShowDayChooser]           = useState(false);
+  const [dayChooserEntries, setDayChooserEntries]     = useState([]);
+
   // sottomenu richieste: "timbratura" | "permessi" | "turni"
   const [requestsSubTab, setRequestsSubTab]           = useState("timbratura");
 
@@ -394,6 +399,23 @@ export default function DipendenteDashboard() {
     setModifyDatetime(timeStr && dateStr ? `${dateStr}T${timeStr}` : (dateStr ? `${dateStr}T09:00` : ""));
     setModifyMotivo("");
     setShowModifyModal(true);
+  }
+
+  // ── un solo pulsante "matita" per giorno: se il giorno ha un solo orario
+  // si passa dritti al modulo di richiesta, altrimenti si chiede prima quale ──
+  function openDayChooser(giorno, coppie) {
+    const entries = [];
+    coppie.forEach(c => {
+      if (c.entrata_id) entries.push({ id: c.entrata_id, tipo: "ENTRATA", time: c.entrata, giorno });
+      if (c.uscita_id)  entries.push({ id: c.uscita_id,  tipo: "USCITA",  time: c.uscita_giorno_dopo ? null : c.uscita, giorno });
+    });
+    if (entries.length === 0) return;
+    if (entries.length === 1) {
+      openModifyModal(entries[0].id, entries[0].giorno, entries[0].time);
+      return;
+    }
+    setDayChooserEntries(entries);
+    setShowDayChooser(true);
   }
 
   // ── invia richiesta modifica timbratura ───────────────────────────────────
@@ -745,10 +767,10 @@ export default function DipendenteDashboard() {
                               <div key={g.giorno} className="border-b border-zinc-50 dark:border-zinc-800/50 last:border-0">
 
                                 {/* ROW PIATTO */}
-                                <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5">
+                                <div className="flex items-start gap-3 px-4 sm:px-6 py-2.5">
 
                                   {/* DATA */}
-                                  <span className="text-xs text-zinc-400 w-14 shrink-0 tabular-nums">
+                                  <span className="text-xs text-zinc-400 w-14 shrink-0 tabular-nums pt-0.5">
                                     {new Date(g.giorno).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" })}
                                   </span>
 
@@ -756,31 +778,17 @@ export default function DipendenteDashboard() {
                                   <span className={`shrink-0 w-[72px] text-center px-2 py-0.5 rounded-md text-[11px] font-medium ${color}`}>{label}</span>
 
                                   {/* TIMBRATURE */}
-                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0 pt-0.5">
                                     {g.coppie.length > 0 ? g.coppie.map((c, i) => (
                                       <div key={i} className="flex items-center gap-3">
                                         <div className="flex items-center gap-1">
                                           <span className="text-emerald-500 font-semibold text-xs">↑</span>
                                           <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 tabular-nums">{c.entrata || "—"}</span>
-                                          {c.entrata_id && (
-                                            <button onClick={() => openModifyModal(c.entrata_id, g.giorno, c.entrata)}
-                                              title="Richiedi modifica"
-                                              className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
-                                              <Pencil size={11} />
-                                            </button>
-                                          )}
                                         </div>
                                         <div className="flex items-center gap-1">
                                           <span className="text-red-400 font-semibold text-xs">↓</span>
                                           <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 tabular-nums">{c.uscita || "—"}</span>
                                           {c.uscita && c.uscita_giorno_dopo && <span className="text-indigo-500 text-[10px] font-medium ml-0.5">+1</span>}
-                                          {c.uscita_id && (
-                                            <button onClick={() => openModifyModal(c.uscita_id, g.giorno, c.uscita_giorno_dopo ? null : c.uscita)}
-                                              title="Richiedi modifica"
-                                              className="ml-0.5 text-zinc-300 hover:text-blue-500 transition-colors">
-                                              <Pencil size={11} />
-                                            </button>
-                                          )}
                                         </div>
                                       </div>
                                     )) : (
@@ -788,10 +796,16 @@ export default function DipendenteDashboard() {
                                     )}
                                   </div>
 
-                                  {/* ORE + GIUSTIFICA */}
-                                  <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  {/* ORE + GIUSTIFICA + RICHIEDI MODIFICA */}
+                                  <div className="flex items-center gap-1.5 ml-auto shrink-0 pt-0.5">
                                     {g.ore_totali > 0 && (
                                       <span className="text-xs text-zinc-400 tabular-nums">{g.ore_totali}h</span>
+                                    )}
+                                    {g.coppie.length > 0 && (
+                                      <button onClick={() => openDayChooser(g.giorno, g.coppie)} title="Richiedi modifica"
+                                        className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-blue-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                        <Pencil size={12} />
+                                      </button>
                                     )}
                                     {g.assente && !giust && (
                                       <button onClick={() => setShowJustForm(showJustForm === g.giorno ? null : g.giorno)}
@@ -1705,6 +1719,33 @@ export default function DipendenteDashboard() {
 
     {showChangePassword && (
       <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+    )}
+
+    {/* MODAL SCEGLI ORARIO — solo quando il giorno ha più di una timbratura */}
+    {showDayChooser && (
+      <div className="anim-backdrop fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+        <div className="anim-modal-panel w-full max-w-sm bg-white dark:bg-[#161618] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Richiesta modifica</h3>
+          <p className="text-xs text-zinc-400 mb-5">Quale orario vuoi correggere?</p>
+          <div className="space-y-2">
+            {dayChooserEntries.map((entry, i) => (
+              <button key={i}
+                onClick={() => { setShowDayChooser(false); openModifyModal(entry.id, entry.giorno, entry.time); }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-zinc-200 dark:border-zinc-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-left">
+                <span className={`font-semibold text-xs ${entry.tipo === "ENTRATA" ? "text-emerald-500" : "text-red-400"}`}>
+                  {entry.tipo === "ENTRATA" ? "↑" : "↓"}
+                </span>
+                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 tabular-nums">{entry.time || "—"}</span>
+                <span className="text-xs text-zinc-400 ml-auto">{entry.tipo === "ENTRATA" ? "Entrata" : "Uscita"}</span>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowDayChooser(false)}
+            className="w-full h-11 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300 mt-5">
+            Annulla
+          </button>
+        </div>
+      </div>
     )}
 
     {/* MODAL MODIFICA TIMBRATURA */}
