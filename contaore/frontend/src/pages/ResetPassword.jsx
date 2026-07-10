@@ -113,7 +113,7 @@ export default function ResetPassword() {
                 placeholder="Email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors({}); }}
-                className={`w-full h-12 px-4 rounded-2xl border outline-none focus:border-zinc-400 ${fieldErrors.email ? "border-red-400" : "border-zinc-200"}`}
+                className={`w-full h-12 px-4 rounded-2xl border bg-white text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 ${fieldErrors.email ? "border-red-400" : "border-zinc-200"}`}
               />
               {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
             </div>
@@ -144,7 +144,7 @@ export default function ResetPassword() {
                 placeholder="Nuova password"
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); if (fieldErrors.newPassword) setFieldErrors(p => ({...p, newPassword: ""})); }}
-                className={`w-full h-12 px-4 rounded-2xl border outline-none focus:border-zinc-400 ${fieldErrors.newPassword ? "border-red-400" : "border-zinc-200"}`}
+                className={`w-full h-12 px-4 rounded-2xl border bg-white text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 ${fieldErrors.newPassword ? "border-red-400" : "border-zinc-200"}`}
               />
               {fieldErrors.newPassword && <p className="text-xs text-red-500 mt-1">{fieldErrors.newPassword}</p>}
             </div>
@@ -154,7 +154,7 @@ export default function ResetPassword() {
                 placeholder="Conferma password"
                 value={confirm}
                 onChange={(e) => { setConfirm(e.target.value); if (fieldErrors.confirm) setFieldErrors(p => ({...p, confirm: ""})); }}
-                className={`w-full h-12 px-4 rounded-2xl border outline-none focus:border-zinc-400 ${fieldErrors.confirm ? "border-red-400" : "border-zinc-200"}`}
+                className={`w-full h-12 px-4 rounded-2xl border bg-white text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 ${fieldErrors.confirm ? "border-red-400" : "border-zinc-200"}`}
               />
               {fieldErrors.confirm && <p className="text-xs text-red-500 mt-1">{fieldErrors.confirm}</p>}
             </div>
