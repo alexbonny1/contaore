@@ -114,7 +114,7 @@ export default function Login() {
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 text-sm sm:text-base outline-none focus:border-zinc-400 transition"
+            className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 text-sm sm:text-base outline-none focus:border-zinc-400 transition"
             required
           />
 
@@ -123,7 +123,7 @@ export default function Login() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 text-sm sm:text-base outline-none focus:border-zinc-400 transition"
+            className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 text-sm sm:text-base outline-none focus:border-zinc-400 transition"
             required
           />
 
